@@ -1,0 +1,204 @@
+name: DPN Stable Release Promotion
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/release-promotion.json"
+      - ".github/workflows/promote-release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: settlement-stable-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Verify Candidate and Publish Stable Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Read and validate promotion request
+        id: request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          REQUEST=".github/release-promotion.json"
+          test -s "$REQUEST"
+
+          version="$(jq -r '.version // empty' "$REQUEST")"
+          candidate="$(jq -r '.source_sha // empty' "$REQUEST")"
+          tag="v$version"
+
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$candidate" =~ ^[0-9a-f]{40}$ ]]
+
+          git fetch origin main --no-tags
+          git cat-file -e "$candidate^{commit}"
+          git merge-base --is-ancestor "$candidate" origin/main
+
+          project_version="$(sed -n 's/^config\/version="\([^"]*\)"/\1/p' project.godot)"
+          test "$project_version" = "$version"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Require all candidate gates green
+        id: gates
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          runs="$(gh api "repos/$GH_REPO/actions/runs?head_sha=$CANDIDATE&per_page=100")"
+
+          require_success() {
+            local name="$1"
+            local count
+            count="$(jq --arg name "$name" '[.workflow_runs[] | select(.name == $name and .status == "completed" and .conclusion == "success")] | length' <<<"$runs")"
+            if [[ "$count" -lt 1 ]]; then
+              echo "::error::Required green workflow missing: $name on $CANDIDATE"
+              jq --arg name "$name" '.workflow_runs[] | select(.name == $name) | {name,status,conclusion,html_url}' <<<"$runs"
+              exit 1
+            fi
+          }
+
+          require_success "DPN Settlement Windows Build"
+          require_success "DPN Settlement CI Gate"
+          require_success "DPN Settlement CodeQL"
+          require_success "DPN Settlement Supply Chain"
+          require_success "Code Quality: Push on main"
+
+          windows_run="$(jq -r '[.workflow_runs[] | select(.name == "DPN Settlement Windows Build" and .status == "completed" and .conclusion == "success")] | sort_by(.run_number) | last | .id // empty' <<<"$runs")"
+          test -n "$windows_run"
+          echo "windows_run=$windows_run" >> "$GITHUB_OUTPUT"
+
+      - name: Download verified Windows candidate artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WINDOWS_RUN: ${{ steps.gates.outputs.windows_run }}
+        run: |
+          set -euo pipefail
+          mkdir -p release/portable release/installer
+          gh run download "$WINDOWS_RUN" --repo "$GH_REPO" --name "TheLastSettlement-Windows-Portable-Final" --dir release/portable
+          gh run download "$WINDOWS_RUN" --repo "$GH_REPO" --name "TheLastSettlement-Windows-Installer" --dir release/installer
+
+          cp release/portable/TheLastSettlement-Windows-x86_64.zip release/
+          cp release/installer/TheLastSettlement-Setup-x64.msi release/
+          test -s release/TheLastSettlement-Windows-x86_64.zip
+          test -s release/TheLastSettlement-Setup-x64.msi
+
+      - name: Build stable release manifest and checksums
+        shell: bash
+        env:
+          VERSION: ${{ steps.request.outputs.version }}
+          TAG: ${{ steps.request.outputs.tag }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          signing_status="unsigned"
+
+          python tools/release_manifest.py             --version "$VERSION"             --channel stable             --commit "$CANDIDATE"             --portable release/TheLastSettlement-Windows-x86_64.zip             --installer release/TheLastSettlement-Setup-x64.msi             --output release/windows-release.json             --repository "$GH_REPO"             --release-tag "$TAG"             --signing-status "$signing_status"             --save-schema 14
+
+          (
+            cd release
+            sha256sum TheLastSettlement-Windows-x86_64.zip TheLastSettlement-Setup-x64.msi > SHA256SUMS-WINDOWS.txt
+            sha256sum -c SHA256SUMS-WINDOWS.txt
+            python -m json.tool windows-release.json >/dev/null
+          )
+
+      - name: Write release notes
+        shell: bash
+        env:
+          VERSION: ${{ steps.request.outputs.version }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
+        run: |
+          cat > release/RELEASE-NOTES.md <<EOF
+          # The Last Settlement v$VERSION
+
+          **DPN Technology // Stable Windows Release**
+
+          This is the first stable Windows release connected to the in-game DPN Update Command.
+
+          ## Included
+
+          - Windows x86_64 portable build
+          - Per-user MSI installer
+          - Secure in-game Update Command
+          - SHA-256 verified installer staging
+          - Stable release/update manifest
+          - Save schema 14 migration support
+          - Civilization, federal governance, colony development, expeditions, industry, factions, utilities, construction and survivor simulation
+
+          ## Security
+
+          This release was promoted only after Windows Build, CI Gate, CodeQL, Supply Chain and Code Quality were green on commit:
+
+          `$CANDIDATE`
+
+          The current binaries are unsigned until a production DPN Windows code-signing certificate is configured. Windows SmartScreen may show **Unknown publisher**.
+
+          **The Old World Died. Build the Next One.**
+          EOF
+
+      - name: Publish stable GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.request.outputs.version }}
+          TAG: ${{ steps.request.outputs.tag }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          assets=(
+            "release/TheLastSettlement-Windows-x86_64.zip"
+            "release/TheLastSettlement-Setup-x64.msi"
+            "release/SHA256SUMS-WINDOWS.txt"
+            "release/windows-release.json"
+          )
+
+          if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${assets[@]}" --repo "$GH_REPO" --clobber
+            gh release edit "$TAG" --repo "$GH_REPO" --title "The Last Settlement v$VERSION" --notes-file release/RELEASE-NOTES.md --latest
+          else
+            gh release create "$TAG" "${assets[@]}"               --repo "$GH_REPO"               --target "$CANDIDATE"               --title "The Last Settlement v$VERSION"               --notes-file release/RELEASE-NOTES.md               --latest
+          fi
+
+      - name: Verify latest release endpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.request.outputs.tag }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          latest="$(gh api "repos/$GH_REPO/releases/latest")"
+          test "$(jq -r '.tag_name' <<<"$latest")" = "$TAG"
+          test "$(jq -r '.target_commitish' <<<"$latest")" = "$CANDIDATE" || true
+          for asset in TheLastSettlement-Windows-x86_64.zip TheLastSettlement-Setup-x64.msi SHA256SUMS-WINDOWS.txt windows-release.json; do
+            count="$(jq --arg asset "$asset" '[.assets[] | select(.name == $asset)] | length' <<<"$latest")"
+            test "$count" -eq 1
+          done
