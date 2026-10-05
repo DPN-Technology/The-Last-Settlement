@@ -661,23 +661,54 @@ Visual complexity can increase dramatically later without throwing away the core
 
 # RUN THE CURRENT BUILD
 
-## Windows Portable Build — Recommended
+## Windows Installer — Recommended
 
-You **do not need Godot installed** to play-test the Windows build.
+The easiest Windows path is now the **MSI installer**. You do **not** need Godot installed.
 
 1. Open the repository's **Actions** tab.
 2. Select **DPN Settlement Windows Build**.
 3. Open the newest successful run.
-4. Download the **TheLastSettlement-Windows-x86_64** artifact.
-5. Extract the ZIP completely.
-6. Keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
-7. Double-click **`TheLastSettlement.exe`**.
+4. Download **TheLastSettlement-Windows-Installer**.
+5. Extract the artifact ZIP.
+6. Run **`TheLastSettlement-Setup-x64.msi`**.
 
-The automated pipeline produces a native **Windows x86_64 GUI executable**, validates the project with Godot before export, verifies the official Godot engine/export templates against their release SHA-512 manifest, verifies the resulting executable format, generates SHA-256 checksums, and uploads a portable ZIP.
+The installer is a per-user package, so it installs under your Windows profile instead of requiring a machine-wide Program Files install. It creates:
 
-> **Development-build note:** the EXE is currently unsigned. Windows SmartScreen may display an **Unknown publisher** warning until DPN Technology adds a Windows code-signing certificate to the release pipeline.
+- **Desktop shortcut**
+- **Start Menu → DPN Technology → The Last Settlement**
+- **Start Menu uninstall shortcut**
 
-The Windows package intentionally keeps the PCK separate instead of embedding it in the EXE. Godot warns that embedded PCKs on Windows can increase antivirus false positives and interfere with normal code signing.
+The installer carries the branded The Last Settlement application icon and installs the native `TheLastSettlement.exe` together with its required `TheLastSettlement.pck`.
+
+## Windows Portable Build — No Install
+
+If you do not want to install the game:
+
+1. Download **TheLastSettlement-Windows-Portable-Final** from the newest successful Windows Build run.
+2. Extract `TheLastSettlement-Windows-x86_64.zip`.
+3. Keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
+4. Double-click **`TheLastSettlement.exe`**.
+
+Both Windows deliverables now include an **artifact-specific SHA-256 manifest**, and the pipeline verifies those hashes before upload.
+
+## Windows Build Security
+
+The Windows pipeline:
+
+- Parses/loads the project with the pinned Godot 4.3 engine before export
+- Verifies the official Godot engine and export templates against release SHA-512 manifests
+- Exports a native Windows x86_64 GUI executable
+- Verifies the EXE is a Windows PE binary
+- Verifies EXE/PCK SHA-256 hashes
+- Builds the MSI with WiX
+- Uses stable MSI component GUIDs
+- Produces extraction-safe, self-verifying checksum manifests
+- Keeps all GitHub Actions pinned to full commit SHAs
+- Supports Authenticode signing of both EXE and MSI when DPN signing secrets are configured
+
+> **Signing status:** the signing pipeline is ready, but the current development artifacts are still unsigned because no DPN Windows code-signing certificate is configured in repository secrets. Windows SmartScreen may therefore show **Unknown publisher** until a certificate is added.
+
+The PCK intentionally remains separate from the EXE. This preserves the cleaner code-signing path and reduces the risk of antivirus false positives associated with embedded PCK exports.
 
 ## Run From Source
 
