@@ -219,3 +219,23 @@
 - [ ] Full save migration tooling
 - [ ] Performance profiling
 - [ ] Large-population simulation optimization
+
+
+---
+
+## Packaging & Distribution
+
+**Status: active**
+
+- [x] Windows Desktop export preset
+- [x] Automated Windows x86_64 EXE export
+- [x] Portable ZIP artifact
+- [x] Official engine/template checksum verification
+- [x] Godot parse gate before export
+- [x] Windows executable format verification
+- [x] SHA-256 package manifest
+- [ ] DPN game icon / Windows resources
+- [ ] Windows code signing
+- [ ] Installer package
+- [ ] Release-channel automation
+- [ ] Crash reporting / diagnostic bundle
