@@ -1,3 +1,28 @@
+## 0.8.2-dev — Regional Trade & Production Control
+
+### Added
+- Cedar Junction and Riverbend Enclave trade hubs
+- Cedar Union and Riverbend Collective faction markets
+- Faction-specific stock and price modifiers
+- Market reputation and reputation discounts
+- Inbound / trading / returning caravan lifecycle
+- Route-danger caravan-loss simulation
+- 36-hour caravan trading windows
+- Regional buy and sell transactions
+- Caravan credits and inventory
+- World-map caravan visualization
+- Trade-hub faction intelligence
+- Player market-source switching
+- Player-created production orders
+- Utility Truck manufacturing recipe
+- Dynamically created additional utility trucks
+- Regional market / caravan persistence in save schema version 9
+
+### Changed
+- Friendly trade hubs can no longer be incorrectly scavenged as expedition ruins
+- Industry Command now prices goods per selected local or faction market
+- Milestone 0.8 now covers its core production, logistics, vehicle and regional trade loop
+
 ## 0.8.1-dev — Industrial Logistics
 
 ### Added
