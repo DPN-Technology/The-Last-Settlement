@@ -69,7 +69,7 @@
 - [x] Utility save/load persistence
 - [ ] Manual connection validation
 - [ ] Per-building load shedding
-- [ ] Fuel simulation
+- [x] Fuel simulation
 - [ ] Water contamination chemistry
 
 ## Milestone 0.5 — Relationships
@@ -163,13 +163,26 @@
 - [ ] Advanced warehouse zoning
 
 ## Milestone 0.9 — Factions & Conflict
-- Dynamic AI settlements
-- Diplomacy
-- Reputation
-- Trade agreements
-- Espionage
-- Raids
-- Tactical defense
+**Status: core complete / expanding**
+
+- [x] AI faction settlement strategic state
+- [x] Diplomacy
+- [x] Reputation
+- [x] Trade agreements
+- [x] Hostile espionage / sabotage
+- [x] Raids
+- [x] Tactical defense resolution
+- [x] Raid warnings / ETA
+- [x] Guard and wall defense contribution
+- [x] Conflict consequences across resources, buildings, survivors and government
+- [x] Friendly / allied support
+- [x] Faction save/load persistence
+- [ ] Full faction population/economy simulation
+- [ ] Offensive player operations
+- [ ] Formal war declarations / peace treaties
+- [ ] Prisoner exchange
+- [ ] Player espionage missions
+- [ ] Defensive emplacements / automated defenses
 
 ## Milestone 1.0 — Civilization
 - Multiple player settlements
