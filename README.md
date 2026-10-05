@@ -1,103 +1,449 @@
-# THE LAST SETTLEMENT
+<p align="center">
+  <img src="assets/readme/the-last-settlement-banner.svg" alt="The Last Settlement banner" width="100%">
+</p>
 
-> **The old world died. Build the next one.**
+<p align="center">
+  <strong>DPN TECHNOLOGY // CIVILIZATION RECOVERY NETWORK</strong><br>
+  <em>The old world died. Build the next one.</em>
+</p>
 
-**The Last Settlement** is an original PC survival/civilization simulation by DPN Technology. The player manages humanity's last known organized settlement from an overhead view, starting with a handful of survivors and growing toward a self-sustaining civilization.
-
-## Current Build: Foundation 0.1
-
-The repository now contains a runnable Godot 4 prototype with:
-
-- Overhead settlement map
-- Live population simulation
-- Individual survivor identities, traits, skills, needs, health, morale, and loyalty
-- Work assignment simulation
-- Food, water, power, medicine, materials, and scrap
-- Day/time progression
-- Resource consumption and production
-- Settlement buildings and infrastructure status
-- Dynamic incident/event feed
-- Population growth pressure and survivor death states
-- Command HUD with pause and time-speed controls
-- Architecture prepared for deeper relationships, politics, logistics, expeditions, factions, and generational gameplay
-
-## Vision
-
-The game is being designed around one rule:
-
-> **Every major system should affect another major system.**
-
-A failed generator should be capable of stopping water pumps. Lost water should damage sanitation and farming. A shortage should affect morale. Morale should affect work. Poor work should reduce production. A production collapse can become a political or security crisis.
-
-### Long-term simulation pillars
-
-1. Citizens, needs, memories, relationships, families and generations
-2. Construction and room-scale building
-3. Electrical, water, sewage and heating networks
-4. Food, farming, storage and spoilage
-5. Workshops, factories and supply chains
-6. Medical care, injury, disease and mental health
-7. Crime, policing, courts and internal security
-8. Government, laws, ideology and elections
-9. Exploration, scavenging and expedition teams
-10. Dynamic factions, trade, diplomacy and warfare
-11. Weather, seasons and disasters
-12. Research based on recovered knowledge
-13. Multi-settlement logistics and regional expansion
-14. Civilization history and emergent storytelling
-
-## Tech
-
-- **Engine:** Godot 4.x
-- **Language:** GDScript
-- **Target:** Windows/Linux PC
-- **Current mode:** 2D overhead prototype
-- **Future rendering path:** 2.5D/isometric or full 3D after simulation systems stabilize
-
-## Run
-
-1. Install Godot 4.3+.
-2. Clone this repository.
-3. Open `project.godot`.
-4. Press **F6/F5**.
-
-No external assets are required for the current prototype.
-
-## Controls
-
-- **Space** — Pause/unpause
-- **1** — Normal speed
-- **2** — Fast speed
-- **3** — Very fast speed
-- **Mouse wheel** — Zoom
-- **Middle mouse drag** — Pan
-
-## Project structure
-
-```text
-The-Last-Settlement/
-├── project.godot
-├── src/
-│   ├── Main.tscn
-│   └── main.gd
-├── simulation/
-│   ├── settlement_simulation.gd
-│   ├── citizen_factory.gd
-│   └── event_director.gd
-├── docs/
-│   ├── GAME_DESIGN.md
-│   └── ROADMAP.md
-├── tools/
-│   └── validate_project.py
-└── .github/workflows/
-    └── validate.yml
-```
-
-## Development philosophy
-
-The Last Settlement should not become a collection of disconnected minigames. Citizens, infrastructure, economy, politics, health, exploration, weather and combat will share state through the simulation layer so consequences propagate through the colony.
+<p align="center">
+  <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
+  <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.2.0--dev-c94640?style=for-the-badge">
+  <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
+</p>
 
 ---
 
-**DPN Technology**  
-**Develop. Pioneer. Navigate.**
+```text
+[DPN CIVILIZATION RECOVERY NETWORK]
+
+> Establishing emergency uplink..................... CONNECTED
+> Locating active population centers................ 1 FOUND
+> Verifying command authority....................... ACCEPTED
+> Settlement designation............................ LAST HAVEN // SITE-01
+> Population status................................. CRITICAL
+> Recovery directive................................. ACTIVE
+
+THE LAST SETTLEMENT IS ONLINE.
+```
+
+# THE LAST SETTLEMENT
+
+**The Last Settlement** is an original PC survival, colony, and civilization simulation developed under **DPN Technology**.
+
+You do not simply place buildings and watch numbers rise.
+
+You are responsible for the last known organized human settlement after the collapse of the old world. Every survivor is an individual. Every shortage has consequences. Every system can fail. Every decision becomes part of the settlement's history.
+
+The game begins with a handful of survivors and almost nothing else.
+
+The long-term goal is to rebuild **civilization itself**.
+
+> **Survive the night. Stabilize the settlement. Rebuild the world.**
+
+---
+
+## CURRENT TRANSMISSION // BUILD 0.2.0-dev
+
+The current foundation is already moving beyond a static colony prototype.
+
+### LIVE NOW
+
+- Overhead settlement simulation
+- Clickable survivors
+- Clickable infrastructure
+- Full survivor inspection panel
+- Individual names, ages, jobs, traits, health, morale, loyalty and stress
+- Hunger, thirst and fatigue
+- Needs-driven behavior
+- Eating, drinking and sleeping
+- Day/night work schedules
+- Job-specific work states
+- Farming production
+- Engineering and power support
+- Construction/material output
+- Medical recovery support
+- Scavenging output
+- Pocket inventory foundation
+- Survivor skill matrix
+- Dynamic event feed
+- Settlement resources
+- Building condition and capacity
+- Pause and multi-speed simulation
+- Camera pan and zoom
+- DPN reconstruction-command HUD
+
+### ACTIVE DEVELOPMENT
+
+- Work orders
+- Physical storage inventories
+- Item hauling
+- Skill-based efficiency
+- Injuries and treatment
+- Shift controls
+- Work priorities
+- Save/load
+- Deterministic simulation seeds
+
+---
+
+# THE CORE PROMISE
+
+Most management games treat disasters as isolated modifiers.
+
+**The Last Settlement is being built around cascading consequences.**
+
+```text
+GENERATOR FAILURE
+      │
+      ▼
+POWER LOSS
+      │
+      ├──────────────► WATER PUMPS STOP
+      │                        │
+      │                        ▼
+      │                 CLEAN WATER FALLS
+      │                        │
+      │                        ▼
+      │                  HYGIENE DECLINES
+      │                        │
+      │                        ▼
+      │                 DISEASE INCREASES
+      │
+      └──────────────► FOOD STORAGE FAILS
+                               │
+                               ▼
+                         FOOD SPOILS
+                               │
+                               ▼
+                         RATIONING BEGINS
+                               │
+                               ▼
+                     MORALE / LOYALTY FALL
+                               │
+                               ▼
+                      THEFT / UNREST RISES
+                               │
+                               ▼
+                      GOVERNMENT PRESSURE
+```
+
+No major system should exist in isolation.
+
+That rule drives the entire architecture.
+
+---
+
+# SURVIVORS ARE PEOPLE, NOT WORKER ICONS
+
+Every survivor is intended to become a persistent simulated person with their own history.
+
+Current survivor data already includes:
+
+```text
+SURVIVOR // #007
+────────────────────────────────────────
+NAME            Mara Kane
+AGE             31
+ROLE            Medic
+TRAIT           Protective
+CURRENT ACTION  Work: Medical
+
+HEALTH          91%
+MORALE          74%
+LOYALTY         83%
+HUNGER          22%
+THIRST          18%
+REST            68%
+STRESS          29%
+
+SKILLS
+Medicine        78
+Engineering     22
+Farming         31
+Construction    26
+Security        17
+```
+
+The future layer expands this into:
+
+- Memories
+- Friendships
+- Enemies
+- Romance
+- Marriage
+- Families
+- Children
+- Trauma
+- Fears
+- Personal goals
+- Politics
+- Ideology
+- Reputation
+- Criminal history
+- Leadership ambitions
+- Generational legacy
+
+Eventually, the player should remember **people**, not just statistics.
+
+---
+
+# FROM CAMP TO CIVILIZATION
+
+```text
+5–30 PEOPLE
+SURVIVOR CAMP
+     │
+     ▼
+30–150 PEOPLE
+SETTLEMENT
+     │
+     ▼
+150–500 PEOPLE
+TOWN
+     │
+     ▼
+500–3,000 PEOPLE
+CITY
+     │
+     ▼
+MULTIPLE SETTLEMENTS
+REGIONAL CIVILIZATION
+     │
+     ▼
+THE WORLD BEGINS AGAIN
+```
+
+The simulation is designed to change as scale increases.
+
+At the start, losing one good engineer can cripple the settlement.
+
+Later, you may be managing elections, factories, trade routes, hospitals, electrical grids, regional defense, diplomacy, and multiple cities.
+
+---
+
+# SIMULATION PILLARS
+
+| System | Direction |
+|---|---|
+| **Citizens** | Needs, health, traits, skills, memory, relationships and generations |
+| **Construction** | Rooms, walls, doors, materials, damage and repair |
+| **Utilities** | Power, water, sewage, heat, fuel and communications |
+| **Food** | Farming, cooking, storage, spoilage and nutrition |
+| **Industry** | Workshops, factories, machine tools and supply chains |
+| **Medicine** | Injuries, disease, surgery, medicine and mental health |
+| **Security** | Guards, patrols, crime, investigations and prisons |
+| **Government** | Laws, elections, councils, authority and unrest |
+| **Economy** | Barter, currency, pricing, trade and scarcity |
+| **Exploration** | Expeditions, ruins, loadouts, radio and discovery |
+| **Factions** | Diplomacy, trade, rivalry, espionage and war |
+| **Environment** | Weather, seasons, contamination and disasters |
+| **Technology** | Recovered knowledge, research and lost expertise |
+| **History** | Named events, archives, generations and settlement legacy |
+
+---
+
+# CIVILIZATION MEMORY
+
+A major long-term system is the **Settlement Archive**.
+
+The game will remember what happened.
+
+```text
+SETTLEMENT ARCHIVE
+════════════════════════════════════════
+
+YEAR 0  // THE FOUNDING
+YEAR 2  // THE LONG WINTER
+YEAR 5  // THE NORTH GATE FIRE
+YEAR 8  // FORMATION OF THE ASSEMBLY
+YEAR 12 // THE RIVER WAR
+YEAR 17 // THE RED FEVER
+YEAR 24 // THE SECOND SETTLEMENT FOUNDED
+```
+
+Important events become part of the world.
+
+Citizens who lived through them can remember them.
+
+Children may grow up hearing about events they never personally witnessed.
+
+The player's save becomes its own history.
+
+---
+
+# VISUAL IDENTITY
+
+The game keeps the recognizable DPN DNA:
+
+- Black command interfaces
+- Deep red warning accents
+- Network/terminal language
+- Digital system readouts
+- 1s and 0s
+- Lightning/electrical energy
+- Operational dashboards
+
+But **The Last Settlement has its own branch of that identity**:
+
+- Rusted red and oxidized copper
+- Emergency broadcast styling
+- Damaged industrial panels
+- Reconstruction-era command systems
+- Faded warning labels
+- Broken-grid cartography
+- Old-world terminals being repurposed by survivors
+- Harsh utility lighting instead of polished corporate neon
+
+Think less **clean cyber command center** and more:
+
+> **DPN technology surviving at the end of the world.**
+
+---
+
+# TECHNOLOGY
+
+| Layer | Current Choice |
+|---|---|
+| Engine | Godot 4.x |
+| Language | GDScript |
+| Platform | Windows / Linux PC |
+| Current Rendering | 2D overhead |
+| Planned Rendering | 2.5D isometric or full 3D after simulation maturity |
+| Architecture | Modular simulation systems |
+| Validation | GitHub Actions |
+| Data Direction | Save-versioned, deterministic-friendly simulation |
+
+The simulation architecture comes first.
+
+Visual complexity can increase dramatically later without throwing away the core systems.
+
+---
+
+# RUN THE CURRENT BUILD
+
+### Requirements
+
+- Godot **4.3+**
+- Windows or Linux
+- Git, if cloning from source
+
+### Start
+
+```bash
+git clone https://github.com/DPN-Technology/The-Last-Settlement.git
+cd The-Last-Settlement
+```
+
+Open `project.godot` in Godot and run the project.
+
+No external art pack is required for the current prototype.
+
+---
+
+# COMMAND INPUTS
+
+| Input | Action |
+|---|---|
+| **Left Click** | Inspect survivor or building |
+| **Esc** | Close inspector |
+| **Space** | Pause / resume |
+| **1** | Normal simulation speed |
+| **2** | Fast simulation |
+| **3** | Very fast simulation |
+| **Mouse Wheel** | Zoom |
+| **Middle Mouse Drag** | Pan map |
+
+---
+
+# PROJECT STRUCTURE
+
+```text
+The-Last-Settlement/
+│
+├── assets/
+│   └── readme/
+│       └── the-last-settlement-banner.svg
+│
+├── docs/
+│   ├── GAME_DESIGN.md
+│   └── ROADMAP.md
+│
+├── simulation/
+│   ├── citizen_factory.gd
+│   ├── event_director.gd
+│   └── settlement_simulation.gd
+│
+├── src/
+│   ├── Main.tscn
+│   └── main.gd
+│
+├── tools/
+│   └── validate_project.py
+│
+├── .github/
+│   └── workflows/
+│       └── validate.yml
+│
+├── CHANGELOG.md
+├── project.godot
+└── README.md
+```
+
+---
+
+# DEVELOPMENT ROAD
+
+```text
+0.1  FOUNDATION
+ │
+ ├── 0.2  NEEDS + WORK             ◄── CURRENT
+ │
+ ├── 0.3  CONSTRUCTION
+ │
+ ├── 0.4  UTILITIES
+ │
+ ├── 0.5  RELATIONSHIPS + FAMILIES
+ │
+ ├── 0.6  WORLD + EXPEDITIONS
+ │
+ ├── 0.7  GOVERNMENT + SOCIETY
+ │
+ ├── 0.8  INDUSTRY + ECONOMY
+ │
+ ├── 0.9  FACTIONS + CONFLICT
+ │
+ └── 1.0  CIVILIZATION
+```
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the active development breakdown.
+
+---
+
+# DPN DEVELOPMENT DIRECTIVE
+
+```text
+╔══════════════════════════════════════════════════════════════╗
+║              CIVILIZATION RECOVERY DIRECTIVE               ║
+╠══════════════════════════════════════════════════════════════╣
+║ DO NOT BUILD DISCONNECTED SYSTEMS.                          ║
+║ DO NOT HIDE CONSEQUENCES BEHIND ARBITRARY NUMBERS.          ║
+║ DO NOT TREAT CITIZENS AS DISPOSABLE TOKENS.                 ║
+║                                                              ║
+║ BUILD A WORLD THAT REMEMBERS.                               ║
+║ BUILD SYSTEMS THAT AFFECT OTHER SYSTEMS.                    ║
+║ BUILD PEOPLE THE PLAYER CARES ABOUT.                        ║
+║ BUILD THE NEXT CIVILIZATION.                                ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+<p align="center">
+  <strong>THE LAST SETTLEMENT</strong><br>
+  <strong>DEVELOPED UNDER DPN TECHNOLOGY</strong><br><br>
+  <code>DEVELOP. PIONEER. NAVIGATE.</code><br>
+  <code>SURVIVE. REBUILD. ENDURE.</code>
+</p>
