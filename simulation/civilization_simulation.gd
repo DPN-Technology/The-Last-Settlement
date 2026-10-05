@@ -224,7 +224,9 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 		settlement["morale"] = move_toward(float(settlement["morale"]),clampf(supply_score,20.0,90.0),0.12*sim_hours)
 		settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+0.008*sim_hours)
 		var security_gain := 0.005*sim_hours
-		if civilization_policies["security"] == "Mutual Defense":
+		if civilization_policies["security"] == "Fortress Network":
+			security_gain *= 2.4
+		elif civilization_policies["security"] == "Mutual Defense":
 			security_gain *= 1.6
 		elif civilization_policies["security"] == "Local Defense":
 			security_gain *= 0.8
@@ -279,7 +281,7 @@ func _route_transfer(sim:SettlementSimulation, source_key:String, destination_ke
 		var priority := int(route.get("priority",2))
 		var freight_factor := _freight_factor()
 		var transfer_cap := (6.0 + float(priority)*3.0)*freight_factor
-		var transfer := minf(surplus,need,transfer_cap)
+		var transfer := minf(minf(surplus,need),transfer_cap)
 		if transfer > 0.0:
 			_change_resource(sim,source_key,item,-transfer)
 			_change_resource(sim,destination_key,item,transfer)
