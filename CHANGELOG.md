@@ -1,3 +1,28 @@
+## 0.8.1-dev — Industrial Logistics
+
+### Added
+- Multiple concurrent industrial lines based on workshop count
+- Warehouse capacity calculated from storage modules
+- Warehouse utilization and overflow pressure
+- Storage-overflow material loss
+- Production efficiency penalties from warehouse congestion
+- Tool-kit production efficiency bonus
+- Generator fuel consumption
+- Vehicle fuel consumption
+- Vehicle-assisted hauling multiplier
+- Automatic vehicle refueling from industrial fuel stock
+- Vehicle repair-kit recipe
+- Player vehicle repair action
+- Production bottleneck reporting
+- Trade-pressure feedback into future market pricing
+- Industrial logistics persistence in save schema version 8
+- Industry Command telemetry for warehousing, bottlenecks, fuel burn and vehicle repair
+
+### Changed
+- Generators now depend on industrial fuel availability
+- Hauling efficiency can improve when an operational fueled truck is available
+- Market prices react to both scarcity and recent buying/selling pressure
+
 ## 0.8.0-dev — Industry & Economy
 
 ### Added
