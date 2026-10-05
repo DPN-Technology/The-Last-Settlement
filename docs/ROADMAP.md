@@ -1,7 +1,7 @@
 # Development Roadmap
 
 ## Milestone 0.1 — Living Settlement Foundation
-**Status: started**
+**Status: core complete**
 
 - [x] Godot project bootstrap
 - [x] Overhead world rendering
@@ -11,22 +11,30 @@
 - [x] Time controls
 - [x] Dynamic event feed
 - [x] Building visualization
-- [ ] Click/select citizens
-- [ ] Citizen detail inspector
-- [ ] Click/select buildings
+- [x] Click/select citizens
+- [x] Citizen detail inspector
+- [x] Click/select buildings
 - [ ] Save/load
 - [ ] Deterministic simulation seed
 
 ## Milestone 0.2 — Needs & Work
-- Job schedules
-- Work orders
-- Hunger/thirst/sleep behavior
-- Food preparation and meals
-- Storage inventories
-- Item hauling
-- Skill-based task efficiency
-- Injuries and treatment
-- Basic morale model
+**Status: active**
+
+- [x] Job schedules
+- [x] Needs-driven action selection
+- [x] Hunger/thirst/sleep behavior
+- [x] Basic job-specific production
+- [x] Pocket inventory data model
+- [x] Skill matrix visibility
+- [x] Basic morale/stress consequences
+- [ ] Work-order queue
+- [ ] Food preparation and physical meals
+- [ ] Storage inventories
+- [ ] Item hauling between stockpiles
+- [ ] Skill-based task efficiency
+- [ ] Injuries and treatment workflow
+- [ ] Shift reassignment UI
+- [ ] Priority/forbidden-work controls
 
 ## Milestone 0.3 — Construction
 - Build mode
