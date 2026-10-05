@@ -27,6 +27,9 @@ var mouse_world := Vector2.ZERO
 var utility_overlay := 0
 var world_map_mode := false
 var selected_world_location_id := 0
+var governance_mode := false
+var governance_law_index := 0
+const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
 
 func _ready() -> void:
@@ -78,7 +81,10 @@ func _draw() -> void:
 		_draw_world()
 		_draw_utility_overlay()
 	_draw_hud()
-	_draw_selection_panel()
+	if governance_mode:
+		_draw_governance_panel()
+	else:
+		_draw_selection_panel()
 
 func _world_point(p: Vector2) -> Vector2:
 	return (p + camera_offset) * zoom
@@ -253,6 +259,65 @@ func _world_map_select(screen_pos: Vector2) -> void:
 			nearest_id = int(location["id"])
 	selected_world_location_id = nearest_id
 
+func _draw_governance_panel() -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 500.0
+	var y := 138.0
+	var w := 480.0
+	var h := vp.y - 190.0
+	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
+	draw_rect(Rect2(x,y,w,h),ACCENT,false,2.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"CIVIC COMMAND // GOVERNANCE",HORIZONTAL_ALIGNMENT_LEFT,-1,15,ACCENT)
+
+	var gov := sim.governance_simulation
+	var leader := sim.get_citizen_by_id(gov.leader_id)
+	var leader_name := "VACANT" if leader.is_empty() else leader["name"]
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"GOVERNMENT // %s" % gov.government_type,HORIZONTAL_ALIGNMENT_LEFT,-1,12,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+86),"LEADER // %s" % leader_name,HORIZONTAL_ALIGNMENT_LEFT,-1,13,RUST)
+
+	_draw_meter(Vector2(x+22,y+118),w-44.0,"LEGITIMACY",float(gov.legitimacy))
+	_draw_meter(Vector2(x+22,y+154),w-44.0,"UNREST",100.0-float(gov.unrest))
+	_draw_meter(Vector2(x+22,y+190),w-44.0,"PUBLIC SAFETY",100.0-float(gov.crime_pressure))
+
+	var ry := y + 242.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"LAW REGISTER",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ry += 28.0
+	for i in range(GOVERNANCE_LAWS.size()):
+		var key := GOVERNANCE_LAWS[i]
+		var marker := ">" if i == governance_law_index else " "
+		var col := TEXT if i == governance_law_index else MUTED
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s // %s" % [marker,key.to_upper(),str(gov.laws[key]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
+		ry += 24.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] SELECT LAW   [ENTER] CHANGE",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+
+	ry += 42.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"POLITICAL BLOCS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ry += 26.0
+	for faction_name in gov.factions.keys():
+		var support := int(float(gov.factions[faction_name]["support"]))
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%-18s %02d supporters" % [faction_name,support],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		ry += 21.0
+
+	ry += 8.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"JUSTICE SYSTEM // OPEN %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ry += 24.0
+	for case in gov.active_cases:
+		if case["status"] == "resolved":
+			continue
+		var suspect := sim.get_citizen_by_id(int(case["suspect_id"]))
+		var suspect_name := "UNKNOWN" if suspect.is_empty() else suspect["name"]
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"CASE-%03d %s // %s // %d%%" % [int(case["id"]),case["type"],suspect_name,int(case["progress"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,10,TEXT)
+		ry += 22.0
+		if ry > y+h-35:
+			break
+
+func _open_case_count() -> int:
+	var count := 0
+	for case in sim.governance_simulation.active_cases:
+		if case["status"] != "resolved":
+			count += 1
+	return count
+
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(0, 0, vp.x, 118), Color("#07090cee"))
@@ -286,6 +351,10 @@ func _draw_hud() -> void:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
 	var mode_text := "[M] SETTLEMENT MAP" if world_map_mode else "[M] WORLD MAP"
+	if governance_mode:
+		mode_text = "[V] CLOSE CIVIC COMMAND"
+	else:
+		mode_text += "  [V] CIVIC COMMAND"
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
@@ -480,8 +549,25 @@ func _unhandled_input(event: InputEvent) -> void:
 					var definition := sim.get_build_catalog()[build_catalog_index]
 					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
+			KEY_V:
+				governance_mode = not governance_mode
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
+			KEY_UP:
+				if governance_mode:
+					governance_law_index -= 1
+					if governance_law_index < 0:
+						governance_law_index = GOVERNANCE_LAWS.size()-1
+			KEY_DOWN:
+				if governance_mode:
+					governance_law_index = (governance_law_index+1) % GOVERNANCE_LAWS.size()
+			KEY_ENTER:
+				if governance_mode:
+					sim.governance_simulation.cycle_law(sim,GOVERNANCE_LAWS[governance_law_index])
 			KEY_M:
 				world_map_mode = not world_map_mode
+				governance_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
@@ -502,7 +588,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if world_map_mode:
+			if governance_mode:
+				pass
+			elif world_map_mode:
 				_world_map_select(event.position)
 			elif build_mode:
 				var definition := sim.get_build_catalog()[build_catalog_index]
