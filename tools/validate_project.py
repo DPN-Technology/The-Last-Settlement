@@ -15,6 +15,7 @@ REQUIRED = [
     "simulation/governance_simulation.gd",
     "simulation/economy_simulation.gd",
     "simulation/faction_simulation.gd",
+    "simulation/civilization_simulation.gd",
     "docs/GAME_DESIGN.md",
     "docs/ROADMAP.md",
 ]
