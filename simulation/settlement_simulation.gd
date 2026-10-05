@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 12
+const SAVE_VERSION := 13
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -855,7 +855,10 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"endgame_stage": civilization_simulation.endgame_stage,
 			"milestones": civilization_simulation.milestones,
 			"civilization_policies": civilization_simulation.civilization_policies,
-			"emergency_log": civilization_simulation.emergency_log
+			"emergency_log": civilization_simulation.emergency_log,
+			"colony_projects": civilization_simulation.colony_projects,
+			"next_colony_project_id": civilization_simulation.next_colony_project_id,
+			"recovery_projects": civilization_simulation.recovery_projects
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -951,6 +954,9 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		civilization_simulation.next_colony_event_hour = float(civilization_state.get("next_colony_event_hour", civilization_simulation.next_colony_event_hour))
 		civilization_simulation.civilization_policies = civilization_state.get("civilization_policies", civilization_simulation.civilization_policies)
 		civilization_simulation.emergency_log = civilization_state.get("emergency_log", civilization_simulation.emergency_log)
+		civilization_simulation.colony_projects = civilization_state.get("colony_projects", civilization_simulation.colony_projects)
+		civilization_simulation.next_colony_project_id = int(civilization_state.get("next_colony_project_id", civilization_simulation.next_colony_project_id))
+		civilization_simulation.recovery_projects = civilization_state.get("recovery_projects", civilization_simulation.recovery_projects)
 		civilization_simulation.endgame_stage = str(civilization_state.get("endgame_stage", civilization_simulation.endgame_stage))
 		civilization_simulation.milestones = civilization_state.get("milestones", civilization_simulation.milestones)
 		civilization_simulation.normalize_loaded_state()
