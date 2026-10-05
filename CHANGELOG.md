@@ -1,3 +1,28 @@
+## Windows Portable Preview — Automated EXE Pipeline
+
+### Added
+- Tracked Godot `Windows Desktop` x86_64 export preset
+- Native `TheLastSettlement.exe` release export
+- External `TheLastSettlement.pck` game data package
+- Portable Windows ZIP packaging
+- GitHub Actions artifact upload
+- Official Godot 4.3 engine checksum verification
+- Official Godot 4.3 export-template checksum verification
+- Cached Windows export templates for later builds
+- Pre-export Godot parse/load verification
+- PE32+/Windows executable validation
+- SHA-256 package manifests
+- Windows portable run instructions inside the ZIP
+- Explicit project version `1.0.3-dev`
+
+### Fixed
+- Portable SHA-256 manifest now uses extraction-safe relative filenames
+
+### Security
+- Build actions remain pinned to full commit SHAs
+- Export templates come from the official `godotengine/godot-builds` release
+- PCK remains external to reduce antivirus false positives and preserve future code-signing compatibility
+
 ## 1.0.3-dev — Founding Teams & Federal Governance
 
 ### Added
