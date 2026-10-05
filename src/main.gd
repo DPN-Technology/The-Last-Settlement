@@ -276,7 +276,10 @@ func _draw_economy_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"INDUSTRY + ECONOMY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,-1,15,RUST)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"CREDITS // %.1f" % eco.credits,HORIZONTAL_ALIGNMENT_LEFT,-1,18,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+88),"FUEL %.1f   PARTS %.1f   TOOLS %.1f   COMPONENTS %.1f" % [float(eco.industry_stock["fuel"]),float(eco.industry_stock["parts"]),float(eco.industry_stock["tools"]),float(eco.industry_stock["components"])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
-	var ry := y + 126.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+108),"WAREHOUSE %.0f/%.0f   PRESSURE %.0f%%   PROD EFF %.0f%%" % [eco.warehouse_used,eco.warehouse_capacity,eco.warehouse_pressure*100.0,eco.production_efficiency*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+	if eco.bottleneck_reason != "":
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+126),"BOTTLENECK // %s" % eco.bottleneck_reason,HORIZONTAL_ALIGNMENT_LEFT,-1,10,WARN)
+	var ry := y + 150.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"MARKET INDEX",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ry += 26.0
 	for i in range(ECONOMY_ITEMS.size()):
@@ -298,7 +301,8 @@ func _draw_economy_panel() -> void:
 			break
 	var vehicle := eco.vehicles[0] if not eco.vehicles.is_empty() else {}
 	if not vehicle.is_empty():
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"VEHICLE // %s  COND %.0f%%  FUEL %.0f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-78),"VEHICLE // %s  COND %.0f%%  FUEL %.1f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"REPAIR KITS %.0f   FUEL BURN %.2f/day   [Y] REPAIR VEHICLE" % [eco.repair_kits,eco.fuel_consumed_today],HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
 
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -627,6 +631,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_BACKSPACE:
 				if economy_mode:
 					sim.economy_simulation.trade(sim,ECONOMY_ITEMS[economy_item_index],1.0,false)
+			KEY_Y:
+				if economy_mode:
+					sim.economy_simulation.repair_vehicle(sim,0)
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
