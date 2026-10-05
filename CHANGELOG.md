@@ -1,3 +1,33 @@
+## 0.9.0-dev — Factions, Diplomacy & Conflict
+
+### Added
+- Cedar Union, Riverbend Collective, Iron Pact and Lantern Medics strategic faction states
+- External faction settlements on the regional map
+- Reputation and disposition model
+- Faction strength, wealth, aggression and intelligence
+- Faction Command UI
+- Aid shipments
+- Trade agreements
+- Trade-agreement caravan price discounts
+- Truce offers
+- Hostile espionage and sabotage
+- Raid scheduling and advance warnings
+- Raid ETA and attack-strength tracking
+- Settlement defense calculation from guards, security skill, walls, command condition and morale
+- Raid victory / breach outcomes
+- Supply theft and building damage after breaches
+- Defender injuries
+- Government-unrest consequences from failed defense
+- Friendly/allied support events
+- Conflict history log
+- Faction persistence in save schema version 10
+- Faction module validation in CI
+
+### Fixed
+- Radio relay range now expands only after the relay is actually restored
+- Restored relay range now remains active instead of disappearing after salvage
+- Inhabited trade/faction settlements cannot be incorrectly depleted as salvage expedition sites
+
 ## 0.8.2-dev — Regional Trade & Production Control
 
 ### Added
