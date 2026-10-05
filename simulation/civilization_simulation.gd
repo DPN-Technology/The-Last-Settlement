@@ -125,6 +125,7 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 	sim.economy_simulation.industry_stock["parts"] -= FOUNDING_PARTS_COST
 
 	var key := "COLONY_%02d" % next_settlement_id
+	var original_site_name := str(location["name"])
 	var settlement_name := _settlement_name_for(location)
 	var ids:Array[int] = []
 	for c in colonists:
@@ -164,7 +165,7 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 	location["name"] = settlement_name
 
 	_create_route("LAST_HAVEN",key)
-	record_history(sim,"NEW SETTLEMENT FOUNDED","%s was founded at %s with %d colonists." % [settlement_name,location["name"],ids.size()],"expansion")
+	record_history(sim,"NEW SETTLEMENT FOUNDED","%s was founded at %s with %d colonists." % [settlement_name,original_site_name,ids.size()],"expansion")
 	sim.add_event("SETTLEMENT FOUNDED","%s joined the recovery network." % settlement_name,"good")
 	return true
 
@@ -498,7 +499,6 @@ func _roll_colony_emergency(sim:SettlementSimulation) -> void:
 	emergency_log.push_front({"day":sim.day,"settlement":settlement["name"],"emergency":emergency})
 	if emergency_log.size() > 30:
 		emergency_log.resize(30)
-	record_history(sim,"COLONY EMERGENCY","%s declared %s." % [settlement["name"],emergency],"critical")
 	sim.add_event("COLONY EMERGENCY","%s reports %s." % [settlement["name"],emergency],"critical")
 
 func _update_colony_status(settlement:Dictionary) -> void:
@@ -586,6 +586,24 @@ func record_history(sim:SettlementSimulation,title:String,body:String,kind:Strin
 	})
 	if history_archive.size() > 80:
 		history_archive.resize(80)
+
+
+func normalize_loaded_state() -> void:
+	for key in settlements.keys():
+		var settlement:Dictionary = settlements[key]
+		if not settlement.has("status"):
+			settlement["status"] = "STABLE"
+		if not settlement.has("emergency"):
+			settlement["emergency"] = ""
+		if not settlement.has("specialization"):
+			settlement["specialization"] = "General" if key != "LAST_HAVEN" else "Capital"
+	for route in logistics_routes:
+		if not route.has("priority"):
+			route["priority"] = 2
+		if not route.has("focus"):
+			route["focus"] = "Balanced"
+		if not route.has("active"):
+			route["active"] = true
 
 func get_settlement_list() -> Array[Dictionary]:
 	var result:Array[Dictionary] = []
