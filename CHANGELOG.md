@@ -1,3 +1,35 @@
+## 1.0.3-dev — Founding Teams & Federal Governance
+
+### Added
+- Manual four-survivor founding roster
+- Founding candidate cycling and roster toggle controls
+- Automatic founding selection fallback when no manual roster is configured
+- Survivor deployment from Last Haven to established colonies
+- Colony housing-capacity limits driven by Housing Block count
+- Real settlement representatives selected from resident survivors
+- Federal representation charter
+- Federal contribution/tithe charter
+- Federal rights charter
+- Federal legitimacy
+- Recovery-network cohesion
+- Federal treasury / reserve
+- Weekly federal council sessions
+- Council accord, standard session and deadlock outcomes
+- Low-cohesion federal disputes
+- Charter-driven colony morale reactions
+- Federal emergency-reserve intervention for colony emergencies
+- Federal legitimacy and cohesion contributions to civilization stability
+- Federal governance simulation module validation
+- Save schema version 14 persistence for federal governance and founding roster
+
+### Fixed
+- Last Haven average morale no longer includes survivors assigned to remote colonies
+- Local settlement defense and governance calculations now use Last Haven residents only
+
+### Changed
+- Colony expansion is now population-constrained by permanent housing capacity
+- Civilization stability now includes federal legitimacy and network cohesion instead of relying only on local government metrics
+
 ## 1.0.2-dev — Colony Development & Civilization Recovery Projects
 
 ### Added
