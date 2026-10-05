@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 13
+const SAVE_VERSION := 14
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -60,6 +60,7 @@ var governance_simulation := GovernanceSimulation.new()
 var economy_simulation := EconomySimulation.new()
 var faction_simulation := FactionSimulation.new()
 var civilization_simulation := CivilizationSimulation.new()
+var federal_governance_simulation := FederalGovernanceSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -73,6 +74,7 @@ func _init() -> void:
 	economy_simulation.initialize(self)
 	faction_simulation.initialize(self)
 	civilization_simulation.initialize(self)
+	federal_governance_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
 
 func _create_buildings() -> void:
@@ -284,6 +286,7 @@ func update(delta: float) -> void:
 	governance_simulation.update(self, sim_hours)
 	economy_simulation.update(self, sim_hours)
 	faction_simulation.update(self, sim_hours)
+	federal_governance_simulation.update(self, sim_hours)
 	civilization_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
@@ -858,7 +861,18 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"emergency_log": civilization_simulation.emergency_log,
 			"colony_projects": civilization_simulation.colony_projects,
 			"next_colony_project_id": civilization_simulation.next_colony_project_id,
-			"recovery_projects": civilization_simulation.recovery_projects
+			"recovery_projects": civilization_simulation.recovery_projects,
+			"founding_roster": civilization_simulation.founding_roster
+		},
+		"federal_governance": {
+			"charter": federal_governance_simulation.charter,
+			"representatives": federal_governance_simulation.representatives,
+			"federal_legitimacy": federal_governance_simulation.federal_legitimacy,
+			"network_cohesion": federal_governance_simulation.network_cohesion,
+			"federal_treasury": federal_governance_simulation.federal_treasury,
+			"next_council_hour": federal_governance_simulation.next_council_hour,
+			"council_history": federal_governance_simulation.council_history,
+			"last_dispute_hour": federal_governance_simulation.last_dispute_hour
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -957,9 +971,20 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		civilization_simulation.colony_projects = civilization_state.get("colony_projects", civilization_simulation.colony_projects)
 		civilization_simulation.next_colony_project_id = int(civilization_state.get("next_colony_project_id", civilization_simulation.next_colony_project_id))
 		civilization_simulation.recovery_projects = civilization_state.get("recovery_projects", civilization_simulation.recovery_projects)
+		civilization_simulation.founding_roster = civilization_state.get("founding_roster", civilization_simulation.founding_roster)
 		civilization_simulation.endgame_stage = str(civilization_state.get("endgame_stage", civilization_simulation.endgame_stage))
 		civilization_simulation.milestones = civilization_state.get("milestones", civilization_simulation.milestones)
 		civilization_simulation.normalize_loaded_state()
+	var federal_state: Dictionary = data.get("federal_governance", {})
+	if not federal_state.is_empty():
+		federal_governance_simulation.charter = federal_state.get("charter", federal_governance_simulation.charter)
+		federal_governance_simulation.representatives = federal_state.get("representatives", federal_governance_simulation.representatives)
+		federal_governance_simulation.federal_legitimacy = float(federal_state.get("federal_legitimacy", federal_governance_simulation.federal_legitimacy))
+		federal_governance_simulation.network_cohesion = float(federal_state.get("network_cohesion", federal_governance_simulation.network_cohesion))
+		federal_governance_simulation.federal_treasury = float(federal_state.get("federal_treasury", federal_governance_simulation.federal_treasury))
+		federal_governance_simulation.next_council_hour = float(federal_state.get("next_council_hour", federal_governance_simulation.next_council_hour))
+		federal_governance_simulation.council_history = federal_state.get("council_history", federal_governance_simulation.council_history)
+		federal_governance_simulation.last_dispute_hour = float(federal_state.get("last_dispute_hour", federal_governance_simulation.last_dispute_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
