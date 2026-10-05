@@ -153,7 +153,7 @@ func _create_crime(sim:SettlementSimulation) -> void:
 	if suspects.is_empty():
 		return
 	var suspect := suspects[sim.rng.randi_range(0,suspects.size()-1)]
-	var kind := ["Theft","Assault","Sabotage"][sim.rng.randi_range(0,2)]
+	var kind: String = str(["Theft","Assault","Sabotage"][sim.rng.randi_range(0,2)])
 	var severity := 1 if kind == "Theft" else (2 if kind == "Assault" else 3)
 	active_cases.append({"id":next_case_id,"type":kind,"suspect_id":int(suspect["id"]),"severity":severity,"progress":0.0,"status":"investigating"})
 	next_case_id += 1
@@ -232,7 +232,7 @@ func _run_election(sim:SettlementSimulation) -> void:
 	for i in range(mini(3,candidates.size())):
 		council_ids.append(int(candidates[i]["id"]))
 	legitimacy = minf(100.0,legitimacy+10.0)
-	var old_name := "none" if old_leader.is_empty() else old_leader["name"]
+	var old_name: String = "none" if old_leader.is_empty() else str(old_leader["name"])
 	sim.add_event("ELECTION RESULT","%s replaced %s as settlement leader." % [winner["name"],old_name],"good")
 
 func _eligible_adults(sim:SettlementSimulation) -> Array[Dictionary]:
