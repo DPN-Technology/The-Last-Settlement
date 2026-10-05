@@ -13,7 +13,7 @@ func update(sim: SettlementSimulation, sim_hours: float) -> void:
 		return
 	next_social_tick = sim.total_hours + SOCIAL_TICK_HOURS
 
-	var alive := sim.get_alive_citizens()
+	var alive := sim.get_settlement_citizens()
 	for citizen in alive:
 		citizen["social_need"] = minf(100.0, float(citizen.get("social_need", 20.0)) + 1.6)
 		if int(citizen["age"]) < 3:
