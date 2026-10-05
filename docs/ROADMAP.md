@@ -135,7 +135,7 @@
 - [ ] Protest demands and negotiation
 
 ## Milestone 0.8 — Industry
-**Status: advanced / active**
+**Status: core complete / expanding**
 
 - [x] Recipes
 - [x] Workshop production queue
@@ -149,11 +149,18 @@
 - [x] Warehousing capacity
 - [x] Fuel consumption
 - [x] Vehicle repair
-- [ ] Vehicle manufacturing
-- [ ] Trade caravans / faction markets
+- [x] Vehicle manufacturing
+- [x] Trade caravans / faction markets
 - [x] Trade-pressure market feedback
 - [x] Vehicle-assisted hauling
 - [x] Production bottleneck visualization
+- [x] Player-created production orders
+- [x] Regional faction price modifiers
+- [x] Caravan route risk
+- [x] Regional market save/load persistence
+- [ ] Factory-specific recipe assignment
+- [ ] Freight contracts
+- [ ] Advanced warehouse zoning
 
 ## Milestone 0.9 — Factions & Conflict
 - Dynamic AI settlements
