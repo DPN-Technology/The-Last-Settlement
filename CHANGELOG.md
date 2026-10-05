@@ -1,3 +1,32 @@
+## 1.0.2-dev — Colony Development & Civilization Recovery Projects
+
+### Added
+- Permanent secondary-settlement module construction
+- Housing Block, Farm Complex, Clinic Module, Workshop Bay, Defense Perimeter, Freight Depot and Radio Tower projects
+- Colony-local construction resource costs
+- Colony construction speed driven by assigned survivors' construction / engineering skill
+- Colony module telemetry in Civilization Command
+- Farm-module food production
+- Clinic-module medicine production and disease containment chance
+- Workshop-module materials and machine-parts production
+- Defense-module security growth
+- Freight Depot regional logistics throughput bonuses
+- Radio Tower morale/security benefits
+- Regional Power Grid recovery project
+- Clean Water Network recovery project
+- Medical Corridor recovery project
+- Communications Backbone recovery project
+- Incremental recovery-project resource contributions from real Last Haven stockpiles
+- Permanent recovery-project effects on infrastructure, water efficiency, medicine resilience and logistics
+- Recovery-project completion contribution to civilization recovery score
+- Explicit CIVILIZATION RESTORED endgame state
+- Save schema version 13 persistence for colony projects and civilization recovery projects
+- Civilization Command controls for colony module queues and recovery-project funding
+
+### Changed
+- Civilization restoration now requires all four regional recovery megaprojects, at least three settlements, 90+ recovery score and 75+ civilization stability
+- Colony development now depends on delivered local resources rather than abstract infrastructure growth alone
+
 ## 1.0.1-dev — Civilization Operations & Engine-Verified CI
 
 ### Added
