@@ -23,21 +23,21 @@
     </Directory>
 
     <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="GameExeComponent" Guid="*">
+      <Component Id="GameExeComponent" Guid="8C1A945E-14E3-4A26-8EAF-AD1D3D8E6A11">
         <File Id="GameExe" Source="$(var.PayloadDir)\TheLastSettlement.exe" />
         <RegistryValue Root="HKCU" Key="Software\DPN Technology\The Last Settlement\Components" Name="GameExe" Type="integer" Value="1" KeyPath="yes" />
         <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
         <RemoveFolder Id="RemoveDpnRootFolder" Directory="DPNROOT" On="uninstall" />
       </Component>
-      <Component Id="GamePckComponent" Guid="*">
+      <Component Id="GamePckComponent" Guid="19E8F5AB-9F6D-4431-8A5C-5134EC8E2B22">
         <File Id="GamePck" Source="$(var.PayloadDir)\TheLastSettlement.pck" />
         <RegistryValue Root="HKCU" Key="Software\DPN Technology\The Last Settlement\Components" Name="GamePck" Type="integer" Value="1" KeyPath="yes" />
       </Component>
-      <Component Id="ReadmeComponent" Guid="*">
+      <Component Id="ReadmeComponent" Guid="3E5F4A62-7B89-4C4F-A164-9A15B2D57C33">
         <File Id="WindowsReadme" Source="$(var.PayloadDir)\README-WINDOWS.txt" />
         <RegistryValue Root="HKCU" Key="Software\DPN Technology\The Last Settlement\Components" Name="Readme" Type="integer" Value="1" KeyPath="yes" />
       </Component>
-      <Component Id="ShortcutComponent" Guid="*">
+      <Component Id="ShortcutComponent" Guid="A76D8C4B-5E20-42E7-9E9D-6C27F3A84D44">
         <Shortcut Id="StartMenuShortcut"
                   Directory="PROGRAMMENUFOLDER"
                   Name="The Last Settlement"
