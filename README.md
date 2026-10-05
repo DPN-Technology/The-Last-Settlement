@@ -10,8 +10,14 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.9.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
+</p>
+
+<p align="center">
+  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml"><img alt="DPN Settlement CI Gate" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml"><img alt="DPN Settlement CodeQL" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml"><img alt="DPN Settlement Supply Chain" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml/badge.svg?branch=main"></a>
 </p>
 
 ---
@@ -20,10 +26,10 @@
 [DPN CIVILIZATION RECOVERY NETWORK]
 
 > Establishing emergency uplink..................... CONNECTED
-> Locating active population centers................ 1 FOUND
+> Locating active population centers................ NETWORK CAPABLE
 > Verifying command authority....................... ACCEPTED
 > Settlement designation............................ LAST HAVEN // SITE-01
-> Population status................................. CRITICAL
+> Recovery network status........................... EXPANDING
 > Recovery directive................................. ACTIVE
 
 THE LAST SETTLEMENT IS ONLINE.
@@ -45,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.9.0-dev
+## CURRENT TRANSMISSION // BUILD 1.0.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -288,17 +294,57 @@ The current foundation is already moving beyond a static colony prototype.
 - Faction state persisted in save version 10
 - Radio relay progression fixed so restoration permanently extends range
 
+### CIVILIZATION NETWORK // LIVE
+
+- Civilization-wide recovery layer
+- Player-founded secondary settlements
+- Four-survivor founding teams drawn from the live Last Haven population
+- Colonists retain their actual survivor identities
+- Secondary-settlement specialization based on founding site
+- Agriculture, medical, industrial, logistics and general colonies
+- Independent colony food, water, medicine, materials, fuel and parts stores
+- Secondary-settlement morale, infrastructure and security
+- Automatic permanent logistics routes
+- Daily regional surplus transfers
+- Civilization recovery score
+- Civilization stability score
+- Recovery phases: Survive → Stabilize → Expand → Regional Power → Rebuild Civilization
+- Civilization milestones
+- Historical archive
+- Critical incidents automatically written into civilization history
+- Multi-settlement world-map nodes
+- Civilization Command interface
+- Civilization state persisted in save version 11
+- Founding sites created from secured and cleared ruins
+
+### SYSTEM STATUS // BUILD 1.0.0-dev
+
+| Layer | Status | Live Integration |
+|---|---|---|
+| Survivor AI + Needs | **ONLINE** | Hunger, thirst, fatigue, work, injuries, treatment |
+| Construction | **ONLINE** | Blueprints, builders, materials, repairs, demolition |
+| Utilities | **ONLINE** | Power, fuel, water, purification, sewage, sanitation |
+| Relationships | **ONLINE** | Memories, partners, families, births, aging |
+| World / Expeditions | **ONLINE** | Fog of war, ruins, risk, casualties, salvage |
+| Government | **ONLINE** | Laws, elections, crime, courts, legitimacy, unrest |
+| Industry / Economy | **ONLINE** | Production, warehouses, vehicles, markets, caravans |
+| Factions / Conflict | **ONLINE** | Reputation, diplomacy, espionage, raids, defense |
+| Civilization Network | **ONLINE — EXPANDING** | Multiple settlements, routes, archive, recovery score |
+| Large-Scale Optimization | **IN DEVELOPMENT** | Performance profiling and population scaling |
+
 ### ACTIVE DEVELOPMENT
 
+- Detailed secondary-settlement management
+- Founding-team selection UI
+- Two-way configurable freight routes
+- Colony emergencies and failure cascades
+- Civilization-wide government
 - Full faction population/economy simulation
 - Offensive player operations
 - Formal war declarations and peace treaties
-- Prisoner exchange
 - Defensive emplacements and automated defenses
-- Espionage missions initiated by the player
-- Freight contracts
-- Factory-specific recipe assignment
-- Advanced warehouse zoning
+- Endgame recovery objectives and victory paths
+- Performance profiling for large populations
 
 ---
 
@@ -380,26 +426,13 @@ Construction    26
 Security        17
 ```
 
-The future layer expands this into:
+The current social layer already tracks memories, relationships, partnerships, families, children, aging, political values, faction affiliation and criminal history foundations.
 
-- Memories
-- Friendships
-- Enemies
-- Romance
-- Marriage
-- Families
-- Children
-- Trauma
-- Fears
-- Personal goals
-- Politics
-- Ideology
-- Reputation
-- Criminal history
-- Leadership ambitions
-- Generational legacy
+The remaining depth will push further into trauma, fears, personal goals, rivalries, leadership ambitions, education and multi-generation legacy.
 
-Eventually, the player should remember **people**, not just statistics.
+The design target remains simple:
+
+> The player should remember **people**, not just statistics.
 
 ---
 
@@ -460,9 +493,9 @@ Later, you may be managing elections, factories, trade routes, hospitals, electr
 
 # CIVILIZATION MEMORY
 
-A major long-term system is the **Settlement Archive**.
+The **Civilization Archive is now live** and grows with the save.
 
-The game will remember what happened.
+Critical incidents and recovery milestones are recorded as part of the civilization timeline.
 
 ```text
 SETTLEMENT ARCHIVE
@@ -516,6 +549,23 @@ Think less **clean cyber command center** and more:
 
 ---
 
+# REPOSITORY SECURITY + QUALITY GATES
+
+The repository is built to stay green while the simulation grows.
+
+| Gate | Purpose |
+|---|---|
+| **DPN Settlement CI Gate** | Repository structure, project validation and required-module checks |
+| **DPN Settlement CodeQL** | Static security analysis |
+| **DPN Settlement Supply Chain** | Dependency / workflow supply-chain checks |
+| **Code Quality** | Repository quality and maintainability checks |
+
+The development rule is the same as the simulation rule:
+
+> **Do not stack new systems on top of known failures. Fix red gates first.**
+
+---
+
 # TECHNOLOGY
 
 | Layer | Current Choice |
@@ -526,7 +576,9 @@ Think less **clean cyber command center** and more:
 | Current Rendering | 2D overhead |
 | Planned Rendering | 2.5D isometric or full 3D after simulation maturity |
 | Architecture | Modular simulation systems |
-| Validation | GitHub Actions |
+| Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
+| Validation | GitHub Actions + CodeQL + supply-chain gates |
+| Save Schema | Version 11 |
 | Data Direction | Save-versioned, deterministic-friendly simulation |
 
 The simulation architecture comes first.
@@ -594,6 +646,9 @@ No external art pack is required for the current prototype.
 | **A** | Send aid to selected faction |
 | **D** | Propose trade agreement |
 | **Z** | Offer truce to hostile faction |
+| **J** | Toggle Civilization Command |
+| **Left / Right** | Cycle settlements in Civilization Command |
+| **I** | Found a settlement at a selected secured world-map site |
 
 ---
 
@@ -618,6 +673,7 @@ The-Last-Settlement/
 │   ├── governance_simulation.gd
 │   ├── economy_simulation.gd
 │   ├── faction_simulation.gd
+│   ├── civilization_simulation.gd
 │   └── settlement_simulation.gd
 │
 ├── src/
@@ -629,7 +685,9 @@ The-Last-Settlement/
 │
 ├── .github/
 │   └── workflows/
-│       └── validate.yml
+│       ├── validate.yml
+│       ├── codeql.yml
+│       └── supply-chain.yml
 │
 ├── CHANGELOG.md
 ├── project.godot
@@ -657,9 +715,9 @@ The-Last-Settlement/
  │
  ├── 0.8  INDUSTRY + ECONOMY
  │
- ├── 0.9  FACTIONS + CONFLICT    ◄── CURRENT
+ ├── 0.9  FACTIONS + CONFLICT
  │
- └── 1.0  CIVILIZATION
+ └── 1.0  CIVILIZATION           ◄── CURRENT
 ```
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the active development breakdown.
