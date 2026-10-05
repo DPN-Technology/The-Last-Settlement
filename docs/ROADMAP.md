@@ -113,14 +113,26 @@
 - [ ] Procedural regional generation
 
 ## Milestone 0.7 — Society
-- Laws
-- Government types
-- Elections
-- Political blocs
-- Crime
-- Police
-- Courts
-- Protest and unrest
+**Status: core complete / expanding**
+
+- [x] Laws
+- [x] Government foundation
+- [x] Elections
+- [x] Political blocs
+- [x] Crime
+- [x] Police / guard investigations
+- [x] Courts
+- [x] Incarceration
+- [x] Protest and unrest
+- [x] Government legitimacy
+- [x] Policy-driven citizen loyalty
+- [x] Governance save/load persistence
+- [ ] Detailed council voting
+- [ ] Corruption / bribery
+- [ ] Evidence and warrants
+- [ ] Prison building capacity
+- [ ] Coup / revolt resolution
+- [ ] Protest demands and negotiation
 
 ## Milestone 0.8 — Industry
 - Recipes
