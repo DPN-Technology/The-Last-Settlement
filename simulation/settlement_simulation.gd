@@ -972,6 +972,8 @@ func _restore_vector_dicts(items: Array) -> Array[Dictionary]:
 	return output
 
 func add_event(title: String, body: String, severity: String) -> void:
+	if severity == "critical" and civilization_simulation != null:
+		civilization_simulation.record_history(self,title,body,"critical")
 	events.push_front({
 		"title": title,
 		"body": body,
