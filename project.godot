@@ -7,6 +7,8 @@ config_version=5
 [application]
 
 config/name="The Last Settlement"
+config/version="1.0.3-dev"
+config/description="A DPN Technology post-collapse civilization recovery simulation."
 run/main_scene="res://src/Main.tscn"
 config/features=PackedStringArray("4.3")
 
