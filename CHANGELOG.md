@@ -1,3 +1,47 @@
+## 1.0.5-dev — Secure In-Game Update Command
+
+### Added
+- Dedicated `UpdateManager` Godot module
+- Automatic Windows stable-release checks
+- DPN Update Command UI
+- F10 update check / panel toggle
+- F11 verified MSI download
+- F12 save + explicit Windows installer handoff
+- Release-manifest schema validation
+- Product and Windows-platform validation
+- Semantic newer-version comparison
+- Save-schema downgrade protection
+- Authorized DPN GitHub release-origin enforcement
+- Installer size validation
+- Streaming SHA-256 calculation for downloaded installers
+- Post-download SHA-256 verification
+- Immediate pre-launch SHA-256 re-verification
+- User-data update staging directory
+- Automatic removal of failed or hash-mismatched installers
+- Project-level stable update-channel configuration
+- Updater security requirements in `security_audit.py`
+- Updater source and update-channel contract required by project validation
+- Windows package/application version advanced to 1.0.5-dev / 1.0.5
+
+### Security
+- Update checks use HTTPS only
+- Manifest URL is locked to the DPN Technology GitHub release channel
+- Installer URL must remain under the DPN repository release origin
+- Updater does not use `OS.execute` or `OS.create_process`
+- Installer launch requires explicit F12 approval
+- Current settlement is saved before installer handoff
+- Save-schema downgrade targets are rejected
+- SHA-256 is checked twice before installer handoff
+- Updater security checks now execute before the security-audit PASS verdict
+
+### Verified
+- Godot 4.3 parser successfully loads the updater-enabled project
+- Repository security audit passes with updater controls enforced
+- 1.0.5-dev Windows portable EXE export succeeds
+- 1.0.5-dev MSI installer succeeds
+- Release metadata generation succeeds
+- Portable and MSI artifacts carry verified SHA-256 metadata
+
 ## 1.0.4-dev — Windows Release & Update Channel
 
 ### Added
