@@ -34,11 +34,15 @@ var faction_index := 0
 var civilization_mode := false
 var civilization_settlement_index := 0
 var civilization_route_index := 0
+var civilization_colony_project_index := 0
+var civilization_recovery_project_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
 const ECONOMY_RECIPES := ["Machine Parts","Components","Tool Kit","Fuel Blend","Vehicle Repair Kit","Utility Truck"]
 const ECONOMY_ITEMS := ["food","water","medicine","materials","scrap","fuel","parts"]
+const CIV_COLONY_PROJECTS := ["Housing Block","Farm Complex","Clinic Module","Workshop Bay","Defense Perimeter","Freight Depot","Radio Tower"]
+const CIV_RECOVERY_PROJECTS := ["Regional Power Grid","Clean Water Network","Medical Corridor","Communications Backbone"]
 var governance_law_index := 0
 const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
@@ -362,71 +366,107 @@ func _draw_economy_panel() -> void:
 
 func _draw_civilization_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 560.0
-	var y := 130.0
-	var w := 540.0
-	var h := vp.y - 178.0
+	var x := maxf(18.0,vp.x-720.0)
+	var y := 112.0
+	var w := minf(700.0,vp.x-36.0)
+	var h := vp.y-150.0
 	var civ := sim.civilization_simulation
-	var settlements := civ.get_settlement_list()
+	var settlements: Array[Dictionary] = civ.get_settlement_list()
 	if civilization_settlement_index >= settlements.size():
 		civilization_settlement_index = 0
 	if civilization_route_index >= civ.logistics_routes.size():
 		civilization_route_index = 0
+	if civilization_colony_project_index >= CIV_COLONY_PROJECTS.size():
+		civilization_colony_project_index = 0
+	if civilization_recovery_project_index >= CIV_RECOVERY_PROJECTS.size():
+		civilization_recovery_project_index = 0
 
 	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
 	draw_rect(Rect2(x,y,w,h),GOOD,false,2.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+28),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+54),"PHASE // %s" % civ.endgame_stage,HORIZONTAL_ALIGNMENT_LEFT,-1,13,TEXT)
-	_draw_meter(Vector2(x+22,y+82),w-44.0,"RECOVERY",civ.recovery_score)
-	_draw_meter(Vector2(x+22,y+116),w-44.0,"STABILITY",civ.civilization_stability)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+26),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+50),"PHASE // %s   NODES %d   ROUTES %d" % [civ.endgame_stage,settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
+	_draw_meter(Vector2(x+20,y+72),310.0,"RECOVERY",civ.recovery_score)
+	_draw_meter(Vector2(x+360,y+72),310.0,"STABILITY",civ.civilization_stability)
 
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+160),"POLICY // AUTONOMY %s // FREIGHT %s // SECURITY %s" % [civ.civilization_policies["autonomy"],civ.civilization_policies["freight"],civ.civilization_policies["security"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+178),"[4] AUTONOMY  [5] FREIGHT  [6] SECURITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+112),"NETWORK POLICY // A:%s  F:%s  S:%s" % [civ.civilization_policies["autonomy"],civ.civilization_policies["freight"],civ.civilization_policies["security"]],HORIZONTAL_ALIGNMENT_LEFT,w-40,9,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+129),"[4] AUTONOMY  [5] FREIGHT  [6] SECURITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
 
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+210),"SETTLEMENT NETWORK // %d NODES // %d ROUTES" % [settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	var recovery_name: String = CIV_RECOVERY_PROJECTS[civilization_recovery_project_index]
+	var recovery_progress := civ.get_recovery_project_progress(recovery_name)
+	var recovery_done := civ._recovery_project_complete(recovery_name)
+	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+112),"RECOVERY PROJECT // %s" % recovery_name.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,310,9,GOOD if recovery_done else ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+129),"PROGRESS %.0f%% // [7] NEXT  [8] CONTRIBUTE" % recovery_progress,HORIZONTAL_ALIGNMENT_LEFT,310,9,RUST)
 
+	var split_x := x+344.0
+	var left_x := x+20.0
+	var right_x := split_x+16.0
+	var body_y := y+160.0
+	draw_line(Vector2(split_x,body_y),Vector2(split_x,y+h-18),PANEL_EDGE,1.0)
+
+	draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y),"COLONY OPERATIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
 	if not settlements.is_empty():
-		var s:Dictionary = settlements[civilization_settlement_index]
-		var status := str(s.get("status","STABLE"))
+		var s: Dictionary = settlements[civilization_settlement_index]
+		var status: String = str(s.get("status","STABLE"))
 		var status_color := BAD if status == "EMERGENCY" else (WARN if status in ["DEGRADED","RECOVERING"] else GOOD)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+240),"[%d/%d] %s" % [civilization_settlement_index+1,settlements.size(),s["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,19,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+263),"STATUS // %s   SPECIALIZATION // %s" % [status,str(s["specialization"]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,10,status_color)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+26),"[%d/%d] %s" % [civilization_settlement_index+1,settlements.size(),s["name"]],HORIZONTAL_ALIGNMENT_LEFT,305,16,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+48),"%s // %s" % [status,str(s["specialization"]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,305,9,status_color)
 		if str(s.get("emergency","")) != "":
-			draw_string(ThemeDB.fallback_font,Vector2(x+22,y+282),"EMERGENCY // %s" % str(s["emergency"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,BAD)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+302),"POP %d   INFRA %.0f%%   MORALE %.0f%%   SECURITY %.0f" % [int(s["population"]),float(s["infrastructure"]),float(s["morale"]),float(s["security"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
-		var res:Dictionary = s["resources"]
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+322),"FOOD %.0f WATER %.0f MED %.0f MAT %.0f FUEL %.0f PARTS %.0f" % [float(res["food"]),float(res["water"]),float(res["medicine"]),float(res["materials"]),float(res["fuel"]),float(res["parts"])],HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+342),"[LEFT/RIGHT] SETTLEMENT  [E] REFOCUS  [A] EMERGENCY AID",HORIZONTAL_ALIGNMENT_LEFT,-1,9,GOOD)
+			draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+65),"EMERGENCY // %s" % str(s["emergency"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,305,9,BAD)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+84),"POP %d  INFRA %.0f  MORALE %.0f  SEC %.0f" % [int(s["population"]),float(s["infrastructure"]),float(s["morale"]),float(s["security"])],HORIZONTAL_ALIGNMENT_LEFT,305,9,MUTED)
+		var res: Dictionary = s["resources"]
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+102),"F %.0f W %.0f MED %.0f MAT %.0f FUEL %.0f PART %.0f" % [float(res["food"]),float(res["water"]),float(res["medicine"]),float(res["materials"]),float(res["fuel"]),float(res["parts"])],HORIZONTAL_ALIGNMENT_LEFT,305,8,RUST)
+		var modules: Dictionary = s.get("modules",{})
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+120),"MODULES H%d F%d C%d W%d D%d FD%d R%d" % [int(modules.get("housing",0)),int(modules.get("farm",0)),int(modules.get("clinic",0)),int(modules.get("workshop",0)),int(modules.get("defense",0)),int(modules.get("freight_depot",0)),int(modules.get("radio",0))],HORIZONTAL_ALIGNMENT_LEFT,305,8,MUTED)
 
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+376),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	var ry := y + 398.0
+		var selected_project: String = CIV_COLONY_PROJECTS[civilization_colony_project_index]
+		var active_project: Dictionary = civ.get_active_colony_project(str(s["id"]))
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+148),"BUILD // %s" % selected_project.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,305,9,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+165),"[N] NEXT MODULE  [C] QUEUE",HORIZONTAL_ALIGNMENT_LEFT,305,9,RUST)
+		if not active_project.is_empty():
+			var project_progress := 100.0*float(active_project["progress"])/maxf(1.0,float(active_project["work"]))
+			draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+184),"ACTIVE // %s // %.0f%%" % [active_project["project"],project_progress],HORIZONTAL_ALIGNMENT_LEFT,305,9,WARN)
+
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+214),"[←/→] SETTLEMENT  [E] REFOCUS",HORIZONTAL_ALIGNMENT_LEFT,305,9,GOOD)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+232),"[A] EMERGENCY AID",HORIZONTAL_ALIGNMENT_LEFT,305,9,GOOD)
+
+	draw_string(ThemeDB.fallback_font,Vector2(right_x,body_y),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	var ry := body_y+24.0
 	if civ.logistics_routes.is_empty():
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"No regional routes. Found a second settlement.",HORIZONTAL_ALIGNMENT_LEFT,-1,9,MUTED)
-		ry += 22.0
+		draw_string(ThemeDB.fallback_font,Vector2(right_x,ry),"No routes. Found a second settlement.",HORIZONTAL_ALIGNMENT_LEFT,320,9,MUTED)
+		ry += 20.0
 	else:
 		for i in range(civ.logistics_routes.size()):
-			var route:Dictionary = civ.logistics_routes[i]
-			var source:Dictionary = civ.settlements[str(route["source"])]
-			var destination:Dictionary = civ.settlements[str(route["destination"])]
-			var marker := ">" if i == civilization_route_index else " "
-			var route_status := "ON" if bool(route.get("active",true)) else "OFF"
+			var route: Dictionary = civ.logistics_routes[i]
+			var source: Dictionary = civ.settlements[str(route["source"])]
+			var destination: Dictionary = civ.settlements[str(route["destination"])]
+			var marker: String = ">" if i == civilization_route_index else " "
+			var route_status: String = "ON" if bool(route.get("active",true)) else "OFF"
 			var route_color := TEXT if i == civilization_route_index else MUTED
-			draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s R-%02d %s↔%s // %s P%d %s // %.0f" % [marker,int(route["id"]),source["name"],destination["name"],route_status,int(route.get("priority",2)),str(route.get("focus","Balanced")).to_upper(),float(route["last_transfer"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,8,route_color)
-			ry += 19.0
-			if ry > y+h-170:
+			draw_string(ThemeDB.fallback_font,Vector2(right_x,ry),"%sR%02d %s↔%s // %s P%d %s" % [marker,int(route["id"]),source["name"],destination["name"],route_status,int(route.get("priority",2)),str(route.get("focus","Balanced")).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,320,8,route_color)
+			ry += 17.0
+			if ry > body_y+110:
 				break
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+2),"[UP/DOWN] ROUTE  [R] ON/OFF  [F] FOCUS  [P] PRIORITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+		draw_string(ThemeDB.fallback_font,Vector2(right_x,ry+2),"[↑/↓] ROUTE [R] ON/OFF [F] FOCUS [P] PRIORITY",HORIZONTAL_ALIGNMENT_LEFT,320,8,RUST)
 		ry += 24.0
 
-	var archive_y := maxf(ry+8.0,y+h-136.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"CIVILIZATION ARCHIVE",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
-	archive_y += 21.0
+	draw_string(ThemeDB.fallback_font,Vector2(right_x,ry+4),"RECOVERY PROGRAM",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	ry += 25.0
+	for project_name_variant in CIV_RECOVERY_PROJECTS:
+		var project_name: String = str(project_name_variant)
+		var progress := civ.get_recovery_project_progress(project_name)
+		var done := civ._recovery_project_complete(project_name)
+		draw_string(ThemeDB.fallback_font,Vector2(right_x,ry),"%s // %.0f%%" % [project_name,progress],HORIZONTAL_ALIGNMENT_LEFT,320,8,GOOD if done else MUTED)
+		ry += 16.0
+
+	var archive_y := maxf(ry+10.0,body_y+230.0)
+	draw_string(ThemeDB.fallback_font,Vector2(right_x,archive_y),"CIVILIZATION ARCHIVE",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	archive_y += 20.0
 	var shown := 0
 	for entry in civ.history_archive:
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"D%03d // %s" % [int(entry["day"]),entry["title"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,8,TEXT)
-		archive_y += 16.0
+		draw_string(ThemeDB.fallback_font,Vector2(right_x,archive_y),"D%03d // %s" % [int(entry["day"]),entry["title"]],HORIZONTAL_ALIGNMENT_LEFT,320,8,TEXT)
+		archive_y += 15.0
 		shown += 1
-		if shown >= 5 or archive_y > y+h-12:
+		if shown >= 6 or archive_y > y+h-12:
 			break
 
 func _draw_faction_panel() -> void:
@@ -897,10 +937,17 @@ func _unhandled_input(event: InputEvent) -> void:
 					if not sources.is_empty():
 						economy_source_index = (economy_source_index+1) % sources.size()
 			KEY_N:
-				if economy_mode:
+				if civilization_mode:
+					civilization_colony_project_index = (civilization_colony_project_index+1) % CIV_COLONY_PROJECTS.size()
+				elif economy_mode:
 					economy_recipe_index = (economy_recipe_index+1) % ECONOMY_RECIPES.size()
 			KEY_C:
-				if economy_mode:
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						var settlement: Dictionary = settlements[civilization_settlement_index]
+						sim.civilization_simulation.queue_colony_project(sim,str(settlement["id"]),CIV_COLONY_PROJECTS[civilization_colony_project_index])
+				elif economy_mode:
 					sim.economy_simulation.queue_recipe(sim,ECONOMY_RECIPES[economy_recipe_index],1)
 			KEY_ENTER:
 				if economy_mode:
@@ -922,6 +969,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_6:
 				if civilization_mode:
 					sim.civilization_simulation.cycle_policy(sim,"security")
+			KEY_7:
+				if civilization_mode:
+					civilization_recovery_project_index = (civilization_recovery_project_index+1) % CIV_RECOVERY_PROJECTS.size()
+			KEY_8:
+				if civilization_mode:
+					sim.civilization_simulation.contribute_recovery_project(sim,CIV_RECOVERY_PROJECTS[civilization_recovery_project_index])
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
