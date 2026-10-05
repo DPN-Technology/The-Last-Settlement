@@ -30,6 +30,8 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"thirst": rng.randf_range(0.0, 12.0),
 		"fatigue": rng.randf_range(0.0, 20.0),
 		"stress": rng.randf_range(5.0, 32.0),
+		"current_action": "Idle",
+		"shift": "DAY",
 		"skills": {
 			"construction": rng.randi_range(10, 80),
 			"medicine": rng.randi_range(5, 80),
@@ -37,7 +39,29 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 			"engineering": rng.randi_range(5, 80),
 			"security": rng.randi_range(5, 80)
 		},
+		"inventory": {
+			"food_ration": 0,
+			"water_ration": 0,
+			"medicine": 0,
+			"scrap": 0
+		},
 		"alive": true,
 		"position": Vector2(rng.randf_range(360, 1120), rng.randf_range(210, 700)),
-		"target": Vector2.ZERO
+		"target": Vector2.ZERO,
+		"target_building": ""
 	}
+
+static func best_skill_for_job(citizen: Dictionary) -> String:
+	match citizen["job"]:
+		"Farmer":
+			return "farming"
+		"Engineer":
+			return "engineering"
+		"Builder":
+			return "construction"
+		"Medic":
+			return "medicine"
+		"Guard":
+			return "security"
+		_:
+			return "construction"
