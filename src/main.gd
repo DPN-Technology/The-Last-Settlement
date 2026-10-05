@@ -22,6 +22,7 @@ var selected_citizen: Dictionary = {}
 var selected_building: Dictionary = {}
 var build_mode := false
 var build_catalog_index := 0
+var build_rotated := false
 var mouse_world := Vector2.ZERO
 
 func _ready() -> void:
@@ -98,9 +99,12 @@ func _draw_world() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		var ghost_pos := _world_point(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0))
-		var ghost_size: Vector2 = definition["size"] * zoom
+		var ghost_world_size: Vector2 = definition["size"]
+		if build_rotated and (definition["type"] == "wall" or definition["type"] == "door"):
+			ghost_world_size = Vector2(ghost_world_size.y, ghost_world_size.x)
+		var ghost_size: Vector2 = ghost_world_size * zoom
 		var ghost_rect := Rect2(ghost_pos - ghost_size/2.0, ghost_size)
-		var valid := sim.can_place_blueprint(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0), definition["size"])
+		var valid := sim.can_place_blueprint(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0), ghost_world_size)
 		draw_rect(ghost_rect, Color(0.25,0.65,0.35,0.18) if valid else Color(0.8,0.15,0.15,0.18), true)
 		draw_rect(ghost_rect, GOOD if valid else BAD, false, 2.0)
 
@@ -147,7 +151,7 @@ func _draw_hud() -> void:
 	var build_text := ""
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
-		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE" % [definition["name"], float(definition["cost"])]
+		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[B] BUILD  [LMB] PLACE/INSPECT  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
@@ -307,6 +311,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_E:
 				if build_mode:
 					build_catalog_index = (build_catalog_index + 1) % sim.get_build_catalog().size()
+					build_rotated = false
+			KEY_F:
+				if build_mode:
+					var definition := sim.get_build_catalog()[build_catalog_index]
+					if definition["type"] == "wall" or definition["type"] == "door":
+						build_rotated = not build_rotated
 			KEY_R:
 				if not selected_building.is_empty():
 					sim.queue_repair(selected_building)
@@ -321,7 +331,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if build_mode:
 				var definition := sim.get_build_catalog()[build_catalog_index]
-				sim.place_blueprint(definition["type"], _screen_to_world(event.position))
+				sim.place_blueprint(definition["type"], _screen_to_world(event.position), build_rotated)
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
