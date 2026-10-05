@@ -54,6 +54,7 @@ var civilization_policies := {
 	"security":"Mutual Defense"
 }
 var emergency_log: Array[Dictionary] = []
+var founding_roster: Array[int] = []
 var colony_projects: Array[Dictionary] = []
 var next_colony_project_id := 1
 var recovery_projects := {
@@ -91,6 +92,7 @@ func initialize(sim: SettlementSimulation) -> void:
 		record_history(sim,"THE FOUNDING","Last Haven established the first organized recovery settlement.","foundation")
 
 func update(sim: SettlementSimulation, sim_hours: float) -> void:
+	_normalize_founding_roster(sim)
 	_sync_capital(sim)
 	_update_secondary_settlements(sim,sim_hours)
 	_update_recovery_score(sim)
@@ -151,7 +153,17 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 		sim.add_event("FOUNDING BLOCKED","4 machine parts are required to establish a settlement.","warning")
 		return false
 
-	var colonists := _select_colonists(sim)
+	var colonists: Array[Dictionary] = []
+	if founding_roster.is_empty():
+		colonists = _select_colonists(sim)
+	elif founding_roster.size() == FOUNDING_POPULATION:
+		for citizen_id in founding_roster:
+			var citizen := sim.get_citizen_by_id(int(citizen_id))
+			if not citizen.is_empty() and _eligible_colonist(citizen):
+				colonists.append(citizen)
+	else:
+		sim.add_event("FOUNDING BLOCKED","Manual founding roster must contain exactly four survivors.","warning")
+		return false
 	if colonists.size() < FOUNDING_POPULATION:
 		sim.add_event("FOUNDING BLOCKED","Four available adult colonists are required.","warning")
 		return false
@@ -203,6 +215,7 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 	location["name"] = settlement_name
 
 	_create_route("LAST_HAVEN",key)
+	founding_roster.clear()
 	record_history(sim,"NEW SETTLEMENT FOUNDED","%s was founded at %s with %d colonists." % [settlement_name,original_site_name,ids.size()],"expansion")
 	sim.add_event("SETTLEMENT FOUNDED","%s joined the recovery network." % settlement_name,"good")
 	return true
@@ -210,9 +223,7 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 func _select_colonists(sim:SettlementSimulation) -> Array[Dictionary]:
 	var candidates:Array[Dictionary] = []
 	for c in sim.get_settlement_citizens():
-		if int(c["age"]) < 18 or c.get("incarcerated",false) or c.get("on_expedition",false):
-			continue
-		if c["job"] in ["Engineer","Builder","Farmer","Medic","Guard","Hauler"]:
+		if _eligible_colonist(c):
 			candidates.append(c)
 	candidates.sort_custom(func(a:Dictionary,b:Dictionary)->bool:
 		var a_score := float(a["health"])+float(a["morale"])+float(a["loyalty"])
@@ -225,6 +236,82 @@ func _select_colonists(sim:SettlementSimulation) -> Array[Dictionary]:
 			break
 		selected.append(c)
 	return selected
+
+
+func _eligible_colonist(citizen:Dictionary) -> bool:
+	return (
+		bool(citizen.get("alive",false)) and
+		int(citizen.get("age",0)) >= 18 and
+		not bool(citizen.get("incarcerated",false)) and
+		not bool(citizen.get("on_expedition",false)) and
+		str(citizen.get("home_settlement","LAST_HAVEN")) == "LAST_HAVEN" and
+		str(citizen.get("job","")) in ["Engineer","Builder","Farmer","Medic","Guard","Hauler"]
+	)
+
+func get_founding_candidates(sim:SettlementSimulation) -> Array[Dictionary]:
+	var result:Array[Dictionary] = []
+	for citizen in sim.get_settlement_citizens():
+		if _eligible_colonist(citizen):
+			result.append(citizen)
+	result.sort_custom(func(a:Dictionary,b:Dictionary)->bool:
+		var a_score := float(a["health"])+float(a["morale"])+float(a["loyalty"])
+		var b_score := float(b["health"])+float(b["morale"])+float(b["loyalty"])
+		return a_score>b_score
+	)
+	return result
+
+func toggle_founding_candidate(sim:SettlementSimulation,citizen_id:int) -> bool:
+	var citizen := sim.get_citizen_by_id(citizen_id)
+	if citizen.is_empty() or not _eligible_colonist(citizen):
+		return false
+	var index := founding_roster.find(citizen_id)
+	if index >= 0:
+		founding_roster.remove_at(index)
+		sim.add_event("FOUNDING ROSTER","%s removed from the founding team." % citizen["name"],"intel")
+		return true
+	if founding_roster.size() >= FOUNDING_POPULATION:
+		sim.add_event("FOUNDING ROSTER FULL","Remove a survivor before adding another founding colonist.","warning")
+		return false
+	founding_roster.append(citizen_id)
+	sim.add_event("FOUNDING ROSTER","%s assigned to the founding team." % citizen["name"],"intel")
+	return true
+
+func deploy_citizen_to_colony(sim:SettlementSimulation,citizen_id:int,settlement_key:String) -> bool:
+	if settlement_key=="LAST_HAVEN" or not settlements.has(settlement_key):
+		return false
+	var citizen := sim.get_citizen_by_id(citizen_id)
+	if citizen.is_empty() or not _eligible_colonist(citizen):
+		return false
+	var settlement:Dictionary = settlements[settlement_key]
+	var capacity := get_colony_capacity(settlement)
+	if int(settlement["population"]) >= capacity:
+		sim.add_event("MIGRATION BLOCKED","%s has no available housing capacity." % settlement["name"],"warning")
+		return false
+	citizen["home_settlement"] = settlement_key
+	citizen["current_action"] = "Transferred // %s" % settlement["name"]
+	citizen["target"] = Vector2.ZERO
+	settlement["population_ids"].append(citizen_id)
+	settlement["population"] = int(settlement["population"])+1
+	var roster_index := founding_roster.find(citizen_id)
+	if roster_index >= 0:
+		founding_roster.remove_at(roster_index)
+	record_history(sim,"MIGRATION","%s transferred from Last Haven to %s." % [citizen["name"],settlement["name"]],"population")
+	sim.add_event("COLONIST TRANSFER","%s deployed to %s." % [citizen["name"],settlement["name"]],"good")
+	return true
+
+func get_colony_capacity(settlement:Dictionary) -> int:
+	if str(settlement.get("id",""))=="LAST_HAVEN":
+		return 9999
+	var modules:Dictionary = settlement.get("modules",{})
+	return 4 + int(modules.get("housing",0))*6
+
+func _normalize_founding_roster(sim:SettlementSimulation) -> void:
+	var valid:Array[int] = []
+	for citizen_id in founding_roster:
+		var citizen := sim.get_citizen_by_id(int(citizen_id))
+		if not citizen.is_empty() and _eligible_colonist(citizen):
+			valid.append(int(citizen_id))
+	founding_roster = valid
 
 func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) -> void:
 	for key in settlements.keys():
@@ -262,6 +349,9 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 		res["parts"] = float(res["parts"]) + float(modules.get("workshop",0))*0.010*sim_hours
 
 		var supply_score := 100.0
+		var housing_capacity := get_colony_capacity(settlement)
+		if int(pop) > housing_capacity:
+			supply_score -= 30.0
 		if float(res["food"]) < pop*2.0:
 			supply_score -= 35.0
 		if float(res["water"]) < pop*3.0:
