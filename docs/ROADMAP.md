@@ -38,14 +38,21 @@
 - [ ] Forbidden-work controls
 
 ## Milestone 0.3 — Construction
-- Build mode
-- Walls, floors, doors and rooms
-- Blueprint placement
-- Construction materials
-- Worker pathing
-- Demolition and salvage
-- Room detection
-- Building condition and repair
+**Status: core complete / expanding**
+
+- [x] Build mode
+- [x] Walls, floors, doors and rooms
+- [x] Blueprint placement
+- [x] Construction materials
+- [x] Worker pathing around walls
+- [x] Demolition and salvage
+- [x] Room detection
+- [x] Building condition and repair
+- [x] Rotatable modular pieces
+- [x] Construction save/load persistence
+- [ ] Drag-to-build walls/floors
+- [ ] Full A* navigation grid
+- [ ] Room roles and environmental simulation
 
 ## Milestone 0.4 — Utilities
 - Electrical graph
