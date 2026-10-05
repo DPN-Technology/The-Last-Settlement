@@ -206,6 +206,10 @@
 - [x] Colony emergency management
 - [x] Emergency aid operations
 - [x] Colony specialization controls
+- [x] Federal governance foundation
+- [x] Settlement representatives
+- [x] Federal charter / network cohesion / legitimacy
+- [x] Survivor migration between Last Haven and colonies
 - [ ] Full civilization-wide laws / government
 - [x] Endgame civilization recovery objectives
 - [x] Backward civilization-state normalization
