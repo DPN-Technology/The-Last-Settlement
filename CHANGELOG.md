@@ -1,3 +1,29 @@
+## 0.6.0-dev — Regional World & Expeditions
+
+### Added
+- Regional operations map
+- Fog-of-war discovery model
+- Radio-range exploration
+- Discoverable ruins, relay sites and unknown signals
+- Expedition team formation
+- Expedition food/water/medical provisioning
+- Outbound travel, search and return phases
+- Radio-contact state
+- Location danger and security-based risk reduction
+- Expedition injuries and casualties
+- Salvage cargo
+- Resource recovery into live settlement stockpiles
+- Depleted world locations
+- Relay restoration that expands radio range
+- Active expedition tracking UI
+- Save/load persistence for world locations and expeditions
+- World simulation validation in CI
+
+### Changed
+- Save schema advanced to version 5
+- Expedition members no longer participate in home settlement social/occupancy simulation while away
+- Exploration now has direct resource and survivor consequences
+
 ## 0.5.0-dev — Relationships, Families & Generations
 
 ### Added
