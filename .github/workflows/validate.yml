@@ -30,6 +30,33 @@ jobs:
           python-version: "3.12"
       - name: Validate repository structure
         run: python tools/validate_project.py
+      - name: Validate release manifest generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .manifest-test
+          printf 'portable-test\n' > .manifest-test/TheLastSettlement-Windows-x86_64.zip
+          printf 'installer-test\n' > .manifest-test/TheLastSettlement-Setup-x64.msi
+          python tools/release_manifest.py             --version 0.0.0-test             --channel development             --commit "$GITHUB_SHA"             --portable .manifest-test/TheLastSettlement-Windows-x86_64.zip             --installer .manifest-test/TheLastSettlement-Setup-x64.msi             --output .manifest-test/windows-release.json             --repository "$GITHUB_REPOSITORY"             --signing-status unsigned             --save-schema 14
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path(".manifest-test")
+          data = json.loads((root / "windows-release.json").read_text(encoding="utf-8"))
+          assert data["schema_version"] == 1
+          assert data["version"] == "0.0.0-test"
+          assert data["channel"] == "development"
+          assert data["save_schema"] == 14
+          for key in ("portable", "installer"):
+              asset = data["assets"][key]
+              path = root / asset["filename"]
+              actual = hashlib.sha256(path.read_bytes()).hexdigest()
+              assert actual == asset["sha256"]
+              assert asset["size_bytes"] == path.stat().st_size
+          print("Release manifest self-test passed.")
+          PY
       - name: Security and workflow integrity audit
         run: python tools/security_audit.py
       - name: Conflict marker guard
