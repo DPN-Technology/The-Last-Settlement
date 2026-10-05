@@ -10,7 +10,7 @@
 - Independent colony resource stores
 - Colony morale, infrastructure and security
 - Automatic regional logistics routes
-- Daily surplus transfer between recovery-network settlements
+- Daily bidirectional surplus transfer between recovery-network settlements using real stockpiles
 - Civilization recovery score
 - Civilization stability score
 - Recovery phase progression
@@ -25,6 +25,8 @@
 - Civilization simulation module validation in CI
 
 ### Changed
+- Regional logistics now deduct and deliver real resources instead of moving synced ledger snapshots
+- Recovery routes now move surplus in both directions between Last Haven and colonies
 - Colonists assigned to secondary settlements no longer render, move, socialize or consume local occupancy at Last Haven
 - Local random incidents now target Last Haven residents rather than colonists assigned elsewhere
 - README upgraded for build 1.0.0-dev with live security badges, system-status matrix and civilization documentation
