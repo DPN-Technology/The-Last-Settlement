@@ -36,6 +36,7 @@ var civilization_settlement_index := 0
 var civilization_route_index := 0
 var civilization_colony_project_index := 0
 var civilization_recovery_project_index := 0
+var civilization_candidate_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
@@ -371,7 +372,9 @@ func _draw_civilization_panel() -> void:
 	var w := minf(700.0,vp.x-36.0)
 	var h := vp.y-150.0
 	var civ := sim.civilization_simulation
+	var fed := sim.federal_governance_simulation
 	var settlements: Array[Dictionary] = civ.get_settlement_list()
+	var founding_candidates: Array[Dictionary] = civ.get_founding_candidates(sim)
 	if civilization_settlement_index >= settlements.size():
 		civilization_settlement_index = 0
 	if civilization_route_index >= civ.logistics_routes.size():
@@ -380,6 +383,8 @@ func _draw_civilization_panel() -> void:
 		civilization_colony_project_index = 0
 	if civilization_recovery_project_index >= CIV_RECOVERY_PROJECTS.size():
 		civilization_recovery_project_index = 0
+	if civilization_candidate_index >= founding_candidates.size():
+		civilization_candidate_index = 0
 
 	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
 	draw_rect(Rect2(x,y,w,h),GOOD,false,2.0)
@@ -390,17 +395,20 @@ func _draw_civilization_panel() -> void:
 
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+112),"NETWORK POLICY // A:%s  F:%s  S:%s" % [civ.civilization_policies["autonomy"],civ.civilization_policies["freight"],civ.civilization_policies["security"]],HORIZONTAL_ALIGNMENT_LEFT,w-40,9,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+129),"[4] AUTONOMY  [5] FREIGHT  [6] SECURITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+149),"FEDERAL // LEG %.0f  COH %.0f  RESERVE %.1f" % [fed.federal_legitimacy,fed.network_cohesion,fed.federal_treasury],HORIZONTAL_ALIGNMENT_LEFT,320,9,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+166),"CHARTER // %s / %s / %s" % [fed.charter["representation"],fed.charter["contribution"],fed.charter["rights"]],HORIZONTAL_ALIGNMENT_LEFT,650,8,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+182),"[T] REPRESENTATION  [Y] CONTRIBUTION  [U] RIGHTS  [B] FEDERAL RESERVE",HORIZONTAL_ALIGNMENT_LEFT,650,8,RUST)
 
 	var recovery_name: String = CIV_RECOVERY_PROJECTS[civilization_recovery_project_index]
 	var recovery_progress := civ.get_recovery_project_progress(recovery_name)
 	var recovery_done := civ._recovery_project_complete(recovery_name)
-	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+112),"RECOVERY PROJECT // %s" % recovery_name.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,310,9,GOOD if recovery_done else ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+129),"PROGRESS %.0f%% // [7] NEXT  [8] CONTRIBUTE" % recovery_progress,HORIZONTAL_ALIGNMENT_LEFT,310,9,RUST)
+	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+149),"RECOVERY PROJECT // %s" % recovery_name.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,310,9,GOOD if recovery_done else ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+360,y+166),"PROGRESS %.0f%% // [7] NEXT  [8] CONTRIBUTE" % recovery_progress,HORIZONTAL_ALIGNMENT_LEFT,310,9,RUST)
 
 	var split_x := x+344.0
 	var left_x := x+20.0
 	var right_x := split_x+16.0
-	var body_y := y+160.0
+	var body_y := y+210.0
 	draw_line(Vector2(split_x,body_y),Vector2(split_x,y+h-18),PANEL_EDGE,1.0)
 
 	draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y),"COLONY OPERATIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
@@ -428,6 +436,18 @@ func _draw_civilization_panel() -> void:
 
 		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+214),"[←/→] SETTLEMENT  [E] REFOCUS",HORIZONTAL_ALIGNMENT_LEFT,305,9,GOOD)
 		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+232),"[A] EMERGENCY AID",HORIZONTAL_ALIGNMENT_LEFT,305,9,GOOD)
+		var representative_name: String = fed.get_representative_name(sim,str(s["id"]))
+		var capacity: int = civ.get_colony_capacity(s)
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+252),"REP // %s   CAPACITY %d" % [representative_name,capacity],HORIZONTAL_ALIGNMENT_LEFT,305,8,MUTED)
+
+		draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+278),"FOUNDING / MIGRATION ROSTER // %d/%d" % [civ.founding_roster.size(),civ.FOUNDING_POPULATION],HORIZONTAL_ALIGNMENT_LEFT,305,9,ACCENT)
+		if not founding_candidates.is_empty():
+			var candidate: Dictionary = founding_candidates[civilization_candidate_index]
+			var rostered: bool = civ.founding_roster.has(int(candidate["id"]))
+			draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+298),"[%d/%d] %s // %s // %s" % [civilization_candidate_index+1,founding_candidates.size(),candidate["name"],candidate["job"],"ROSTER" if rostered else "AVAILABLE"],HORIZONTAL_ALIGNMENT_LEFT,305,8,GOOD if rostered else TEXT)
+			draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+316),"[9] NEXT  [0] TOGGLE ROSTER  [D] DEPLOY TO COLONY",HORIZONTAL_ALIGNMENT_LEFT,305,8,RUST)
+		else:
+			draw_string(ThemeDB.fallback_font,Vector2(left_x,body_y+298),"No eligible Last Haven colonists.",HORIZONTAL_ALIGNMENT_LEFT,305,8,MUTED)
 
 	draw_string(ThemeDB.fallback_font,Vector2(right_x,body_y),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
 	var ry := body_y+24.0
@@ -795,7 +815,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_citizen = {}
 				selected_building = {}
 			KEY_T:
-				if not selected_citizen.is_empty():
+				if civilization_mode:
+					sim.federal_governance_simulation.cycle_charter(sim,"representation")
+				elif not selected_citizen.is_empty():
 					sim.cycle_selected_shift(selected_citizen)
 			KEY_P:
 				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
@@ -804,9 +826,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif not selected_citizen.is_empty():
 					sim.cycle_selected_priority(selected_citizen)
 			KEY_B:
-				build_mode = not build_mode
-				selected_citizen = {}
-				selected_building = {}
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						var settlement: Dictionary = settlements[civilization_settlement_index]
+						sim.federal_governance_simulation.spend_reserve_for_emergency(sim,str(settlement["id"]))
+				else:
+					build_mode = not build_mode
+					selected_citizen = {}
+					selected_building = {}
 			KEY_Q:
 				if build_mode:
 					build_catalog_index -= 1
@@ -922,7 +950,16 @@ func _unhandled_input(event: InputEvent) -> void:
 					if not visible.is_empty():
 						sim.faction_simulation.send_aid(sim,visible[faction_index])
 			KEY_D:
-				if faction_mode:
+				if civilization_mode:
+					var candidates := sim.civilization_simulation.get_founding_candidates(sim)
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not candidates.is_empty() and not settlements.is_empty():
+						if civilization_candidate_index >= candidates.size():
+							civilization_candidate_index = 0
+						var candidate: Dictionary = candidates[civilization_candidate_index]
+						var settlement: Dictionary = settlements[civilization_settlement_index]
+						sim.civilization_simulation.deploy_citizen_to_colony(sim,int(candidate["id"]),str(settlement["id"]))
+				elif faction_mode:
 					var visible := sim.faction_simulation.get_visible_factions(sim)
 					if not visible.is_empty():
 						sim.faction_simulation.propose_trade_agreement(sim,visible[faction_index])
@@ -958,7 +995,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				if economy_mode:
 					sim.economy_simulation.trade_with_source(sim,economy_source_index,ECONOMY_ITEMS[economy_item_index],1.0,false)
 			KEY_Y:
-				if economy_mode:
+				if civilization_mode:
+					sim.federal_governance_simulation.cycle_charter(sim,"contribution")
+				elif economy_mode:
 					sim.economy_simulation.repair_vehicle(sim,0)
 			KEY_4:
 				if civilization_mode:
@@ -975,6 +1014,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_8:
 				if civilization_mode:
 					sim.civilization_simulation.contribute_recovery_project(sim,CIV_RECOVERY_PROJECTS[civilization_recovery_project_index])
+			KEY_9:
+				if civilization_mode:
+					var candidates := sim.civilization_simulation.get_founding_candidates(sim)
+					if not candidates.is_empty():
+						civilization_candidate_index = (civilization_candidate_index+1) % candidates.size()
+			KEY_0:
+				if civilization_mode:
+					var candidates := sim.civilization_simulation.get_founding_candidates(sim)
+					if not candidates.is_empty():
+						if civilization_candidate_index >= candidates.size():
+							civilization_candidate_index = 0
+						sim.civilization_simulation.toggle_founding_candidate(sim,int(candidates[civilization_candidate_index]["id"]))
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
@@ -988,7 +1039,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				if world_map_mode and selected_world_location_id > 1:
 					sim.world_simulation.create_expedition(sim, selected_world_location_id)
 			KEY_U:
-				utility_overlay = (utility_overlay + 1) % UTILITY_OVERLAYS.size()
+				if civilization_mode:
+					sim.federal_governance_simulation.cycle_charter(sim,"rights")
+				else:
+					utility_overlay = (utility_overlay + 1) % UTILITY_OVERLAYS.size()
 			KEY_R:
 				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
 					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
