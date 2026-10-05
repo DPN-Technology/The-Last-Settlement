@@ -238,18 +238,37 @@ The current foundation is already moving beyond a static colony prototype.
 - Trade activity influencing future market prices
 - Industrial logistics persisted in save version 8
 
+### REGIONAL TRADE // LIVE
+
+- Discoverable trade-hub settlements
+- Cedar Union regional market
+- Riverbend Collective regional market
+- Faction-specific market inventories
+- Faction-specific price modifiers
+- Reputation discounts
+- Inbound trade caravans
+- Route-risk / caravan loss
+- 36-hour trading windows
+- Caravan return routes
+- Regional market stock persistence
+- World-map caravan visualization
+- Industry Command market-source switching
+- Regional buy/sell transactions
+- Regional trade history
+- Player-created production orders
+- Utility-truck manufacturing
+- Regional trade state persisted in save version 9
+
 ### ACTIVE DEVELOPMENT
 
-- Trade caravans and faction markets
-- Additional vehicle types
-- Vehicle manufacturing
-- Player-created production orders
+- Additional vehicle classes
 - Factory-specific recipe assignment
-- Dynamic regional prices by faction/location
-- Freight routes between settlements
+- Freight contracts
 - Advanced warehouse zoning
+- Regional trade agreements
 - Player-selected election candidates
 - Detailed council voting
+- Dynamic diplomacy-driven tariffs
 
 ---
 
@@ -537,6 +556,9 @@ No external art pack is required for the current prototype.
 | **K** | Toggle Industry + Economy Command |
 | **Backspace** | Sell selected market item in Industry Command |
 | **Y** | Repair primary vehicle using a repair kit in Industry Command |
+| **H** | Cycle local / active caravan market in Industry Command |
+| **N** | Cycle production recipe in Industry Command |
+| **C** | Queue selected production recipe |
 
 ---
 
