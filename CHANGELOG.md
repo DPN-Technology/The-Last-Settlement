@@ -1,3 +1,32 @@
+## 0.7.0-dev — Government, Law & Society
+
+### Added
+- Interim settlement leader and civic council
+- Recurring election cycle
+- Government legitimacy
+- Unrest simulation
+- Crime-pressure model
+- Political factions and citizen faction membership
+- Liberty, order and welfare political values
+- Player-controlled rationing, security, labor, justice and speech laws
+- Citizen loyalty reactions to policy
+- Theft, assault and sabotage incidents
+- Guard-driven investigations
+- Court-case progression
+- Restorative, balanced and punitive justice outcomes
+- Incarceration and sentence completion
+- Protests and governance-crisis escalation
+- Civic Command government UI
+- Open-case visibility
+- Faction support display
+- Governance persistence in save schema version 6
+- Governance module validation in CI
+
+### Changed
+- Scarcity, citizen stress and guard staffing now influence internal crime
+- Law choices directly affect citizen loyalty and public order
+- High unrest can interrupt citizens with protest behavior
+
 ## 0.6.0-dev — Regional World & Expeditions
 
 ### Added
