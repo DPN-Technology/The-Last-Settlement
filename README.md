@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.1--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.0-dev
+## CURRENT TRANSMISSION // BUILD 1.0.1-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -317,7 +317,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Civilization state persisted in save version 11
 - Founding sites created from secured and cleared ruins
 
-### SYSTEM STATUS // BUILD 1.0.0-dev
+### SYSTEM STATUS // BUILD 1.0.1-dev
 
 | Layer | Status | Live Integration |
 |---|---|---|
@@ -332,9 +332,27 @@ The current foundation is already moving beyond a static colony prototype.
 | Civilization Network | **ONLINE — EXPANDING** | Multiple settlements, routes, archive, recovery score |
 | Large-Scale Optimization | **IN DEVELOPMENT** | Performance profiling and population scaling |
 
+### CIVILIZATION OPERATIONS // LIVE
+
+- Colony status states: Stable, Recovering, Degraded and Emergency
+- Colony emergencies: food shortage, water crisis, infrastructure failure, security incident, storm damage, disease cluster and equipment failure
+- Emergency aid packages using real Last Haven food, water and medicine
+- Player-controlled colony specialization changes
+- Colony specialization refocus costs real materials and machine parts
+- Civilization-wide autonomy policy
+- Civilization-wide freight policy
+- Civilization-wide security policy
+- Configurable freight-route on/off state
+- Freight route priority levels
+- Freight cargo focus: Balanced, Survival or Industrial
+- Policy-driven colony production and security growth
+- Policy-driven regional freight throughput
+- Save schema version 12 persistence for policies and emergencies
+- Backward normalization for older civilization saves
+
 ### ACTIVE DEVELOPMENT
 
-- Detailed secondary-settlement management
+- Detailed secondary-settlement construction
 - Founding-team selection UI
 - Two-way configurable freight routes
 - Colony emergencies and failure cascades
@@ -551,11 +569,11 @@ Think less **clean cyber command center** and more:
 
 # REPOSITORY SECURITY + QUALITY GATES
 
-The repository is built to stay green while the simulation grows.
+The repository is built to stay green while the simulation grows. The main CI gate now installs the official pinned Godot 4.3 engine, verifies its release checksum, and performs a headless project parse before the gate can pass.
 
 | Gate | Purpose |
 |---|---|
-| **DPN Settlement CI Gate** | Repository structure, project validation and required-module checks |
+| **DPN Settlement CI Gate** | Repository structure, security audit, checksum-verified Godot install and real engine parse/load validation |
 | **DPN Settlement CodeQL** | Static security analysis |
 | **DPN Settlement Supply Chain** | Dependency / workflow supply-chain checks |
 | **Code Quality** | Repository quality and maintainability checks |
@@ -578,7 +596,7 @@ The development rule is the same as the simulation rule:
 | Architecture | Modular simulation systems |
 | Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
 | Validation | GitHub Actions + CodeQL + supply-chain gates |
-| Save Schema | Version 11 |
+| Save Schema | Version 12 |
 | Data Direction | Save-versioned, deterministic-friendly simulation |
 
 The simulation architecture comes first.
@@ -623,11 +641,11 @@ No external art pack is required for the current prototype.
 | **S** | Save settlement |
 | **L** | Load settlement |
 | **T** | Toggle selected survivor day/night shift |
-| **P** | Cycle selected survivor job priority |
+| **P** | Cycle selected survivor job priority / freight-route priority in Civilization Command |
 | **B** | Toggle build mode |
-| **Q / E** | Cycle build type |
-| **F** | Rotate wall/door blueprint |
-| **R** | Queue repair on selected structure |
+| **Q / E** | Cycle build type; **E** refocuses selected colony in Civilization Command |
+| **F** | Rotate wall/door blueprint / cycle freight-route cargo focus |
+| **R** | Queue repair on selected structure / toggle selected freight route |
 | **X** | Demolish/salvage selected structure |
 | **U** | Cycle utility overlay: Off / Power / Water / Sewage |
 | **M** | Toggle settlement / regional world map |
@@ -643,10 +661,11 @@ No external art pack is required for the current prototype.
 | **C** | Queue selected production recipe |
 | **O** | Toggle Faction Command |
 | **↑ / ↓** | Cycle discovered factions in Faction Command |
-| **A** | Send aid to selected faction |
+| **A** | Send aid to selected faction / emergency aid to selected colony |
 | **D** | Propose trade agreement |
 | **Z** | Offer truce to hostile faction |
 | **J** | Toggle Civilization Command |
+| **4 / 5 / 6** | Cycle Civilization autonomy / freight / security policy |
 | **Left / Right** | Cycle settlements in Civilization Command |
 | **I** | Found a settlement at a selected secured world-map site |
 
