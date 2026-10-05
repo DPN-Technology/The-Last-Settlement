@@ -241,5 +241,9 @@
 - [x] Release-channel automation
 - [x] Machine-readable update manifest
 - [x] Tagged GitHub Release publishing
-- [ ] In-game update notification / installer handoff
+- [x] In-game update notification / installer handoff
+- [x] Stable release auto-check
+- [x] Update manifest validation
+- [x] SHA-256 verified MSI staging
+- [x] Explicit user-approved installer handoff
 - [ ] Crash reporting / diagnostic bundle
