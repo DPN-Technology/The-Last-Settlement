@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.4.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.5.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.4.0-dev
+## CURRENT TRANSMISSION // BUILD 0.5.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -130,16 +130,38 @@ The current foundation is already moving beyond a static colony prototype.
 - Infrastructure status in the building inspector
 - Utility state persisted in save version 3
 
+### RELATIONSHIPS + FAMILIES // LIVE
+
+- Persistent relationship scores between survivors
+- Personality-driven compatibility
+- Positive and negative social interactions
+- Social need pressure
+- Morale/stress consequences from interactions
+- Persistent memory records
+- Arguments and meaningful-conversation memories
+- Partner formation
+- Relationship breakups
+- Family names
+- Biological sex state for family simulation
+- Pregnancy and birth
+- Parent/child relationship links
+- Children as persistent settlement citizens
+- Aging and birthdays
+- Coming-of-age transition into the workforce
+- Social/family data persisted in save version 4
+- Survivor inspector now shows partner, children, memory count and latest memory
+
 ### ACTIVE DEVELOPMENT
 
+- Friendship/rival labels in the inspector
+- Family tree visualization
+- Grief and bereavement depth
+- Child education and development
+- Personality-driven romance preferences
+- Social groups and cliques
 - Manual power-line and pipe routing rules
 - Per-building powered/unpowered state
-- Breaker panels and load shedding
-- Water contamination events
-- Fuel and generator consumption
 - Advanced A* pathfinding
-- Physical item entities
-- Deterministic simulation seeds
 
 ---
 
@@ -467,9 +489,9 @@ The-Last-Settlement/
  │
  ├── 0.3  CONSTRUCTION
  │
- ├── 0.4  UTILITIES               ◄── CURRENT
+ ├── 0.4  UTILITIES
  │
- ├── 0.5  RELATIONSHIPS + FAMILIES
+ ├── 0.5  RELATIONSHIPS + FAMILIES ◄── CURRENT
  │
  ├── 0.6  WORLD + EXPEDITIONS
  │
