@@ -55,13 +55,22 @@
 - [ ] Room roles and environmental simulation
 
 ## Milestone 0.4 — Utilities
-- Electrical graph
-- Power producers, consumers and batteries
-- Water network
-- Pumps and purification
-- Sewage
-- Utility overlays
-- Failure propagation
+**Status: core complete / expanding**
+
+- [x] Electrical network model
+- [x] Power producers, consumers and batteries
+- [x] Water network model
+- [x] Pumps and purification
+- [x] Sewage generation and processing
+- [x] Utility overlays
+- [x] Failure propagation
+- [x] Generator trips and pump failures
+- [x] Sanitation consequences
+- [x] Utility save/load persistence
+- [ ] Manual connection validation
+- [ ] Per-building load shedding
+- [ ] Fuel simulation
+- [ ] Water contamination chemistry
 
 ## Milestone 0.5 — Relationships
 - Social interactions
