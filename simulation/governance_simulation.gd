@@ -27,6 +27,7 @@ var active_cases: Array[Dictionary] = []
 var next_case_id := 1
 var next_election_hour := 720.0
 var last_protest_hour := -999.0
+var last_crisis_hour := -999.0
 
 func initialize(sim: SettlementSimulation) -> void:
 	if leader_id != 0:
@@ -212,7 +213,8 @@ func _update_unrest(sim:SettlementSimulation, sim_hours:float) -> void:
 		for c in sim.get_settlement_citizens():
 			if float(c["loyalty"]) < 40.0:
 				c["current_action"] = "Protest"
-	if unrest > 88.0:
+	if unrest > 88.0 and sim.total_hours-last_crisis_hour > 24.0:
+		last_crisis_hour = sim.total_hours
 		sim.add_event("GOVERNANCE CRISIS","Settlement authority is close to collapse.","critical")
 
 func _run_election(sim:SettlementSimulation) -> void:
