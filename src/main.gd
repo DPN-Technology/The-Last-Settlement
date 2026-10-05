@@ -31,6 +31,8 @@ var governance_mode := false
 var economy_mode := false
 var economy_item_index := 0
 var economy_source_index := 0
+var economy_recipe_index := 0
+const ECONOMY_RECIPES := ["Machine Parts","Components","Tool Kit","Fuel Blend","Vehicle Repair Kit","Utility Truck"]
 const ECONOMY_ITEMS := ["food","water","medicine","materials","scrap","fuel","parts"]
 var governance_law_index := 0
 const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
@@ -253,7 +255,11 @@ func _draw_world_map() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,232),"TYPE // %s" % str(location["type"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,255),"DANGER // %d%%" % int(float(location["danger"])*100.0),HORIZONTAL_ALIGNMENT_LEFT,-1,11,WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,278),"STATUS // %s" % ("DEPLETED" if location["depleted"] else "AVAILABLE"),HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,315),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
+		if str(location["type"]) == "trade_hub":
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"FACTION // %s" % str(location.get("faction","UNKNOWN")).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("#7ca0c2"))
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,323),"TRADE HUB // CARAVANS SERVICE LAST HAVEN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		else:
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,315),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
 	else:
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),"Select a discovered location.",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
 
@@ -315,7 +321,12 @@ func _draw_economy_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s %.1f cr" % [marker,item.to_upper(),eco.get_trade_price(item,economy_source_index)],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
 		ry += 22.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [H] MARKET  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-	ry += 44.0
+	ry += 30.0
+	var selected_recipe := ECONOMY_RECIPES[economy_recipe_index]
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION ORDER // %s" % selected_recipe.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
+	ry += 20.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[N] NEXT RECIPE   [C] QUEUE 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+	ry += 30.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION QUEUE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ry += 24.0
 	for batch in eco.production_queue:
@@ -654,6 +665,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					var sources := sim.economy_simulation.get_trade_sources()
 					if not sources.is_empty():
 						economy_source_index = (economy_source_index+1) % sources.size()
+			KEY_N:
+				if economy_mode:
+					economy_recipe_index = (economy_recipe_index+1) % ECONOMY_RECIPES.size()
+			KEY_C:
+				if economy_mode:
+					sim.economy_simulation.queue_recipe(sim,ECONOMY_RECIPES[economy_recipe_index],1)
 			KEY_ENTER:
 				if economy_mode:
 					sim.economy_simulation.trade_with_source(sim,economy_source_index,ECONOMY_ITEMS[economy_item_index],1.0,true)
