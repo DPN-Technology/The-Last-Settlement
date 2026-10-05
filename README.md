@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.5--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.5-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,9 +51,23 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.5-dev
+## CURRENT TRANSMISSION // BUILD 1.0.5
 
 The current foundation is already moving beyond a static colony prototype.
+
+### STABLE WINDOWS RELEASE // v1.0.5
+
+The first stable Windows release is live on GitHub.
+
+- Release: **The Last Settlement v1.0.5**
+- Stable tag: `v1.0.5`
+- Stable release source: `fd1e5cd403ac7d1d9325f2057dd9b7b15afa4e86`
+- Windows MSI installer published
+- Windows x86_64 portable ZIP published
+- Combined SHA-256 manifest published
+- Machine-readable `windows-release.json` published
+- In-game Update Command now has a live `/releases/latest` target
+- Release was promoted only after Windows Build, CI Gate, CodeQL, Supply Chain and Code Quality were all green on the release source
 
 ### LIVE NOW
 
@@ -317,7 +331,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Civilization state persisted in save version 14
 - Founding sites created from secured and cleared ruins
 
-### SYSTEM STATUS // BUILD 1.0.5-dev
+### SYSTEM STATUS // BUILD 1.0.5
 
 | Layer | Status | Live Integration |
 |---|---|---|
