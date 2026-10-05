@@ -67,6 +67,9 @@ func create_expedition(sim: SettlementSimulation, location_id: int, max_members:
 	var destination := get_location_by_id(location_id)
 	if destination.is_empty() or not destination["discovered"] or destination["depleted"]:
 		return false
+	if str(destination["type"]) == "trade_hub":
+		sim.add_event("EXPEDITION BLOCKED", "%s is an active trade settlement, not a salvage site." % destination["name"], "warning")
+		return false
 	var members: Array[int] = []
 	for citizen in sim.get_alive_citizens():
 		if members.size() >= max_members:
