@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -54,6 +54,7 @@ var utility_failures := {
 	"sewage_overflow": false
 }
 var event_director := EventDirector.new()
+var social_simulation := SocialSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -258,6 +259,7 @@ func update(delta: float) -> void:
 
 	_update_utilities(sim_hours)
 	_apply_utility_consequences(sim_hours)
+	social_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -434,6 +436,16 @@ func _update_citizen_needs(c: Dictionary, sim_hours: float) -> void:
 		c["health"] = maxf(0.0, c["health"] - 1.1 * sim_hours)
 
 func _choose_action(c: Dictionary) -> void:
+	if int(c["age"]) < 16:
+		if c["thirst"] >= 58.0 and float(stockpiles["command"].get("water", 0.0)) > 0.1:
+			_set_action(c, "Drink", "command")
+		elif c["hunger"] >= 62.0 and float(stockpiles["command"].get("meals", 0.0)) > 0.1:
+			_set_action(c, "Eat", "command")
+		elif c["fatigue"] >= 60.0:
+			_set_action(c, "Sleep", "housing")
+		else:
+			_set_action(c, "Play / Learn", "housing")
+		return
 	if c["injury"] != "" and c["health"] < 72.0:
 		_set_action(c, "Seek Treatment", "medical")
 		return
@@ -690,6 +702,12 @@ func get_building_by_type(building_type: String) -> Dictionary:
 		if b["type"] == building_type:
 			return b
 	return buildings[0]
+
+func get_citizen_by_id(id: int) -> Dictionary:
+	for c in citizens:
+		if int(c["id"]) == id:
+			return c
+	return {}
 
 func get_building_by_name(building_name: String) -> Dictionary:
 	for b in buildings:
