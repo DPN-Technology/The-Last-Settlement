@@ -381,7 +381,7 @@ func cycle_settlement_specialization(sim:SettlementSimulation, settlement_key:St
 	var settlement:Dictionary = settlements[settlement_key]
 	var current := str(settlement["specialization"])
 	var idx := options.find(current)
-	var next := options[(idx+1)%options.size()]
+	var next: String = str(options[(idx+1)%options.size()])
 	if float(sim.stockpiles["industry"].get("materials",0.0)) < 8.0 or float(sim.economy_simulation.industry_stock.get("parts",0.0)) < 1.0:
 		sim.add_event("COLONY REFOCUS BLOCKED","8 materials and 1 machine part are required.","warning")
 		return false
