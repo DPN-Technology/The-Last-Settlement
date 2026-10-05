@@ -48,6 +48,26 @@ var bottleneck_reason := ""
 var fuel_consumed_today := 0.0
 var next_warehouse_check_hour := 24.0
 var repair_kits := 0.0
+var regional_markets := {
+	"9":{
+		"location_id":9,
+		"faction":"Cedar Union",
+		"reputation":18.0,
+		"price_modifiers":{"food":0.92,"water":1.08,"medicine":1.16,"materials":0.88,"scrap":0.82,"fuel":0.94,"parts":1.12},
+		"stock":{"food":30.0,"water":24.0,"medicine":8.0,"materials":34.0,"scrap":40.0,"fuel":22.0,"parts":10.0},
+		"next_caravan_hour":72.0
+	},
+	"10":{
+		"location_id":10,
+		"faction":"Riverbend Collective",
+		"reputation":12.0,
+		"price_modifiers":{"food":0.84,"water":0.90,"medicine":1.05,"materials":1.12,"scrap":0.94,"fuel":1.18,"parts":0.98},
+		"stock":{"food":48.0,"water":42.0,"medicine":10.0,"materials":18.0,"scrap":26.0,"fuel":12.0,"parts":16.0},
+		"next_caravan_hour":96.0
+	}
+}
+var trade_caravans: Array[Dictionary] = []
+var next_caravan_id := 1
 
 func initialize(sim: SettlementSimulation) -> void:
 	if production_queue.is_empty():
@@ -59,6 +79,7 @@ func update(sim: SettlementSimulation, sim_hours: float) -> void:
 	_update_warehouse(sim)
 	_update_production(sim,sim_hours)
 	_update_vehicle_state(sim,sim_hours)
+	_update_regional_trade(sim,sim_hours)
 
 func queue_recipe(sim: SettlementSimulation, recipe_name:String, quantity:int=1) -> bool:
 	if not recipes.has(recipe_name) or quantity <= 0:
@@ -308,3 +329,175 @@ func get_active_batch() -> Dictionary:
 		if batch["status"] != "complete":
 			return batch
 	return {}
+
+
+func _update_regional_trade(sim:SettlementSimulation, sim_hours:float) -> void:
+	for market_key in regional_markets.keys():
+		var market:Dictionary = regional_markets[market_key]
+		var location := sim.world_simulation.get_location_by_id(int(market["location_id"]))
+		if location.is_empty() or not location["discovered"]:
+			continue
+		if sim.total_hours >= float(market["next_caravan_hour"]) and not _market_has_active_caravan(str(market_key)):
+			_spawn_trade_caravan(sim,str(market_key),location)
+
+	for caravan in trade_caravans:
+		if caravan["status"] in ["complete","lost"]:
+			continue
+		match str(caravan["status"]):
+			"inbound":
+				caravan["progress"] = float(caravan["progress"]) + 32.0*sim_hours
+				if not caravan["risk_resolved"] and float(caravan["progress"]) >= float(caravan["distance"])*0.45:
+					caravan["risk_resolved"] = true
+					if sim.rng.randf() < float(caravan["route_danger"])*0.18:
+						caravan["status"] = "lost"
+						var market:Dictionary = regional_markets[str(caravan["market_key"])]
+						market["next_caravan_hour"] = sim.total_hours + 120.0
+						sim.add_event("TRADE CARAVAN LOST","A %s caravan failed to reach Last Haven." % caravan["faction"],"warning")
+						continue
+				if float(caravan["progress"]) >= float(caravan["distance"]):
+					caravan["status"] = "trading"
+					caravan["trade_hours_remaining"] = 36.0
+					sim.add_event("TRADE CARAVAN ARRIVED","%s traders opened a 36-hour market at Last Haven." % caravan["faction"],"good")
+			"trading":
+				caravan["trade_hours_remaining"] = maxf(0.0,float(caravan["trade_hours_remaining"])-sim_hours)
+				if float(caravan["trade_hours_remaining"]) <= 0.0:
+					caravan["status"] = "returning"
+					caravan["progress"] = 0.0
+					sim.add_event("CARAVAN DEPARTED","%s traders closed market and began the return route." % caravan["faction"],"intel")
+			"returning":
+				caravan["progress"] = float(caravan["progress"]) + 32.0*sim_hours
+				if float(caravan["progress"]) >= float(caravan["distance"]):
+					caravan["status"] = "complete"
+					var market:Dictionary = regional_markets[str(caravan["market_key"])]
+					market["stock"] = caravan["stock"].duplicate(true)
+					market["next_caravan_hour"] = sim.total_hours + 144.0
+
+func _market_has_active_caravan(market_key:String) -> bool:
+	for caravan in trade_caravans:
+		if str(caravan["market_key"]) == market_key and caravan["status"] not in ["complete","lost"]:
+			return true
+	return false
+
+func _spawn_trade_caravan(sim:SettlementSimulation, market_key:String, location:Dictionary) -> void:
+	var market:Dictionary = regional_markets[market_key]
+	var distance := Vector2(location["position"]).distance_to(Vector2(600,410))
+	trade_caravans.append({
+		"id":next_caravan_id,
+		"market_key":market_key,
+		"faction":market["faction"],
+		"origin_location_id":int(market["location_id"]),
+		"distance":distance,
+		"progress":0.0,
+		"status":"inbound",
+		"route_danger":float(location.get("danger",0.25)),
+		"risk_resolved":false,
+		"trade_hours_remaining":0.0,
+		"stock":market["stock"].duplicate(true),
+		"credits":260.0
+	})
+	next_caravan_id += 1
+	market["next_caravan_hour"] = sim.total_hours + 99999.0
+	sim.add_event("CARAVAN INBOUND","Radio traffic confirms a %s trade caravan is approaching." % market["faction"],"intel")
+
+func get_trade_sources() -> Array[Dictionary]:
+	var sources:Array[Dictionary] = [{"kind":"local","name":"LOCAL MARKET","caravan_id":0}]
+	for caravan in trade_caravans:
+		if caravan["status"] == "trading":
+			sources.append({
+				"kind":"caravan",
+				"name":"%s CARAVAN" % caravan["faction"].to_upper(),
+				"caravan_id":int(caravan["id"])
+			})
+	return sources
+
+func get_trade_price(item:String, source_index:int=0) -> float:
+	if not market_index.has(item):
+		return 0.0
+	var base := 10.0*float(market_index[item])
+	if source_index <= 0:
+		return base
+	var sources := get_trade_sources()
+	if source_index >= sources.size():
+		return base
+	var caravan := get_caravan_by_id(int(sources[source_index]["caravan_id"]))
+	if caravan.is_empty():
+		return base
+	var market:Dictionary = regional_markets[str(caravan["market_key"])]
+	var modifier := float(market["price_modifiers"].get(item,1.0))
+	var reputation_discount := clampf(float(market["reputation"])*0.0025,0.0,0.18)
+	return base*modifier*(1.0-reputation_discount)
+
+func trade_with_source(sim:SettlementSimulation, source_index:int, item:String, quantity:float, buying:bool) -> bool:
+	if source_index <= 0:
+		return trade(sim,item,quantity,buying)
+	var sources := get_trade_sources()
+	if source_index >= sources.size():
+		return false
+	var caravan := get_caravan_by_id(int(sources[source_index]["caravan_id"]))
+	if caravan.is_empty() or caravan["status"] != "trading":
+		return false
+	if not market_index.has(item) or quantity <= 0.0:
+		return false
+
+	var unit_price := get_trade_price(item,source_index)
+	var total := unit_price*quantity
+	var caravan_stock:Dictionary = caravan["stock"]
+	if buying:
+		if credits < total or float(caravan_stock.get(item,0.0)) < quantity:
+			return false
+		if not _add_trade_item(sim,item,quantity):
+			return false
+		caravan_stock[item] = float(caravan_stock.get(item,0.0))-quantity
+		credits -= total
+		caravan["credits"] = float(caravan["credits"])+total
+	else:
+		if float(caravan["credits"]) < total*0.8:
+			return false
+		if not _remove_trade_item(sim,item,quantity):
+			return false
+		caravan_stock[item] = float(caravan_stock.get(item,0.0))+quantity
+		credits += total*0.8
+		caravan["credits"] = float(caravan["credits"])-total*0.8
+
+	var market:Dictionary = regional_markets[str(caravan["market_key"])]
+	market["reputation"] = minf(100.0,float(market["reputation"])+0.35*quantity)
+	trade_log.push_front({
+		"item":item,
+		"quantity":quantity,
+		"buying":buying,
+		"price":unit_price,
+		"day":sim.day,
+		"source":caravan["faction"]
+	})
+	if trade_log.size()>20:
+		trade_log.resize(20)
+	sim.add_event("REGIONAL TRADE","%s %.0f %s with %s." % ["Bought" if buying else "Sold",quantity,item,caravan["faction"]],"good")
+	return true
+
+func _add_trade_item(sim:SettlementSimulation,item:String,quantity:float) -> bool:
+	if item in ["fuel","parts"]:
+		industry_stock[item] = float(industry_stock.get(item,0.0))+quantity
+		return true
+	if item in sim.stockpiles["industry"]:
+		sim.stockpiles["industry"][item] = float(sim.stockpiles["industry"][item])+quantity
+		return true
+	if item in sim.stockpiles["command"]:
+		sim.stockpiles["command"][item] = float(sim.stockpiles["command"][item])+quantity
+		return true
+	if item == "medicine":
+		sim.stockpiles["medical"]["medicine"] = float(sim.stockpiles["medical"]["medicine"])+quantity
+		return true
+	return false
+
+func get_caravan_by_id(id:int) -> Dictionary:
+	for caravan in trade_caravans:
+		if int(caravan["id"]) == id:
+			return caravan
+	return {}
+
+func get_inbound_caravans() -> Array[Dictionary]:
+	var result:Array[Dictionary] = []
+	for caravan in trade_caravans:
+		if caravan["status"] in ["inbound","trading","returning"]:
+			result.append(caravan)
+	return result
