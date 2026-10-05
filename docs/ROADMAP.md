@@ -14,11 +14,11 @@
 - [x] Click/select citizens
 - [x] Citizen detail inspector
 - [x] Click/select buildings
-- [ ] Save/load
+- [x] Save/load
 - [ ] Deterministic simulation seed
 
 ## Milestone 0.2 — Needs & Work
-**Status: active**
+**Status: advanced / active**
 
 - [x] Job schedules
 - [x] Needs-driven action selection
@@ -27,14 +27,15 @@
 - [x] Pocket inventory data model
 - [x] Skill matrix visibility
 - [x] Basic morale/stress consequences
-- [ ] Work-order queue
-- [ ] Food preparation and physical meals
-- [ ] Storage inventories
-- [ ] Item hauling between stockpiles
-- [ ] Skill-based task efficiency
-- [ ] Injuries and treatment workflow
-- [ ] Shift reassignment UI
-- [ ] Priority/forbidden-work controls
+- [x] Work-order queue
+- [x] Food preparation and physical meals
+- [x] Storage inventories
+- [x] Item hauling between stockpiles
+- [x] Skill-based task efficiency
+- [x] Injuries and treatment workflow
+- [x] Shift reassignment controls
+- [x] Priority controls
+- [ ] Forbidden-work controls
 
 ## Milestone 0.3 — Construction
 - Build mode
