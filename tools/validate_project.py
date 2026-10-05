@@ -13,6 +13,7 @@ REQUIRED = [
     "simulation/social_simulation.gd",
     "simulation/world_simulation.gd",
     "simulation/governance_simulation.gd",
+    "simulation/economy_simulation.gd",
     "docs/GAME_DESIGN.md",
     "docs/ROADMAP.md",
 ]
