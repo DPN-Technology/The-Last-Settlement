@@ -23,7 +23,7 @@ const RELEASE_ASSET_PREFIX := "https://github.com/DPN-Technology/The-Last-Settle
 const INSTALLER_PATH := "user://updates/TheLastSettlement-Setup-x64.msi"
 const MAX_MANIFEST_BYTES := 262144
 
-var state: UpdateState = UpdateState.IDLE
+var state := UpdateState.IDLE
 var message := "UPDATE CHANNEL IDLE"
 var current_version := "0.0.0"
 var current_save_schema := 0
@@ -176,7 +176,7 @@ func _handle_manifest_response(result:int,response_code:int,body:PackedByteArray
 		return
 	var text := body.get_string_from_utf8()
 	var parsed:Variant = JSON.parse_string(text)
-	if parsed == null or not parsed is Dictionary:
+	if parsed == null or not (parsed is Dictionary):
 		_set_error("RELEASE MANIFEST JSON IS INVALID")
 		return
 	var candidate:Dictionary = parsed
@@ -228,11 +228,12 @@ func _validate_manifest(candidate:Dictionary) -> String:
 	var target_save_schema := int(candidate.get("save_schema",0))
 	if target_save_schema < current_save_schema:
 		return "UPDATE SAVE SCHEMA WOULD DOWNGRADE CURRENT SAVES"
-	var assets:Variant = candidate.get("assets",{})
-	if not assets is Dictionary:
+	var assets_variant:Variant = candidate.get("assets",{})
+	if not (assets_variant is Dictionary):
 		return "RELEASE ASSET TABLE IS INVALID"
+	var assets:Dictionary = assets_variant
 	var installer_variant:Variant = assets.get("installer",{})
-	if not installer_variant is Dictionary:
+	if not (installer_variant is Dictionary):
 		return "INSTALLER RELEASE ASSET IS MISSING"
 	var installer:Dictionary = installer_variant
 	var url := str(installer.get("url",""))
@@ -249,7 +250,7 @@ func _is_sha256(value:String) -> bool:
 	if value.length() != 64:
 		return false
 	for character in value:
-		if not character.to_lower() in "0123456789abcdef":
+		if not (character.to_lower() in "0123456789abcdef"):
 			return false
 	return true
 
@@ -314,7 +315,7 @@ func _reset_request() -> void:
 	downloaded_bytes = 0
 	total_bytes = 0
 
-func _set_state(next_state:UpdateState,next_message:String) -> void:
+func _set_state(next_state:int,next_message:String) -> void:
 	state = next_state
 	message = next_message
 	state_changed.emit()
