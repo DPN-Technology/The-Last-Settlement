@@ -2,6 +2,28 @@
 
 All notable development changes to **The Last Settlement** are tracked here.
 
+## 0.2.1-dev — Settlement Operations Layer
+
+### Added
+- Physical stockpiles by settlement zone
+- Hauling between farm, industry and command stock
+- Work-order queue with priorities and completion effects
+- Skill-weighted work output
+- Day/night shift controls
+- Per-survivor job priorities
+- Injury state and treatment progression
+- Medical supply consumption
+- Meals separated from raw food
+- JSON save/load support
+- Incident integration with real stockpiles
+- New command hotkeys for save/load, shifts and priorities
+
+### Changed
+- Production is now routed through stockpiles instead of only aggregate counters
+- Needs consume resources from real settlement storage
+- Random incidents affect stored supplies directly
+- Citizen job logic checks active shift, needs, injury status and queued work before default work
+
 ## 0.2.0-dev — Living Survivor Systems
 
 ### Added
