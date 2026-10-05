@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -57,6 +57,7 @@ var event_director := EventDirector.new()
 var social_simulation := SocialSimulation.new()
 var world_simulation := WorldSimulation.new()
 var governance_simulation := GovernanceSimulation.new()
+var economy_simulation := EconomySimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -67,6 +68,7 @@ func _init() -> void:
 		add_citizen()
 	_seed_work_orders()
 	governance_simulation.initialize(self)
+	economy_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
 
 func _create_buildings() -> void:
@@ -276,6 +278,7 @@ func update(delta: float) -> void:
 	social_simulation.update(self, sim_hours)
 	world_simulation.update(self, sim_hours)
 	governance_simulation.update(self, sim_hours)
+	economy_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -796,6 +799,16 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"next_election_hour": governance_simulation.next_election_hour,
 			"last_protest_hour": governance_simulation.last_protest_hour,
 			"last_crisis_hour": governance_simulation.last_crisis_hour
+		},
+		"economy": {
+			"credits": economy_simulation.credits,
+			"market_index": economy_simulation.market_index,
+			"industry_stock": economy_simulation.industry_stock,
+			"production_queue": economy_simulation.production_queue,
+			"next_batch_id": economy_simulation.next_batch_id,
+			"price_update_hour": economy_simulation.price_update_hour,
+			"trade_log": economy_simulation.trade_log,
+			"vehicles": economy_simulation.vehicles
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -849,6 +862,16 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		governance_simulation.next_election_hour = float(governance.get("next_election_hour", governance_simulation.next_election_hour))
 		governance_simulation.last_protest_hour = float(governance.get("last_protest_hour", governance_simulation.last_protest_hour))
 		governance_simulation.last_crisis_hour = float(governance.get("last_crisis_hour", governance_simulation.last_crisis_hour))
+	var economy: Dictionary = data.get("economy", {})
+	if not economy.is_empty():
+		economy_simulation.credits = float(economy.get("credits", economy_simulation.credits))
+		economy_simulation.market_index = economy.get("market_index", economy_simulation.market_index)
+		economy_simulation.industry_stock = economy.get("industry_stock", economy_simulation.industry_stock)
+		economy_simulation.production_queue = economy.get("production_queue", economy_simulation.production_queue)
+		economy_simulation.next_batch_id = int(economy.get("next_batch_id", economy_simulation.next_batch_id))
+		economy_simulation.price_update_hour = float(economy.get("price_update_hour", economy_simulation.price_update_hour))
+		economy_simulation.trade_log = economy.get("trade_log", economy_simulation.trade_log)
+		economy_simulation.vehicles = economy.get("vehicles", economy_simulation.vehicles)
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
