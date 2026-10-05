@@ -54,7 +54,7 @@ var civilization_policies := {
 	"security":"Mutual Defense"
 }
 var emergency_log: Array[Dictionary] = []
-var founding_roster: Array[int] = []
+var founding_roster: Array = []
 var colony_projects: Array[Dictionary] = []
 var next_colony_project_id := 1
 var recovery_projects := {
@@ -833,10 +833,12 @@ func _update_recovery_score(sim:SettlementSimulation) -> void:
 		0.0,100.0
 	)
 	civilization_stability = clampf(
-		avg_morale*0.35 +
-		avg_infrastructure*0.30 +
-		(100.0-float(sim.governance_simulation.unrest))*0.20 +
-		float(sim.governance_simulation.legitimacy)*0.15,
+		avg_morale*0.28 +
+		avg_infrastructure*0.24 +
+		(100.0-float(sim.governance_simulation.unrest))*0.12 +
+		float(sim.governance_simulation.legitimacy)*0.10 +
+		float(sim.federal_governance_simulation.federal_legitimacy)*0.14 +
+		float(sim.federal_governance_simulation.network_cohesion)*0.12,
 		0.0,100.0
 	)
 
