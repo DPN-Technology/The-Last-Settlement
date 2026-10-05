@@ -243,15 +243,26 @@ jobs:
           & $signtool verify /pa /v "dist\TheLastSettlement-Setup-x64.msi"
           Remove-Item $pfx -Force
 
-      - name: Write distribution checksums
+      - name: Write and verify distribution checksums
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           $portable = (Get-FileHash "dist\TheLastSettlement-Windows-x86_64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
           $installer = (Get-FileHash "dist\TheLastSettlement-Setup-x64.msi" -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          "$portable  TheLastSettlement-Windows-x86_64.zip" |
+            Set-Content "dist\SHA256SUM-PORTABLE.txt" -Encoding ascii
+          "$installer  TheLastSettlement-Setup-x64.msi" |
+            Set-Content "dist\SHA256SUM-INSTALLER.txt" -Encoding ascii
           @(
             "$portable  TheLastSettlement-Windows-x86_64.zip"
             "$installer  TheLastSettlement-Setup-x64.msi"
           ) | Set-Content "dist\SHA256SUMS-WINDOWS.txt" -Encoding ascii
+
+          $portableCheck = (Get-FileHash "dist\TheLastSettlement-Windows-x86_64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $installerCheck = (Get-FileHash "dist\TheLastSettlement-Setup-x64.msi" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($portableCheck -ne $portable) { throw "Portable ZIP checksum verification failed." }
+          if ($installerCheck -ne $installer) { throw "MSI checksum verification failed." }
 
       - name: Upload final portable Windows package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -259,7 +270,7 @@ jobs:
           name: TheLastSettlement-Windows-Portable-Final
           path: |
             dist/TheLastSettlement-Windows-x86_64.zip
-            dist/SHA256SUMS-WINDOWS.txt
+            dist/SHA256SUM-PORTABLE.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -269,6 +280,6 @@ jobs:
           name: TheLastSettlement-Windows-Installer
           path: |
             dist/TheLastSettlement-Setup-x64.msi
-            dist/SHA256SUMS-WINDOWS.txt
+            dist/SHA256SUM-INSTALLER.txt
           if-no-files-found: error
           retention-days: 30
