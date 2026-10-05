@@ -8,6 +8,18 @@ const FOUNDING_PARTS_COST := 4.0
 const FOUNDING_POPULATION := 4
 const LOGISTICS_INTERVAL_HOURS := 24.0
 
+const COLONY_PROJECT_CATALOG := {
+	"Housing Block":{"materials":10.0,"parts":1.0,"medicine":0.0,"work":60.0,"module":"housing"},
+	"Farm Complex":{"materials":12.0,"parts":1.0,"medicine":0.0,"work":72.0,"module":"farm"},
+	"Clinic Module":{"materials":10.0,"parts":2.0,"medicine":2.0,"work":84.0,"module":"clinic"},
+	"Workshop Bay":{"materials":14.0,"parts":3.0,"medicine":0.0,"work":90.0,"module":"workshop"},
+	"Defense Perimeter":{"materials":16.0,"parts":2.0,"medicine":0.0,"work":100.0,"module":"defense"},
+	"Freight Depot":{"materials":12.0,"parts":2.0,"medicine":0.0,"work":80.0,"module":"freight_depot"},
+	"Radio Tower":{"materials":8.0,"parts":3.0,"medicine":0.0,"work":70.0,"module":"radio"}
+}
+
+const RECOVERY_PROJECT_ORDER := ["Regional Power Grid","Clean Water Network","Medical Corridor","Communications Backbone"]
+
 var settlements: Dictionary = {
 	"LAST_HAVEN":{
 		"id":"LAST_HAVEN",
@@ -22,6 +34,7 @@ var settlements: Dictionary = {
 		"security":45.0,
 		"status":"STABLE",
 		"emergency":"",
+		"modules":{"housing":1,"farm":0,"clinic":0,"workshop":0,"defense":0,"freight_depot":0,"radio":0},
 		"resources":{"food":0.0,"water":0.0,"medicine":0.0,"materials":0.0,"fuel":0.0,"parts":0.0},
 		"active":true
 	}
@@ -41,6 +54,30 @@ var civilization_policies := {
 	"security":"Mutual Defense"
 }
 var emergency_log: Array[Dictionary] = []
+var colony_projects: Array[Dictionary] = []
+var next_colony_project_id := 1
+var recovery_projects := {
+	"Regional Power Grid":{
+		"cost":{"materials":60.0,"parts":15.0,"fuel":25.0},
+		"contributed":{"materials":0.0,"parts":0.0,"fuel":0.0},
+		"completed":false
+	},
+	"Clean Water Network":{
+		"cost":{"materials":45.0,"parts":10.0,"water":120.0},
+		"contributed":{"materials":0.0,"parts":0.0,"water":0.0},
+		"completed":false
+	},
+	"Medical Corridor":{
+		"cost":{"materials":30.0,"parts":8.0,"medicine":30.0},
+		"contributed":{"materials":0.0,"parts":0.0,"medicine":0.0},
+		"completed":false
+	},
+	"Communications Backbone":{
+		"cost":{"materials":40.0,"parts":18.0,"fuel":10.0},
+		"contributed":{"materials":0.0,"parts":0.0,"fuel":0.0},
+		"completed":false
+	}
+}
 var milestones := {
 	"second_settlement":false,
 	"regional_network":false,
@@ -147,6 +184,7 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 		"security":22.0,
 		"status":"STABLE",
 		"emergency":"",
+		"modules":{"housing":1,"farm":0,"clinic":0,"workshop":0,"defense":0,"freight_depot":0,"radio":0},
 		"resources":{
 			"food":18.0,
 			"water":24.0,
@@ -200,9 +238,11 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 		var res:Dictionary = settlement["resources"]
 		var specialization := str(settlement["specialization"])
 		var autonomy_factor := _autonomy_factor()
+		var modules: Dictionary = settlement.get("modules",{})
+		var water_factor := 0.88 if _recovery_project_complete("Clean Water Network") else 1.0
 
 		res["food"] = maxf(0.0,float(res["food"]) - pop*0.035*sim_hours)
-		res["water"] = maxf(0.0,float(res["water"]) - pop*0.055*sim_hours)
+		res["water"] = maxf(0.0,float(res["water"]) - pop*0.055*sim_hours*water_factor)
 		match specialization:
 			"Agriculture":
 				res["food"] = float(res["food"]) + pop*0.075*sim_hours*autonomy_factor
@@ -216,14 +256,22 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 			_:
 				res["materials"] = float(res["materials"]) + pop*0.018*sim_hours*autonomy_factor
 
+		res["food"] = float(res["food"]) + float(modules.get("farm",0))*0.11*sim_hours
+		res["medicine"] = float(res["medicine"]) + float(modules.get("clinic",0))*0.018*sim_hours
+		res["materials"] = float(res["materials"]) + float(modules.get("workshop",0))*0.055*sim_hours
+		res["parts"] = float(res["parts"]) + float(modules.get("workshop",0))*0.010*sim_hours
+
 		var supply_score := 100.0
 		if float(res["food"]) < pop*2.0:
 			supply_score -= 35.0
 		if float(res["water"]) < pop*3.0:
 			supply_score -= 35.0
 		settlement["morale"] = move_toward(float(settlement["morale"]),clampf(supply_score,20.0,90.0),0.12*sim_hours)
-		settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+0.008*sim_hours)
-		var security_gain := 0.005*sim_hours
+		var infrastructure_gain := 0.008*sim_hours
+		if _recovery_project_complete("Regional Power Grid"):
+			infrastructure_gain *= 1.35
+		settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+infrastructure_gain)
+		var security_gain := (0.005 + float(modules.get("defense",0))*0.004)*sim_hours
 		if civilization_policies["security"] == "Fortress Network":
 			security_gain *= 2.4
 		elif civilization_policies["security"] == "Mutual Defense":
@@ -231,6 +279,7 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 		elif civilization_policies["security"] == "Local Defense":
 			security_gain *= 0.8
 		settlement["security"] = minf(100.0,float(settlement["security"])+security_gain)
+		_update_colony_projects(sim,str(key),settlement,sim_hours)
 		_update_colony_status(settlement)
 
 func _sync_colony_population(sim:SettlementSimulation, settlement:Dictionary) -> void:
@@ -280,7 +329,11 @@ func _route_transfer(sim:SettlementSimulation, source_key:String, destination_ke
 		var need := maxf(0.0,dest_target-dest_amount)
 		var priority := int(route.get("priority",2))
 		var freight_factor := _freight_factor()
-		var transfer_cap := (6.0 + float(priority)*3.0)*freight_factor
+		var source_modules: Dictionary = source.get("modules",{})
+		var destination_modules: Dictionary = destination.get("modules",{})
+		var depot_factor := 1.0 + (float(source_modules.get("freight_depot",0))+float(destination_modules.get("freight_depot",0)))*0.10
+		var communications_factor := 1.15 if _recovery_project_complete("Communications Backbone") else 1.0
+		var transfer_cap := (6.0 + float(priority)*3.0)*freight_factor*depot_factor*communications_factor
 		var transfer := minf(minf(surplus,need),transfer_cap)
 		if transfer > 0.0:
 			_change_resource(sim,source_key,item,-transfer)
@@ -478,7 +531,11 @@ func _roll_colony_emergency(sim:SettlementSimulation) -> void:
 	if risks.is_empty():
 		return
 
-	var emergency := risks[sim.rng.randi_range(0,risks.size()-1)]
+	var emergency: String = str(risks[sim.rng.randi_range(0,risks.size()-1)])
+	var modules: Dictionary = settlement.get("modules",{})
+	if emergency == "Disease Cluster" and (int(modules.get("clinic",0)) > 0 or _recovery_project_complete("Medical Corridor")) and sim.rng.randf() < 0.65:
+		sim.add_event("COLONY MEDICAL RESPONSE","%s contained a disease cluster before emergency escalation." % settlement["name"],"good")
+		return
 	settlement["emergency"] = emergency
 	settlement["status"] = "EMERGENCY"
 	match emergency:
@@ -514,6 +571,150 @@ func _update_colony_status(settlement:Dictionary) -> void:
 	else:
 		settlement["status"] = "STABLE"
 
+
+func queue_colony_project(sim:SettlementSimulation, settlement_key:String, project_name:String) -> bool:
+	if settlement_key == "LAST_HAVEN" or not settlements.has(settlement_key):
+		return false
+	if not COLONY_PROJECT_CATALOG.has(project_name):
+		return false
+	for project in colony_projects:
+		if str(project["settlement_key"]) == settlement_key and str(project["status"]) != "complete":
+			sim.add_event("COLONY PROJECT BLOCKED","%s already has an active construction project." % settlements[settlement_key]["name"],"warning")
+			return false
+
+	var settlement: Dictionary = settlements[settlement_key]
+	var resources: Dictionary = settlement["resources"]
+	var definition: Dictionary = COLONY_PROJECT_CATALOG[project_name]
+	var materials_cost := float(definition["materials"])
+	var parts_cost := float(definition["parts"])
+	var medicine_cost := float(definition["medicine"])
+	if float(resources.get("materials",0.0)) < materials_cost or float(resources.get("parts",0.0)) < parts_cost or float(resources.get("medicine",0.0)) < medicine_cost:
+		sim.add_event("COLONY PROJECT BLOCKED","%s lacks local materials, parts or medicine for %s." % [settlement["name"],project_name],"warning")
+		return false
+
+	resources["materials"] = float(resources["materials"])-materials_cost
+	resources["parts"] = float(resources["parts"])-parts_cost
+	resources["medicine"] = float(resources["medicine"])-medicine_cost
+	colony_projects.append({
+		"id":next_colony_project_id,
+		"settlement_key":settlement_key,
+		"project":project_name,
+		"progress":0.0,
+		"work":float(definition["work"]),
+		"status":"working"
+	})
+	next_colony_project_id += 1
+	sim.add_event("COLONY PROJECT","%s began construction of %s." % [settlement["name"],project_name],"intel")
+	return true
+
+func _update_colony_projects(sim:SettlementSimulation, settlement_key:String, settlement:Dictionary, sim_hours:float) -> void:
+	for project in colony_projects:
+		if str(project["settlement_key"]) != settlement_key or str(project["status"]) != "working":
+			continue
+		var labor := _colony_construction_labor(sim,settlement)
+		project["progress"] = float(project["progress"]) + sim_hours*(0.65+labor/180.0)
+		if float(project["progress"]) >= float(project["work"]):
+			project["status"] = "complete"
+			_apply_colony_project(sim,settlement,str(project["project"]))
+		break
+
+func _colony_construction_labor(sim:SettlementSimulation, settlement:Dictionary) -> float:
+	var labor := 0.0
+	for id in settlement["population_ids"]:
+		var citizen := sim.get_citizen_by_id(int(id))
+		if citizen.is_empty() or not citizen["alive"]:
+			continue
+		labor += maxf(float(citizen["skills"].get("construction",20)),float(citizen["skills"].get("engineering",20)))
+	return labor/maxf(1.0,float(settlement["population"]))
+
+func _apply_colony_project(sim:SettlementSimulation, settlement:Dictionary, project_name:String) -> void:
+	var definition: Dictionary = COLONY_PROJECT_CATALOG[project_name]
+	var module_key := str(definition["module"])
+	var modules: Dictionary = settlement["modules"]
+	modules[module_key] = int(modules.get(module_key,0))+1
+	match module_key:
+		"housing":
+			settlement["morale"] = minf(100.0,float(settlement["morale"])+4.0)
+			settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+3.0)
+		"clinic":
+			settlement["morale"] = minf(100.0,float(settlement["morale"])+3.0)
+			settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+4.0)
+		"workshop":
+			settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+5.0)
+		"defense":
+			settlement["security"] = minf(100.0,float(settlement["security"])+14.0)
+		"freight_depot":
+			settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+4.0)
+		"radio":
+			settlement["security"] = minf(100.0,float(settlement["security"])+4.0)
+			settlement["morale"] = minf(100.0,float(settlement["morale"])+2.0)
+		"farm":
+			settlement["morale"] = minf(100.0,float(settlement["morale"])+2.0)
+	record_history(sim,"COLONY INFRASTRUCTURE","%s completed %s." % [settlement["name"],project_name],"construction")
+	sim.add_event("COLONY PROJECT COMPLETE","%s completed %s." % [settlement["name"],project_name],"good")
+
+func get_active_colony_project(settlement_key:String) -> Dictionary:
+	for project in colony_projects:
+		if str(project["settlement_key"]) == settlement_key and str(project["status"]) == "working":
+			return project
+	return {}
+
+func contribute_recovery_project(sim:SettlementSimulation, project_name:String) -> bool:
+	if not recovery_projects.has(project_name):
+		return false
+	var project: Dictionary = recovery_projects[project_name]
+	if bool(project["completed"]):
+		return false
+	var cost: Dictionary = project["cost"]
+	var contributed: Dictionary = project["contributed"]
+	var moved_any := false
+	var package_caps := {"materials":10.0,"parts":3.0,"fuel":5.0,"water":20.0,"medicine":5.0}
+	for item in cost.keys():
+		var needed := maxf(0.0,float(cost[item])-float(contributed.get(item,0.0)))
+		if needed <= 0.0:
+			continue
+		var cap := float(package_caps.get(item,5.0))
+		var available := _resource_amount(sim,"LAST_HAVEN",str(item))
+		var amount := minf(minf(needed,cap),available)
+		if amount > 0.0:
+			_change_resource(sim,"LAST_HAVEN",str(item),-amount)
+			contributed[item] = float(contributed.get(item,0.0))+amount
+			moved_any = true
+	if not moved_any:
+		sim.add_event("RECOVERY PROJECT BLOCKED","Last Haven lacks resources for the next %s contribution." % project_name,"warning")
+		return false
+
+	if get_recovery_project_progress(project_name) >= 99.99:
+		project["completed"] = true
+		record_history(sim,"RECOVERY PROJECT COMPLETE","%s was completed across the civilization network." % project_name,"endgame")
+		sim.add_event("RECOVERY PROJECT COMPLETE","%s is now operational across the network." % project_name,"good")
+	else:
+		sim.add_event("RECOVERY CONTRIBUTION","Resources committed to %s // %.0f%% complete." % [project_name,get_recovery_project_progress(project_name)],"intel")
+	return true
+
+func get_recovery_project_progress(project_name:String) -> float:
+	if not recovery_projects.has(project_name):
+		return 0.0
+	var project: Dictionary = recovery_projects[project_name]
+	var cost: Dictionary = project["cost"]
+	var contributed: Dictionary = project["contributed"]
+	var ratios := 0.0
+	var count := 0.0
+	for item in cost.keys():
+		ratios += clampf(float(contributed.get(item,0.0))/maxf(0.001,float(cost[item])),0.0,1.0)
+		count += 1.0
+	return 100.0*ratios/maxf(1.0,count)
+
+func _recovery_project_complete(project_name:String) -> bool:
+	return recovery_projects.has(project_name) and bool(recovery_projects[project_name]["completed"])
+
+func get_completed_recovery_project_count() -> int:
+	var completed := 0
+	for project_name in RECOVERY_PROJECT_ORDER:
+		if _recovery_project_complete(str(project_name)):
+			completed += 1
+	return completed
+
 func _update_recovery_score(sim:SettlementSimulation) -> void:
 	var settlement_count := settlements.size()
 	var population := 0
@@ -537,7 +738,8 @@ func _update_recovery_score(sim:SettlementSimulation) -> void:
 		minf(25.0,float(population)*0.65) +
 		avg_infrastructure*0.24 +
 		avg_morale*0.18 +
-		float(allied)*6.0,
+		float(allied)*6.0 +
+		float(get_completed_recovery_project_count())*6.0,
 		0.0,100.0
 	)
 	civilization_stability = clampf(
@@ -550,7 +752,9 @@ func _update_recovery_score(sim:SettlementSimulation) -> void:
 
 func _update_endgame_stage(sim:SettlementSimulation) -> void:
 	var old_stage := endgame_stage
-	if recovery_score >= 85.0 and settlements.size() >= 3:
+	if get_completed_recovery_project_count() >= RECOVERY_PROJECT_ORDER.size() and recovery_score >= 90.0 and civilization_stability >= 75.0 and settlements.size() >= 3:
+		endgame_stage = "CIVILIZATION RESTORED"
+	elif recovery_score >= 85.0 and settlements.size() >= 3:
 		endgame_stage = "REBUILD CIVILIZATION"
 	elif recovery_score >= 65.0:
 		endgame_stage = "REGIONAL POWER"
@@ -599,6 +803,8 @@ func normalize_loaded_state() -> void:
 			settlement["emergency"] = ""
 		if not settlement.has("specialization"):
 			settlement["specialization"] = "General" if key != "LAST_HAVEN" else "Capital"
+		if not settlement.has("modules"):
+			settlement["modules"] = {"housing":1,"farm":0,"clinic":0,"workshop":0,"defense":0,"freight_depot":0,"radio":0}
 	for route in logistics_routes:
 		if not route.has("priority"):
 			route["priority"] = 2
