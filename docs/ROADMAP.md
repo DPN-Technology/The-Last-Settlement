@@ -73,13 +73,23 @@
 - [ ] Water contamination chemistry
 
 ## Milestone 0.5 — Relationships
-- Social interactions
-- Friends/enemies
-- Romance
-- Families
-- Memories
-- Personality-driven behavior
-- Birth, aging and death
+**Status: core complete / expanding**
+
+- [x] Social interactions
+- [x] Persistent relationship scores
+- [x] Friends/enemies foundation
+- [x] Romance / partnerships
+- [x] Families
+- [x] Memories
+- [x] Personality-driven compatibility
+- [x] Pregnancy and birth
+- [x] Aging and coming of age
+- [x] Parent/child links
+- [ ] Friendship/rival labels
+- [ ] Family tree UI
+- [ ] Grief and bereavement system
+- [ ] Child education/development
+- [ ] Death-memory propagation
 
 ## Milestone 0.6 — World & Expeditions
 - Regional map
