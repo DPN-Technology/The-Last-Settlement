@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.3.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.4.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.3.0-dev
+## CURRENT TRANSMISSION // BUILD 0.4.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -109,12 +109,35 @@ The current foundation is already moving beyond a static colony prototype.
 - Wall-aware survivor movement
 - Construction state saved and restored
 
+### UTILITIES SYSTEM // LIVE
+
+- Generator production versus settlement demand
+- Battery charge, discharge and reserve capacity
+- Power consumers across command, housing, industry, medical and utilities
+- Water extraction pumps
+- Raw-water reserve
+- Water purification
+- Clean-water production rate
+- Water storage
+- Sewage generation from population
+- Sewage processing capacity
+- Sanitation rating
+- Grid trips and pump failures
+- Engineer-driven service recovery
+- Utility consequences that affect thirst, stress, morale and health
+- Utility build catalog: generators, batteries, poles, pumps, purifiers, tanks, pipes and sewage processors
+- Power, water and sewage overlays
+- Infrastructure status in the building inspector
+- Utility state persisted in save version 3
+
 ### ACTIVE DEVELOPMENT
 
-- Blueprint cancellation UI
-- Multi-tile drag construction
+- Manual power-line and pipe routing rules
+- Per-building powered/unpowered state
+- Breaker panels and load shedding
+- Water contamination events
+- Fuel and generator consumption
 - Advanced A* pathfinding
-- Room roles and environmental stats
 - Physical item entities
 - Deterministic simulation seeds
 
@@ -395,6 +418,7 @@ No external art pack is required for the current prototype.
 | **F** | Rotate wall/door blueprint |
 | **R** | Queue repair on selected structure |
 | **X** | Demolish/salvage selected structure |
+| **U** | Cycle utility overlay: Off / Power / Water / Sewage |
 
 ---
 
@@ -441,9 +465,9 @@ The-Last-Settlement/
  │
  ├── 0.2  NEEDS + WORK
  │
- ├── 0.3  CONSTRUCTION            ◄── CURRENT
+ ├── 0.3  CONSTRUCTION
  │
- ├── 0.4  UTILITIES
+ ├── 0.4  UTILITIES               ◄── CURRENT
  │
  ├── 0.5  RELATIONSHIPS + FAMILIES
  │
