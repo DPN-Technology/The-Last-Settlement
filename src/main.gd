@@ -29,6 +29,8 @@ var world_map_mode := false
 var selected_world_location_id := 0
 var governance_mode := false
 var economy_mode := false
+var faction_mode := false
+var faction_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
@@ -91,6 +93,8 @@ func _draw() -> void:
 		_draw_governance_panel()
 	elif economy_mode:
 		_draw_economy_panel()
+	elif faction_mode:
+		_draw_faction_panel()
 	else:
 		_draw_selection_panel()
 
@@ -341,6 +345,60 @@ func _draw_economy_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-78),"VEHICLE // %s  COND %.0f%%  FUEL %.1f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"REPAIR KITS %.0f   FUEL BURN %.2f/day   [Y] REPAIR VEHICLE" % [eco.repair_kits,eco.fuel_consumed_today],HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
 
+
+func _draw_faction_panel() -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 500.0
+	var y := 138.0
+	var w := 480.0
+	var h := vp.y - 190.0
+	var fs := sim.faction_simulation
+	var visible := fs.get_visible_factions(sim)
+	if faction_index >= visible.size():
+		faction_index = 0
+
+	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
+	draw_rect(Rect2(x,y,w,h),BAD,false,2.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"FACTION COMMAND // REGIONAL INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,BAD)
+
+	if visible.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+70),"NO EXTERNAL SETTLEMENTS IN ACTIVE INTELLIGENCE RANGE.",HORIZONTAL_ALIGNMENT_LEFT,w-44,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+98),"Restore radio infrastructure and expand regional discovery.",HORIZONTAL_ALIGNMENT_LEFT,w-44,10,RUST)
+		return
+
+	var faction_name:String = visible[faction_index]
+	var faction:Dictionary = fs.factions[faction_name]
+	var location := sim.world_simulation.get_location_by_id(int(faction["location_id"]))
+	var disposition := str(faction["disposition"])
+	var disposition_color := GOOD if disposition in ["FRIENDLY","ALLIED"] else (BAD if disposition == "HOSTILE" else WARN)
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+66),faction_name,HORIZONTAL_ALIGNMENT_LEFT,-1,23,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+92),"%s // %s" % [location["name"],disposition],HORIZONTAL_ALIGNMENT_LEFT,-1,11,disposition_color)
+	_draw_meter(Vector2(x+22,y+126),w-44.0,"REPUTATION",clampf((float(faction["reputation"])+100.0)*0.5,0.0,100.0))
+	_draw_meter(Vector2(x+22,y+162),w-44.0,"STRENGTH",float(faction["strength"]))
+	_draw_meter(Vector2(x+22,y+198),w-44.0,"WEALTH",float(faction["wealth"]))
+	_draw_meter(Vector2(x+22,y+234),w-44.0,"INTELLIGENCE",float(faction["intel"]))
+
+	var agreement := "ACTIVE" if bool(faction["trade_agreement"]) else "NONE"
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+286),"TRADE AGREEMENT // %s" % agreement,HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD if agreement=="ACTIVE" else MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+314),"[↑/↓] FACTION   [A] SEND AID   [D] TRADE AGREEMENT   [Z] TRUCE",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+
+	if not fs.active_raid.is_empty():
+		var attacker := str(fs.active_raid["faction"])
+		var eta := float(fs.active_raid["eta_hours"])
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+356),"ACTIVE THREAT // %s // ETA %.1f HOURS" % [attacker,eta],HORIZONTAL_ALIGNMENT_LEFT,-1,12,BAD)
+	else:
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+356),"ACTIVE THREAT // NONE",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+398),"RECENT CONFLICT",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	var ry := y + 424.0
+	for record in fs.raid_log:
+		var result := "REPELLED" if bool(record["victory"]) else "BREACHED"
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"D%d // %s // %s // DEF %.0f / ATK %.0f" % [int(record["day"]),record["faction"],result,float(record["defense"]),float(record["attack"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,10,TEXT)
+		ry += 22.0
+		if ry > y+h-35:
+			break
+
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
 	var x := vp.x - 500.0
@@ -437,8 +495,10 @@ func _draw_hud() -> void:
 		mode_text = "[V] CLOSE CIVIC COMMAND"
 	elif economy_mode:
 		mode_text = "[K] CLOSE INDUSTRY COMMAND"
+	elif faction_mode:
+		mode_text = "[O] CLOSE FACTION COMMAND"
 	else:
-		mode_text += "  [V] CIVIC COMMAND  [K] INDUSTRY"
+		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS"
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
@@ -636,6 +696,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_K:
 				economy_mode = not economy_mode
 				governance_mode = false
+				faction_mode = false
 				world_map_mode = false
 				build_mode = false
 				selected_citizen = {}
@@ -643,11 +704,26 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_V:
 				governance_mode = not governance_mode
 				economy_mode = false
+				faction_mode = false
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
+			KEY_O:
+				faction_mode = not faction_mode
+				governance_mode = false
+				economy_mode = false
+				world_map_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
 			KEY_UP:
-				if economy_mode:
+				if faction_mode:
+					var visible := sim.faction_simulation.get_visible_factions(sim)
+					if not visible.is_empty():
+						faction_index -= 1
+						if faction_index < 0:
+							faction_index = visible.size()-1
+				elif economy_mode:
 					economy_item_index -= 1
 					if economy_item_index < 0:
 						economy_item_index = ECONOMY_ITEMS.size()-1
@@ -656,10 +732,29 @@ func _unhandled_input(event: InputEvent) -> void:
 					if governance_law_index < 0:
 						governance_law_index = GOVERNANCE_LAWS.size()-1
 			KEY_DOWN:
-				if economy_mode:
+				if faction_mode:
+					var visible := sim.faction_simulation.get_visible_factions(sim)
+					if not visible.is_empty():
+						faction_index = (faction_index+1) % visible.size()
+				elif economy_mode:
 					economy_item_index = (economy_item_index+1) % ECONOMY_ITEMS.size()
 				elif governance_mode:
 					governance_law_index = (governance_law_index+1) % GOVERNANCE_LAWS.size()
+			KEY_A:
+				if faction_mode:
+					var visible := sim.faction_simulation.get_visible_factions(sim)
+					if not visible.is_empty():
+						sim.faction_simulation.send_aid(sim,visible[faction_index])
+			KEY_D:
+				if faction_mode:
+					var visible := sim.faction_simulation.get_visible_factions(sim)
+					if not visible.is_empty():
+						sim.faction_simulation.propose_trade_agreement(sim,visible[faction_index])
+			KEY_Z:
+				if faction_mode:
+					var visible := sim.faction_simulation.get_visible_factions(sim)
+					if not visible.is_empty():
+						sim.faction_simulation.request_truce(sim,visible[faction_index])
 			KEY_H:
 				if economy_mode:
 					var sources := sim.economy_simulation.get_trade_sources()
@@ -685,6 +780,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
+				economy_mode = false
+				faction_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
@@ -705,7 +802,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if governance_mode or economy_mode:
+			if governance_mode or economy_mode or faction_mode:
 				pass
 			elif world_map_mode:
 				_world_map_select(event.position)
