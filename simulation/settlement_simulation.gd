@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 8
+const SAVE_VERSION := 9
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -824,7 +824,10 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"bottleneck_reason": economy_simulation.bottleneck_reason,
 			"fuel_consumed_today": economy_simulation.fuel_consumed_today,
 			"next_warehouse_check_hour": economy_simulation.next_warehouse_check_hour,
-			"repair_kits": economy_simulation.repair_kits
+			"repair_kits": economy_simulation.repair_kits,
+			"regional_markets": economy_simulation.regional_markets,
+			"trade_caravans": economy_simulation.trade_caravans,
+			"next_caravan_id": economy_simulation.next_caravan_id
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -897,6 +900,9 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.fuel_consumed_today = float(economy.get("fuel_consumed_today", economy_simulation.fuel_consumed_today))
 		economy_simulation.next_warehouse_check_hour = float(economy.get("next_warehouse_check_hour", economy_simulation.next_warehouse_check_hour))
 		economy_simulation.repair_kits = float(economy.get("repair_kits", economy_simulation.repair_kits))
+		economy_simulation.regional_markets = economy.get("regional_markets", economy_simulation.regional_markets)
+		economy_simulation.trade_caravans = economy.get("trade_caravans", economy_simulation.trade_caravans)
+		economy_simulation.next_caravan_id = int(economy.get("next_caravan_id", economy_simulation.next_caravan_id))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
