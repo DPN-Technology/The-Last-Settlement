@@ -342,6 +342,9 @@ func _update_utilities(sim_hours: float) -> void:
 	if utility_failures["generator_trip"] and get_active_engineers() > 0 and rng.randf() < 0.015 * sim_hours:
 		utility_failures["generator_trip"] = false
 		add_event("GRID RESTORED", "Engineering reset the generator and re-energized the bus.", "good")
+	if utility_failures["pump_failure"] and get_active_engineers() > 0 and rng.randf() < 0.012 * sim_hours:
+		utility_failures["pump_failure"] = false
+		add_event("WATER SERVICE RESTORED", "Engineering returned the extraction pump to service.", "good")
 
 	var power_factor := 1.0 if utility_state["power_online"] else 0.12
 	var extracted := pump_capacity * power_factor * sim_hours
