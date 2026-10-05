@@ -3,6 +3,8 @@ name: DPN Settlement Windows Build
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
     paths:
       - "project.godot"
       - "export_presets.cfg"
@@ -11,6 +13,7 @@ on:
       - "assets/**"
       - ".github/workflows/windows-build.yml"
       - "packaging/windows/**"
+      - "tools/release_manifest.py"
   workflow_dispatch:
 
 permissions:
@@ -25,8 +28,8 @@ env:
   GODOT_TEMPLATE_VERSION: "4.3.stable"
   GODOT_ASSET: "Godot_v4.3-stable_linux.x86_64.zip"
   GODOT_TEMPLATES: "Godot_v4.3-stable_export_templates.tpz"
-  PACKAGE_VERSION: "1.0.3"
-  DISPLAY_VERSION: "1.0.3-dev"
+  PACKAGE_VERSION: "1.0.4"
+  DISPLAY_VERSION: "1.0.4-dev"
 
 jobs:
   build-windows:
@@ -264,6 +267,36 @@ jobs:
           if ($portableCheck -ne $portable) { throw "Portable ZIP checksum verification failed." }
           if ($installerCheck -ne $installer) { throw "MSI checksum verification failed." }
 
+      - name: Build machine-readable Windows update manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $channel = "development"
+          $tagArgs = @()
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $tag = $env:GITHUB_REF_NAME
+            $channel = if ($tag -match "-") { "prerelease" } else { "stable" }
+            $tagArgs = @("--release-tag", $tag)
+          }
+          $signing = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGN_CERT_BASE64)) { "unsigned" } else { "signed" }
+
+          $args = @(
+            "tools/release_manifest.py",
+            "--version", $env:DISPLAY_VERSION,
+            "--channel", $channel,
+            "--commit", $env:GITHUB_SHA,
+            "--portable", "dist\TheLastSettlement-Windows-x86_64.zip",
+            "--installer", "dist\TheLastSettlement-Setup-x64.msi",
+            "--output", "dist\windows-release.json",
+            "--repository", $env:GITHUB_REPOSITORY,
+            "--signing-status", $signing,
+            "--save-schema", "14"
+          ) + $tagArgs
+
+          python @args
+          if ($LASTEXITCODE -ne 0) { throw "Release manifest generator failed." }
+          python -m json.tool "dist\windows-release.json" | Out-Null
+
       - name: Upload final portable Windows package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -283,3 +316,79 @@ jobs:
             dist/SHA256SUM-INSTALLER.txt
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload Windows update metadata
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-Update-Metadata
+          path: |
+            dist/windows-release.json
+            dist/SHA256SUMS-WINDOWS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+
+  publish-release:
+    name: Publish Tagged Windows Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package-windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download final portable package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: TheLastSettlement-Windows-Portable-Final
+          path: release
+
+      - name: Download MSI installer
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: TheLastSettlement-Windows-Installer
+          path: release
+
+      - name: Download update metadata
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: TheLastSettlement-Windows-Update-Metadata
+          path: release
+
+      - name: Verify tagged release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum -c SHA256SUMS-WINDOWS.txt
+          python -m json.tool windows-release.json >/dev/null
+          test -s TheLastSettlement-Windows-x86_64.zip
+          test -s TheLastSettlement-Setup-x64.msi
+
+      - name: Publish or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          assets=(
+            "release/TheLastSettlement-Windows-x86_64.zip"
+            "release/TheLastSettlement-Setup-x64.msi"
+            "release/SHA256SUMS-WINDOWS.txt"
+            "release/windows-release.json"
+          )
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+            exit 0
+          fi
+
+          release_flags=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          gh release create "$GITHUB_REF_NAME"             "${assets[@]}"             --verify-tag             --generate-notes             --title "The Last Settlement $GITHUB_REF_NAME"             "${release_flags[@]}"
