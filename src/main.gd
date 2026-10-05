@@ -20,6 +20,9 @@ var dragging := false
 var drag_origin := Vector2.ZERO
 var selected_citizen: Dictionary = {}
 var selected_building: Dictionary = {}
+var build_mode := false
+var build_catalog_index := 0
+var mouse_world := Vector2.ZERO
 
 func _ready() -> void:
 	set_process(true)
@@ -34,6 +37,12 @@ func _update_citizens(delta: float) -> void:
 	for c in sim.citizens:
 		if not c["alive"]:
 			continue
+		if int(c.get("target_blueprint_id", 0)) > 0:
+			var bp := sim.get_blueprint_by_id(int(c["target_blueprint_id"]))
+			if not bp.is_empty():
+				c["target"] = bp["position"]
+				c["position"] = c["position"].move_toward(c["target"], 25.0 * delta * maxf(0.5, sim.speed))
+				continue
 		if c["target"] == Vector2.ZERO or c["position"].distance_to(c["target"]) < 8.0:
 			var b := sim.get_building_by_type(c["target_building"])
 			c["target"] = b["position"] + Vector2(
@@ -77,6 +86,24 @@ func _draw_world() -> void:
 		draw_string(ThemeDB.fallback_font, pos + Vector2(-sz.x * 0.43, -sz.y * 0.12), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
 		draw_string(ThemeDB.fallback_font, pos + Vector2(-sz.x * 0.43, sz.y * 0.17), "COND %d%%" % int(b["condition"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 
+	for bp in sim.blueprints:
+		var bp_pos: Vector2 = _world_point(bp["position"])
+		var bp_size: Vector2 = bp["size"] * zoom
+		var bp_rect := Rect2(bp_pos - bp_size / 2.0, bp_size)
+		draw_rect(bp_rect, Color(0.55, 0.18, 0.15, 0.18), true)
+		draw_rect(bp_rect, ACCENT, false, 2.0)
+		var pct := 100.0 * float(bp["progress"]) / maxf(1.0, float(bp["work_required"]))
+		draw_string(ThemeDB.fallback_font, bp_pos + Vector2(-bp_size.x*0.42, 0), "%s %d%%" % [bp["name"], int(pct)], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT)
+
+	if build_mode:
+		var definition := sim.get_build_catalog()[build_catalog_index]
+		var ghost_pos := _world_point(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0))
+		var ghost_size: Vector2 = definition["size"] * zoom
+		var ghost_rect := Rect2(ghost_pos - ghost_size/2.0, ghost_size)
+		var valid := sim.can_place_blueprint(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0), definition["size"])
+		draw_rect(ghost_rect, Color(0.25,0.65,0.35,0.18) if valid else Color(0.8,0.15,0.15,0.18), true)
+		draw_rect(ghost_rect, GOOD if valid else BAD, false, 2.0)
+
 	for c in sim.citizens:
 		var p: Vector2 = _world_point(c["position"])
 		var col := GOOD if c["health"] > 55.0 else BAD
@@ -117,7 +144,11 @@ func _draw_hud() -> void:
 		_draw_event_panel()
 
 	var status := "PAUSED" if sim.paused else ("x%.0f" % sim.speed)
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[LMB] INSPECT  [SPACE] PAUSE  [1/2/3] SPEED  [S/L] SAVE/LOAD  [T] SHIFT  [P] PRIORITY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
+	var build_text := ""
+	if build_mode:
+		var definition := sim.get_build_catalog()[build_catalog_index]
+		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE" % [definition["name"], float(definition["cost"])]
+	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[B] BUILD  [LMB] PLACE/INSPECT  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 func _draw_event_panel() -> void:
@@ -206,6 +237,7 @@ func _draw_building_panel(b: Dictionary) -> void:
 	_draw_meter(Vector2(x+20,y+126), w-40.0, "CONDITION", float(b["condition"]))
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+184), "WORK CAPACITY // %d" % int(b["capacity"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+214), "NODE STATUS // OPERATIONAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, GOOD)
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+240), "[R] QUEUE REPAIR   [X] DEMOLISH / SALVAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
 
 func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> void:
 	draw_string(ThemeDB.fallback_font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, 150, 10, MUTED)
@@ -263,12 +295,35 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_P:
 				if not selected_citizen.is_empty():
 					sim.cycle_selected_priority(selected_citizen)
+			KEY_B:
+				build_mode = not build_mode
+				selected_citizen = {}
+				selected_building = {}
+			KEY_Q:
+				if build_mode:
+					build_catalog_index -= 1
+					if build_catalog_index < 0:
+						build_catalog_index = sim.get_build_catalog().size() - 1
+			KEY_E:
+				if build_mode:
+					build_catalog_index = (build_catalog_index + 1) % sim.get_build_catalog().size()
+			KEY_R:
+				if not selected_building.is_empty():
+					sim.queue_repair(selected_building)
+			KEY_X:
+				if not selected_building.is_empty():
+					sim.demolish_building(selected_building)
+					selected_building = {}
 			KEY_ESCAPE:
 				selected_citizen = {}
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			_select_at(event.position)
+			if build_mode:
+				var definition := sim.get_build_catalog()[build_catalog_index]
+				sim.place_blueprint(definition["type"], _screen_to_world(event.position))
+			else:
+				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			zoom = minf(1.6, zoom + 0.08)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
@@ -276,7 +331,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_MIDDLE:
 			dragging = event.pressed
 			drag_origin = event.position
-	elif event is InputEventMouseMotion and dragging:
-		var drag_delta := event.position - drag_origin
-		camera_offset += drag_delta / zoom
-		drag_origin = event.position
+	elif event is InputEventMouseMotion:
+		mouse_world = _screen_to_world(event.position)
+		if dragging:
+			var drag_delta := event.position - drag_origin
+			camera_offset += drag_delta / zoom
+			drag_origin = event.position
