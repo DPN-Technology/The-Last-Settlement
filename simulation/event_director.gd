@@ -11,13 +11,20 @@ func update(sim: SettlementSimulation) -> void:
 	if roll < 0.18:
 		sim.add_event("SCOUT REPORT", "Distant smoke spotted beyond the northern ridge.", "intel")
 	elif roll < 0.36:
-		sim.resources["scrap"] += 6.0
+		sim.stockpiles["industry"]["scrap"] = float(sim.stockpiles["industry"].get("scrap", 0.0)) + 6.0
 		sim.add_event("SALVAGE FOUND", "Workers recovered usable scrap from nearby ruins.", "good")
 	elif roll < 0.53:
-		sim.resources["water"] = maxf(0.0, sim.resources["water"] - 12.0)
+		sim.stockpiles["command"]["water"] = maxf(0.0, float(sim.stockpiles["command"].get("water", 0.0)) - 12.0)
 		sim.add_event("PIPE LEAK", "A cracked line dumped part of the clean-water reserve.", "warning")
 	elif roll < 0.70:
-		sim.resources["medicine"] = maxf(0.0, sim.resources["medicine"] - 2.0)
+		var medical_stock := float(sim.stockpiles["medical"].get("medicine", 0.0))
+		var command_stock := float(sim.stockpiles["command"].get("medicine", 0.0))
+		var remaining := 2.0
+		var from_medical := minf(medical_stock, remaining)
+		sim.stockpiles["medical"]["medicine"] = medical_stock - from_medical
+		remaining -= from_medical
+		if remaining > 0.0:
+			sim.stockpiles["command"]["medicine"] = maxf(0.0, command_stock - remaining)
 		sim.add_event("CLINIC LOAD", "Several survivors required treatment supplies.", "warning")
 	elif roll < 0.86:
 		for citizen in sim.citizens:
