@@ -1,3 +1,29 @@
+## 0.4.0-dev — Utilities & Infrastructure
+
+### Added
+- Dynamic settlement power generation and demand
+- Battery reserve simulation
+- Generator condition affecting available output
+- Water extraction and raw-water reserves
+- Purification into clean settlement water
+- Sewage generation and treatment
+- Sanitation rating
+- Generator-trip failures
+- Water-pump failures
+- Engineer-driven restoration events
+- Utility consequences for citizen stress, morale, thirst and health
+- Buildable generators, batteries, power poles, pumps, purifiers, water tanks, pipes and sewage processors
+- Power / water / sewage overlays
+- Utility infrastructure status in the building inspector
+- Utility telemetry in the command HUD
+- Utility-state persistence in save schema version 3
+
+### Changed
+- Power is now derived from production, demand and battery support rather than a passive percentage
+- Water availability now depends on extraction, power and purification
+- Population generates sewage that must be processed
+- Infrastructure failure can cascade into sanitation and survivor-health pressure
+
 ## 0.3.0-dev — Construction & Reclamation
 
 ### Added
