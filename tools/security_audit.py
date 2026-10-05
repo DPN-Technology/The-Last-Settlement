@@ -116,3 +116,24 @@ if errors:
 
 print("THE LAST SETTLEMENT SECURITY AUDIT: PASS")
 print("No embedded credential patterns, prohibited source binaries, unpinned third-party actions, or high-risk GDScript APIs detected.")
+
+
+UPDATE_MANAGER_REQUIRED_MARKERS = [
+    'DEFAULT_MANIFEST_URL := "https://github.com/DPN-Technology/The-Last-Settlement/releases/latest/download/windows-release.json"',
+    'RELEASE_ASSET_PREFIX := "https://github.com/DPN-Technology/The-Last-Settlement/releases/download/"',
+    'HashingContext.HASH_SHA256',
+    'OS.shell_open',
+    'target_save_schema < current_save_schema',
+    'INSTALLER SHA-256 VERIFICATION FAILED',
+]
+
+update_manager = ROOT / "src" / "update_manager.gd"
+if not update_manager.exists():
+    errors.append("secure update manager is missing")
+else:
+    updater_text = update_manager.read_text(encoding="utf-8")
+    if "http://" in updater_text:
+        errors.append("update manager contains an insecure HTTP URL")
+    for marker in UPDATE_MANAGER_REQUIRED_MARKERS:
+        if marker not in updater_text:
+            errors.append(f"update manager security marker missing: {marker}")
