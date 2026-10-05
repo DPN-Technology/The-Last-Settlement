@@ -1,3 +1,27 @@
+## 0.5.0-dev — Relationships, Families & Generations
+
+### Added
+- Persistent pairwise relationship scores
+- Trait-based compatibility
+- Positive and negative social interactions
+- Social-need simulation
+- Persistent survivor memories
+- Partnership formation and separation
+- Family names and partner links
+- Biological sex state for family simulation
+- Pregnancy and birth
+- Parent/child relationship links
+- Child citizens
+- Aging and birthday progression
+- Coming-of-age workforce assignment
+- Social/family visibility in the survivor inspector
+- Social simulation module validation in CI
+
+### Changed
+- Save schema advanced to version 4
+- Children prioritize survival, rest and play/learning rather than adult work
+- Social outcomes now directly influence morale and stress
+
 ## 0.4.0-dev — Utilities & Infrastructure
 
 ### Added
