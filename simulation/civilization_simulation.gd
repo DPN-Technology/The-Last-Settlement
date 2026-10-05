@@ -20,6 +20,8 @@ var settlements: Dictionary = {
 		"infrastructure":55.0,
 		"morale":70.0,
 		"security":45.0,
+		"status":"STABLE",
+		"emergency":"",
 		"resources":{"food":0.0,"water":0.0,"medicine":0.0,"materials":0.0,"fuel":0.0,"parts":0.0},
 		"active":true
 	}
@@ -31,7 +33,14 @@ var civilization_stability := 50.0
 var next_settlement_id := 2
 var next_route_id := 1
 var next_logistics_hour := 24.0
+var next_colony_event_hour := 48.0
 var endgame_stage := "SURVIVE"
+var civilization_policies := {
+	"autonomy":"Balanced",
+	"freight":"Balanced",
+	"security":"Mutual Defense"
+}
+var emergency_log: Array[Dictionary] = []
 var milestones := {
 	"second_settlement":false,
 	"regional_network":false,
@@ -49,6 +58,9 @@ func update(sim: SettlementSimulation, sim_hours: float) -> void:
 	_update_secondary_settlements(sim,sim_hours)
 	_update_recovery_score(sim)
 	_update_endgame_stage(sim)
+	if sim.total_hours >= next_colony_event_hour:
+		next_colony_event_hour = sim.total_hours + sim.rng.randf_range(36.0,72.0)
+		_roll_colony_emergency(sim)
 	if sim.total_hours >= next_logistics_hour:
 		next_logistics_hour = sim.total_hours + LOGISTICS_INTERVAL_HOURS
 		_process_logistics(sim)
@@ -132,6 +144,8 @@ func found_settlement(sim:SettlementSimulation, location_id:int) -> bool:
 		"infrastructure":28.0,
 		"morale":66.0,
 		"security":22.0,
+		"status":"STABLE",
+		"emergency":"",
 		"resources":{
 			"food":18.0,
 			"water":24.0,
@@ -184,21 +198,22 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 		var pop := float(settlement["population"])
 		var res:Dictionary = settlement["resources"]
 		var specialization := str(settlement["specialization"])
+		var autonomy_factor := _autonomy_factor()
 
 		res["food"] = maxf(0.0,float(res["food"]) - pop*0.035*sim_hours)
 		res["water"] = maxf(0.0,float(res["water"]) - pop*0.055*sim_hours)
 		match specialization:
 			"Agriculture":
-				res["food"] = float(res["food"]) + pop*0.075*sim_hours
+				res["food"] = float(res["food"]) + pop*0.075*sim_hours*autonomy_factor
 			"Industry":
-				res["materials"] = float(res["materials"]) + pop*0.045*sim_hours
-				res["parts"] = float(res["parts"]) + pop*0.008*sim_hours
+				res["materials"] = float(res["materials"]) + pop*0.045*sim_hours*autonomy_factor
+				res["parts"] = float(res["parts"]) + pop*0.008*sim_hours*autonomy_factor
 			"Medical":
-				res["medicine"] = float(res["medicine"]) + pop*0.012*sim_hours
+				res["medicine"] = float(res["medicine"]) + pop*0.012*sim_hours*autonomy_factor
 			"Logistics":
-				res["fuel"] = float(res["fuel"]) + pop*0.018*sim_hours
+				res["fuel"] = float(res["fuel"]) + pop*0.018*sim_hours*autonomy_factor
 			_:
-				res["materials"] = float(res["materials"]) + pop*0.018*sim_hours
+				res["materials"] = float(res["materials"]) + pop*0.018*sim_hours*autonomy_factor
 
 		var supply_score := 100.0
 		if float(res["food"]) < pop*2.0:
@@ -207,7 +222,13 @@ func _update_secondary_settlements(sim:SettlementSimulation, sim_hours:float) ->
 			supply_score -= 35.0
 		settlement["morale"] = move_toward(float(settlement["morale"]),clampf(supply_score,20.0,90.0),0.12*sim_hours)
 		settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+0.008*sim_hours)
-		settlement["security"] = minf(100.0,float(settlement["security"])+0.005*sim_hours)
+		var security_gain := 0.005*sim_hours
+		if civilization_policies["security"] == "Mutual Defense":
+			security_gain *= 1.6
+		elif civilization_policies["security"] == "Local Defense":
+			security_gain *= 0.8
+		settlement["security"] = minf(100.0,float(settlement["security"])+security_gain)
+		_update_colony_status(settlement)
 
 func _sync_colony_population(sim:SettlementSimulation, settlement:Dictionary) -> void:
 	var live_ids:Array[int] = []
@@ -229,26 +250,35 @@ func _process_logistics(sim:SettlementSimulation) -> void:
 		if not source["active"] or not destination["active"]:
 			continue
 
-		var outbound := _route_transfer(sim,source_key,destination_key)
-		var inbound := _route_transfer(sim,destination_key,source_key)
+		var outbound := _route_transfer(sim,source_key,destination_key,route)
+		var inbound := _route_transfer(sim,destination_key,source_key,route)
 		var moved := outbound + inbound
 		route["last_transfer"] = moved
 		route["last_day"] = sim.day
 		if moved > 0.0:
 			sim.add_event("REGIONAL LOGISTICS","%s ↔ %s moved %.0f units through the recovery network." % [source["name"],destination["name"],moved],"intel")
 
-func _route_transfer(sim:SettlementSimulation, source_key:String, destination_key:String) -> float:
+func _route_transfer(sim:SettlementSimulation, source_key:String, destination_key:String, route:Dictionary) -> float:
 	var source:Dictionary = settlements[source_key]
 	var destination:Dictionary = settlements[destination_key]
 	var moved := 0.0
-	for item in ["food","water","medicine","materials","fuel","parts"]:
+	var items := ["food","water","medicine","materials","fuel","parts"]
+	var focus := str(route.get("focus","Balanced"))
+	if focus == "Survival":
+		items = ["food","water","medicine"]
+	elif focus == "Industrial":
+		items = ["materials","fuel","parts"]
+	for item in items:
 		var source_target := maxf(4.0,float(source["population"])*2.0)
 		var dest_target := maxf(6.0,float(destination["population"])*2.5)
 		var source_amount := _resource_amount(sim,source_key,item)
 		var dest_amount := _resource_amount(sim,destination_key,item)
 		var surplus := maxf(0.0,source_amount-source_target)
 		var need := maxf(0.0,dest_target-dest_amount)
-		var transfer := minf(surplus,need,12.0)
+		var priority := int(route.get("priority",2))
+		var freight_factor := _freight_factor()
+		var transfer_cap := (6.0 + float(priority)*3.0)*freight_factor
+		var transfer := minf(surplus,need,transfer_cap)
 		if transfer > 0.0:
 			_change_resource(sim,source_key,item,-transfer)
 			_change_resource(sim,destination_key,item,transfer)
@@ -306,10 +336,181 @@ func _create_route(source:String,destination:String) -> void:
 		"source":source,
 		"destination":destination,
 		"active":true,
+		"priority":2,
+		"focus":"Balanced",
 		"last_transfer":0.0,
 		"last_day":0
 	})
 	next_route_id += 1
+
+
+func toggle_route(route_id:int) -> bool:
+	for route in logistics_routes:
+		if int(route["id"]) == route_id:
+			route["active"] = not bool(route["active"])
+			return true
+	return false
+
+func cycle_route_priority(route_id:int) -> bool:
+	for route in logistics_routes:
+		if int(route["id"]) == route_id:
+			var priority := int(route.get("priority",2)) + 1
+			if priority > 3:
+				priority = 1
+			route["priority"] = priority
+			return true
+	return false
+
+func cycle_route_focus(route_id:int) -> bool:
+	var focuses := ["Balanced","Survival","Industrial"]
+	for route in logistics_routes:
+		if int(route["id"]) == route_id:
+			var current := str(route.get("focus","Balanced"))
+			var idx := focuses.find(current)
+			route["focus"] = focuses[(idx+1)%focuses.size()]
+			return true
+	return false
+
+func cycle_settlement_specialization(sim:SettlementSimulation, settlement_key:String) -> bool:
+	if settlement_key == "LAST_HAVEN" or not settlements.has(settlement_key):
+		return false
+	var options := ["General","Agriculture","Industry","Medical","Logistics"]
+	var settlement:Dictionary = settlements[settlement_key]
+	var current := str(settlement["specialization"])
+	var idx := options.find(current)
+	var next := options[(idx+1)%options.size()]
+	if float(sim.stockpiles["industry"].get("materials",0.0)) < 8.0 or float(sim.economy_simulation.industry_stock.get("parts",0.0)) < 1.0:
+		sim.add_event("COLONY REFOCUS BLOCKED","8 materials and 1 machine part are required.","warning")
+		return false
+	sim.stockpiles["industry"]["materials"] -= 8.0
+	sim.economy_simulation.industry_stock["parts"] -= 1.0
+	settlement["specialization"] = next
+	settlement["infrastructure"] = maxf(10.0,float(settlement["infrastructure"])-2.0)
+	record_history(sim,"COLONY REORGANIZED","%s changed specialization from %s to %s." % [settlement["name"],current,next],"policy")
+	sim.add_event("COLONY REFOCUSED","%s specialization changed to %s." % [settlement["name"],next],"intel")
+	return true
+
+func send_emergency_aid(sim:SettlementSimulation, settlement_key:String) -> bool:
+	if settlement_key == "LAST_HAVEN" or not settlements.has(settlement_key):
+		return false
+	if float(sim.stockpiles["command"].get("food",0.0)) < 8.0 or float(sim.stockpiles["command"].get("water",0.0)) < 12.0 or float(sim.stockpiles["medical"].get("medicine",0.0)) < 2.0:
+		sim.add_event("AID BLOCKED","Emergency aid requires 8 food, 12 water and 2 medicine.","warning")
+		return false
+	sim.stockpiles["command"]["food"] -= 8.0
+	sim.stockpiles["command"]["water"] -= 12.0
+	sim.stockpiles["medical"]["medicine"] -= 2.0
+	var settlement:Dictionary = settlements[settlement_key]
+	var res:Dictionary = settlement["resources"]
+	res["food"] = float(res["food"])+8.0
+	res["water"] = float(res["water"])+12.0
+	res["medicine"] = float(res["medicine"])+2.0
+	settlement["morale"] = minf(100.0,float(settlement["morale"])+8.0)
+	settlement["infrastructure"] = minf(100.0,float(settlement["infrastructure"])+4.0)
+	var old_emergency := str(settlement.get("emergency",""))
+	settlement["emergency"] = ""
+	settlement["status"] = "RECOVERING"
+	record_history(sim,"EMERGENCY AID","Last Haven stabilized %s after %s." % [settlement["name"],old_emergency if old_emergency != "" else "a supply crisis"],"aid")
+	sim.add_event("EMERGENCY AID DELIVERED","%s received emergency recovery supplies." % settlement["name"],"good")
+	return true
+
+func cycle_policy(sim:SettlementSimulation, policy_key:String) -> bool:
+	var options := {
+		"autonomy":["Centralized","Balanced","Autonomous"],
+		"freight":["Conservative","Balanced","Aggressive"],
+		"security":["Local Defense","Mutual Defense","Fortress Network"]
+	}
+	if not options.has(policy_key):
+		return false
+	var values:Array = options[policy_key]
+	var current := str(civilization_policies[policy_key])
+	var idx := values.find(current)
+	civilization_policies[policy_key] = values[(idx+1)%values.size()]
+	record_history(sim,"CIVILIZATION POLICY","%s policy changed to %s." % [policy_key.capitalize(),civilization_policies[policy_key]],"policy")
+	sim.add_event("NETWORK POLICY","%s policy set to %s." % [policy_key.capitalize(),civilization_policies[policy_key]],"intel")
+	return true
+
+func _autonomy_factor() -> float:
+	match str(civilization_policies["autonomy"]):
+		"Autonomous":
+			return 1.12
+		"Centralized":
+			return 0.92
+		_:
+			return 1.0
+
+func _freight_factor() -> float:
+	match str(civilization_policies["freight"]):
+		"Aggressive":
+			return 1.35
+		"Conservative":
+			return 0.75
+		_:
+			return 1.0
+
+func _roll_colony_emergency(sim:SettlementSimulation) -> void:
+	var candidates:Array[String] = []
+	for key in settlements.keys():
+		if key != "LAST_HAVEN" and settlements[key]["active"]:
+			candidates.append(str(key))
+	if candidates.is_empty():
+		return
+	var key := candidates[sim.rng.randi_range(0,candidates.size()-1)]
+	var settlement:Dictionary = settlements[key]
+	if str(settlement.get("emergency","")) != "":
+		return
+
+	var res:Dictionary = settlement["resources"]
+	var pop := maxf(1.0,float(settlement["population"]))
+	var risks:Array[String] = []
+	if float(res["food"]) < pop*2.5:
+		risks.append("Food Shortage")
+	if float(res["water"]) < pop*3.5:
+		risks.append("Water Crisis")
+	if float(settlement["infrastructure"]) < 45.0:
+		risks.append("Infrastructure Failure")
+	if float(settlement["security"]) < 35.0:
+		risks.append("Security Incident")
+	if risks.is_empty() and sim.rng.randf() < 0.35:
+		risks.append(["Storm Damage","Disease Cluster","Equipment Failure"][sim.rng.randi_range(0,2)])
+	if risks.is_empty():
+		return
+
+	var emergency := risks[sim.rng.randi_range(0,risks.size()-1)]
+	settlement["emergency"] = emergency
+	settlement["status"] = "EMERGENCY"
+	match emergency:
+		"Food Shortage":
+			settlement["morale"] = maxf(0.0,float(settlement["morale"])-8.0)
+		"Water Crisis":
+			settlement["morale"] = maxf(0.0,float(settlement["morale"])-10.0)
+		"Infrastructure Failure":
+			settlement["infrastructure"] = maxf(5.0,float(settlement["infrastructure"])-12.0)
+		"Security Incident":
+			settlement["security"] = maxf(5.0,float(settlement["security"])-10.0)
+		"Storm Damage":
+			settlement["infrastructure"] = maxf(5.0,float(settlement["infrastructure"])-9.0)
+		"Disease Cluster":
+			res["medicine"] = maxf(0.0,float(res["medicine"])-3.0)
+			settlement["morale"] = maxf(0.0,float(settlement["morale"])-6.0)
+		"Equipment Failure":
+			res["parts"] = maxf(0.0,float(res["parts"])-2.0)
+			settlement["infrastructure"] = maxf(5.0,float(settlement["infrastructure"])-6.0)
+	emergency_log.push_front({"day":sim.day,"settlement":settlement["name"],"emergency":emergency})
+	if emergency_log.size() > 30:
+		emergency_log.resize(30)
+	record_history(sim,"COLONY EMERGENCY","%s declared %s." % [settlement["name"],emergency],"critical")
+	sim.add_event("COLONY EMERGENCY","%s reports %s." % [settlement["name"],emergency],"critical")
+
+func _update_colony_status(settlement:Dictionary) -> void:
+	if str(settlement.get("emergency","")) != "":
+		settlement["status"] = "EMERGENCY"
+	elif float(settlement["morale"]) < 40.0 or float(settlement["infrastructure"]) < 35.0:
+		settlement["status"] = "DEGRADED"
+	elif str(settlement.get("status","")) == "RECOVERING":
+		if float(settlement["morale"]) >= 55.0 and float(settlement["infrastructure"]) >= 50.0:
+			settlement["status"] = "STABLE"
+	else:
+		settlement["status"] = "STABLE"
 
 func _update_recovery_score(sim:SettlementSimulation) -> void:
 	var settlement_count := settlements.size()
