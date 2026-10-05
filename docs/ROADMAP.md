@@ -92,13 +92,25 @@
 - [ ] Death-memory propagation
 
 ## Milestone 0.6 — World & Expeditions
-- Regional map
-- Fog of war
-- Expedition teams
-- Supplies and loadouts
-- Ruins
-- Radio range
-- Encounter simulation
+**Status: core complete / expanding**
+
+- [x] Regional map
+- [x] Fog of war
+- [x] Expedition teams
+- [x] Supplies and loadouts
+- [x] Ruins
+- [x] Radio range
+- [x] Encounter simulation
+- [x] Expedition injuries and casualties
+- [x] Salvage return to settlement stockpiles
+- [x] Relay restoration / range expansion
+- [x] Expedition save/load persistence
+- [ ] Player-selected team composition
+- [ ] Custom loadouts
+- [ ] Branching encounter decisions
+- [ ] Weather/travel modifiers
+- [ ] Vehicles / convoy travel
+- [ ] Procedural regional generation
 
 ## Milestone 0.7 — Society
 - Laws
