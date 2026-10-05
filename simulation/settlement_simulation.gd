@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
