@@ -1,0 +1,144 @@
+name: DPN Settlement Windows Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "src/**"
+      - "simulation/**"
+      - "assets/**"
+      - ".github/workflows/windows-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: settlement-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.3-stable"
+  GODOT_TEMPLATE_VERSION: "4.3.stable"
+  GODOT_ASSET: "Godot_v4.3-stable_linux.x86_64.zip"
+  GODOT_TEMPLATES: "Godot_v4.3-stable_export_templates.tpz"
+
+jobs:
+  build-windows:
+    name: Windows x86_64 Portable Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Restore Godot Windows export templates
+        id: export-templates
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.3.stable
+          key: godot-4.3-stable-windows-x86_64-export-templates-v1
+
+      - name: Install checksum-verified Godot 4.3 editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "${BASE}/${GODOT_ASSET}" -o godot.zip
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "${BASE}/SHA512-SUMS.txt" -o SHA512-SUMS.txt
+          EXPECTED="$(grep "  ${GODOT_ASSET}$" SHA512-SUMS.txt | awk '{print $1}')"
+          ACTUAL="$(sha512sum godot.zip | awk '{print $1}')"
+          test -n "$EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          mkdir -p .godot-build
+          unzip -q godot.zip -d .godot-build
+          chmod +x ".godot-build/Godot_v4.3-stable_linux.x86_64"
+          ".godot-build/Godot_v4.3-stable_linux.x86_64" --version
+
+      - name: Install checksum-verified Windows export templates
+        if: steps.export-templates.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "${BASE}/${GODOT_TEMPLATES}" -o export_templates.tpz
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "${BASE}/SHA512-SUMS.txt" -o TEMPLATE-SHA512-SUMS.txt
+          EXPECTED="$(grep "  ${GODOT_TEMPLATES}$" TEMPLATE-SHA512-SUMS.txt | awk '{print $1}')"
+          ACTUAL="$(sha512sum export_templates.tpz | awk '{print $1}')"
+          test -n "$EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          mkdir -p "$TEMPLATE_DIR"
+          unzip -j -q export_templates.tpz             "templates/windows_release_x86_64.exe"             "templates/windows_debug_x86_64.exe"             -d "$TEMPLATE_DIR"
+          test -s "$TEMPLATE_DIR/windows_release_x86_64.exe"
+          test -s "$TEMPLATE_DIR/windows_debug_x86_64.exe"
+
+      - name: Verify project parses before export
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT=".godot-build/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --editor --quit-after 2
+
+      - name: Export Windows release
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT=".godot-build/Godot_v4.3-stable_linux.x86_64"
+          mkdir -p dist/windows
+          "$GODOT" --headless --path . --export-release "Windows Desktop" "dist/windows/TheLastSettlement.exe"
+          test -s dist/windows/TheLastSettlement.exe
+          test -s dist/windows/TheLastSettlement.pck
+
+      - name: Verify Windows package
+        shell: bash
+        run: |
+          set -euo pipefail
+          file dist/windows/TheLastSettlement.exe | tee dist/windows/EXECUTABLE-TYPE.txt
+          grep -Eq 'PE32|MS Windows' dist/windows/EXECUTABLE-TYPE.txt
+          sha256sum             dist/windows/TheLastSettlement.exe             dist/windows/TheLastSettlement.pck             > dist/windows/SHA256SUMS.txt
+
+      - name: Add portable run instructions
+        shell: bash
+        run: |
+          cat > dist/windows/README-WINDOWS.txt <<'EOF'
+          THE LAST SETTLEMENT // WINDOWS PORTABLE BUILD
+          DPN TECHNOLOGY
+
+          1. Extract the complete ZIP to a normal folder.
+          2. Keep TheLastSettlement.exe and TheLastSettlement.pck together.
+          3. Double-click TheLastSettlement.exe.
+
+          This development build is currently unsigned. Windows SmartScreen may
+          show an "Unknown publisher" warning until DPN Technology adds a Windows
+          code-signing certificate to the release pipeline.
+
+          Do not delete or rename TheLastSettlement.pck. The executable loads
+          the game data from that file.
+
+          DEVELOP. PIONEER. NAVIGATE.
+          THE OLD WORLD DIED. BUILD THE NEXT ONE.
+          EOF
+
+      - name: Create portable ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist/windows
+          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             SHA256SUMS.txt
+          cd ../..
+          test -s dist/TheLastSettlement-Windows-x86_64.zip
+
+      - name: Upload Windows portable build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-x86_64
+          path: dist/TheLastSettlement-Windows-x86_64.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
