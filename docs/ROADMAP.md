@@ -234,8 +234,8 @@
 - [x] Godot parse gate before export
 - [x] Windows executable format verification
 - [x] SHA-256 package manifest
-- [ ] DPN game icon / Windows resources
-- [ ] Windows code signing
-- [ ] Installer package
-- [ ] Release-channel automation
+- [x] DPN game icon / Windows resources
+- [x] Windows code-signing pipeline hooks\n- [ ] Production Windows code-signing certificate
+- [x] Per-user MSI installer package
+- [ ] Release-channel automation / auto-update channel
 - [ ] Crash reporting / diagnostic bundle
