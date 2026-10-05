@@ -29,7 +29,7 @@ env:
   GODOT_ASSET: "Godot_v4.3-stable_linux.x86_64.zip"
   GODOT_TEMPLATES: "Godot_v4.3-stable_export_templates.tpz"
   PACKAGE_VERSION: "1.0.5"
-  DISPLAY_VERSION: "1.0.5-dev"
+  DISPLAY_VERSION: "1.0.5"
 
 jobs:
   build-windows:
@@ -124,7 +124,7 @@ jobs:
           2. Keep TheLastSettlement.exe and TheLastSettlement.pck together.
           3. Double-click TheLastSettlement.exe.
 
-          This development build is currently unsigned. Windows SmartScreen may
+          This stable build is currently unsigned. Windows SmartScreen may
           show an "Unknown publisher" warning until DPN Technology adds a Windows
           code-signing certificate to the release pipeline.
 
