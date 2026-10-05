@@ -1,12 +1,12 @@
 # Windows Release & Update Channel
 
-**The Last Settlement** uses a versioned Windows distribution pipeline designed for safe manual installs today and a future in-game updater.
+**The Last Settlement** uses a versioned Windows distribution pipeline designed for safe manual installs and a live in-game Windows Update Command.
 
 ## Channels
 
 | Channel | Source | Example | Behavior |
 |---|---|---|---|
-| Development | `main` | `1.0.4-dev` | Builds Actions artifacts only |
+| Development | `main` | `1.0.5-dev` | Builds Actions artifacts only |
 | Prerelease | Git tag containing `-` | `v1.1.0-beta.1` | Publishes a GitHub prerelease |
 | Stable | Clean Git tag | `v1.1.0` | Publishes a normal GitHub Release |
 
@@ -32,7 +32,7 @@ Example shape:
   "schema_version": 1,
   "product": "The Last Settlement",
   "publisher": "DPN Technology",
-  "version": "1.0.4-dev",
+  "version": "1.0.5-dev",
   "channel": "development",
   "commit": "<git-sha>",
   "platform": "windows-x86_64",
@@ -82,9 +82,9 @@ Before creating a release tag:
 Recommended tags:
 
 ```text
-v1.0.4-dev.1
-v1.0.4-beta.1
-v1.0.4
+v1.0.5-dev.1
+v1.0.5-beta.1
+v1.0.5
 ```
 
 ## GitHub Release publishing
@@ -111,21 +111,45 @@ The pipeline can Authenticode-sign the EXE and MSI when both repository secrets 
 
 Until a production DPN Windows signing certificate is configured, manifests correctly report `"signing_status": "unsigned"`.
 
-## Future in-game updater
+## In-game Update Command
 
-The game should not silently replace itself.
+The Windows updater is now implemented.
 
-The planned updater flow is:
+Stable Windows builds use:
 
-**Detect → Explain → Download → Verify → Stage → User approves install → Restart**
+`https://github.com/DPN-Technology/The-Last-Settlement/releases/latest/download/windows-release.json`
 
-No update should execute unless:
+The updater flow is:
 
-- The manifest schema is supported.
-- The package SHA-256 matches.
-- The target version is newer.
-- The save schema is compatible.
-- The user explicitly approves the update.
+**Detect → Validate manifest → Compare version → Validate save schema → Explain → Download MSI → Verify SHA-256 → Stage → User approves → Save → Re-verify SHA-256 → Windows installer handoff**
+
+### Controls
+
+- **F10** — open/close Update Command and check again
+- **F11** — download the MSI after a newer compatible release is validated
+- **F12** — save the settlement and explicitly approve installer handoff after verification
+
+### Runtime security requirements
+
+The updater refuses an update unless:
+
+- Manifest schema is exactly supported.
+- Product is exactly **The Last Settlement**.
+- Platform is exactly **windows-x86_64**.
+- Target version is newer than the running build.
+- Target save schema does not downgrade the current save schema.
+- Installer URL begins with the DPN repository release origin.
+- Installer URL uses the approved HTTPS release channel.
+- Installer SHA-256 is a valid 64-character digest.
+- Installer size metadata is positive.
+- Download completes successfully.
+- Downloaded installer SHA-256 matches the manifest.
+- Installer SHA-256 still matches immediately before launch.
+- The user explicitly presses **F12**.
+
+The updater never silently replaces the running executable and does not use `OS.execute` or `OS.create_process`.
+
+The verified installer is staged in the game's `user://updates` directory and handed to the Windows shell only after approval.
 
 ---
 
