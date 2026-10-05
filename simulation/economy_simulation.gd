@@ -439,7 +439,8 @@ func get_trade_price(item:String, source_index:int=0) -> float:
 	var market:Dictionary = regional_markets[str(caravan["market_key"])]
 	var modifier := float(market["price_modifiers"].get(item,1.0))
 	var reputation_discount := clampf(float(market["reputation"])*0.0025,0.0,0.18)
-	return base*modifier*(1.0-reputation_discount)
+	var agreement_discount := 0.10 if bool(market.get("agreement",false)) else 0.0
+	return base*modifier*maxf(0.65,1.0-reputation_discount-agreement_discount)
 
 func trade_with_source(sim:SettlementSimulation, source_index:int, item:String, quantity:float, buying:bool) -> bool:
 	if source_index <= 0:
