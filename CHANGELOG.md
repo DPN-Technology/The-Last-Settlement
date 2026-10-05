@@ -1,3 +1,27 @@
+## 0.8.0-dev — Industry & Economy
+
+### Added
+- Manufacturing recipe system
+- Workshop production queue
+- Machine-parts production
+- Component production
+- Tool-kit production
+- Fuel blending
+- Skill-weighted industrial work
+- Industrial fuel, parts, tools and components stock
+- Settlement credits
+- Scarcity-driven market pricing
+- Buying and selling
+- Trade log
+- Vehicle condition/fuel foundation
+- Industry & Economy command panel
+- Economy persistence in save schema version 7
+- Economy module validation in CI
+
+### Changed
+- Workshop output now includes intermediate manufactured goods
+- Scarcity can now alter market value rather than only affecting survival metrics
+
 ## 0.7.0-dev — Government, Law & Society
 
 ### Added
