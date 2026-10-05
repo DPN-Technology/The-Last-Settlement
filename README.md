@@ -220,16 +220,34 @@ The current foundation is already moving beyond a static colony prototype.
 - Industry/economy command panel
 - Economy state persisted in save version 7
 
+### INDUSTRIAL LOGISTICS // LIVE
+
+- Multiple production lines based on workshop count
+- Warehouse capacity from storage modules
+- Warehouse overflow pressure
+- Industrial material loss under severe storage pressure
+- Production efficiency penalties from storage congestion
+- Tool-kit production bonuses
+- Generator fuel consumption
+- Vehicle fuel consumption
+- Vehicle-assisted hauling bonus
+- Automatic vehicle refueling from industrial fuel stock
+- Vehicle repair kits
+- Player-triggered vehicle repair
+- Production bottleneck reporting
+- Trade activity influencing future market prices
+- Industrial logistics persisted in save version 8
+
 ### ACTIVE DEVELOPMENT
 
-- Multi-workshop production lines
-- Warehouses and storage limits
-- Fuel consumption by generators/vehicles
 - Trade caravans and faction markets
-- Vehicle repair/manufacturing
-- Production bottlenecks
+- Additional vehicle types
+- Vehicle manufacturing
 - Player-created production orders
-- Dynamic regional prices
+- Factory-specific recipe assignment
+- Dynamic regional prices by faction/location
+- Freight routes between settlements
+- Advanced warehouse zoning
 - Player-selected election candidates
 - Detailed council voting
 
@@ -518,6 +536,7 @@ No external art pack is required for the current prototype.
 | **Enter** | Change selected law / buy selected market item in Industry Command |
 | **K** | Toggle Industry + Economy Command |
 | **Backspace** | Sell selected market item in Industry Command |
+| **Y** | Repair primary vehicle using a repair kit in Industry Command |
 
 ---
 
