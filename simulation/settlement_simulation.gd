@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -59,6 +59,7 @@ var world_simulation := WorldSimulation.new()
 var governance_simulation := GovernanceSimulation.new()
 var economy_simulation := EconomySimulation.new()
 var faction_simulation := FactionSimulation.new()
+var civilization_simulation := CivilizationSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -71,6 +72,7 @@ func _init() -> void:
 	governance_simulation.initialize(self)
 	economy_simulation.initialize(self)
 	faction_simulation.initialize(self)
+	civilization_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
 
 func _create_buildings() -> void:
@@ -282,6 +284,7 @@ func update(delta: float) -> void:
 	governance_simulation.update(self, sim_hours)
 	economy_simulation.update(self, sim_hours)
 	faction_simulation.update(self, sim_hours)
+	civilization_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -729,7 +732,7 @@ func get_alive_citizens() -> Array[Dictionary]:
 func get_settlement_citizens() -> Array[Dictionary]:
 	var present: Array[Dictionary] = []
 	for c in citizens:
-		if c["alive"] and not c.get("on_expedition", false):
+		if c["alive"] and not c.get("on_expedition", false) and str(c.get("home_settlement","LAST_HAVEN")) == "LAST_HAVEN":
 			present.append(c)
 	return present
 
@@ -838,6 +841,18 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"active_raid": faction_simulation.active_raid,
 			"raid_log": faction_simulation.raid_log,
 			"last_espionage_hour": faction_simulation.last_espionage_hour
+		},
+		"civilization": {
+			"settlements": civilization_simulation.settlements,
+			"logistics_routes": civilization_simulation.logistics_routes,
+			"history_archive": civilization_simulation.history_archive,
+			"recovery_score": civilization_simulation.recovery_score,
+			"civilization_stability": civilization_simulation.civilization_stability,
+			"next_settlement_id": civilization_simulation.next_settlement_id,
+			"next_route_id": civilization_simulation.next_route_id,
+			"next_logistics_hour": civilization_simulation.next_logistics_hour,
+			"endgame_stage": civilization_simulation.endgame_stage,
+			"milestones": civilization_simulation.milestones
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -920,6 +935,18 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		faction_simulation.active_raid = faction_state.get("active_raid", faction_simulation.active_raid)
 		faction_simulation.raid_log = faction_state.get("raid_log", faction_simulation.raid_log)
 		faction_simulation.last_espionage_hour = float(faction_state.get("last_espionage_hour", faction_simulation.last_espionage_hour))
+	var civilization_state: Dictionary = data.get("civilization", {})
+	if not civilization_state.is_empty():
+		civilization_simulation.settlements = civilization_state.get("settlements", civilization_simulation.settlements)
+		civilization_simulation.logistics_routes = civilization_state.get("logistics_routes", civilization_simulation.logistics_routes)
+		civilization_simulation.history_archive = civilization_state.get("history_archive", civilization_simulation.history_archive)
+		civilization_simulation.recovery_score = float(civilization_state.get("recovery_score", civilization_simulation.recovery_score))
+		civilization_simulation.civilization_stability = float(civilization_state.get("civilization_stability", civilization_simulation.civilization_stability))
+		civilization_simulation.next_settlement_id = int(civilization_state.get("next_settlement_id", civilization_simulation.next_settlement_id))
+		civilization_simulation.next_route_id = int(civilization_state.get("next_route_id", civilization_simulation.next_route_id))
+		civilization_simulation.next_logistics_hour = float(civilization_state.get("next_logistics_hour", civilization_simulation.next_logistics_hour))
+		civilization_simulation.endgame_stage = str(civilization_state.get("endgame_stage", civilization_simulation.endgame_stage))
+		civilization_simulation.milestones = civilization_state.get("milestones", civilization_simulation.milestones)
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
