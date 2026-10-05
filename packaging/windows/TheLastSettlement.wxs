@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="The Last Settlement" Language="1033" Version="$(var.ProductVersion)" Manufacturer="DPN Technology" UpgradeCode="7D70539D-4F96-4EC9-AD38-2A4C2A51F3B7">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" Description="The Last Settlement by DPN Technology" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of The Last Settlement is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPNOREPAIR" Value="1" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/DPN-Technology/The-Last-Settlement" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="DPNROOT" Name="DPN Technology">
+          <Directory Id="INSTALLFOLDER" Name="The Last Settlement" />
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="DPNMENU" Name="DPN Technology">
+          <Directory Id="PROGRAMMENUFOLDER" Name="The Last Settlement" />
+        </Directory>
+      </Directory>
+      <Directory Id="DesktopFolder" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="GameExeComponent" Guid="*">
+        <File Id="GameExe" Source="$(var.PayloadDir)\TheLastSettlement.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="GamePckComponent" Guid="*">
+        <File Id="GamePck" Source="$(var.PayloadDir)\TheLastSettlement.pck" KeyPath="yes" />
+      </Component>
+      <Component Id="ReadmeComponent" Guid="*">
+        <File Id="WindowsReadme" Source="$(var.PayloadDir)\README-WINDOWS.txt" KeyPath="yes" />
+      </Component>
+      <Component Id="ShortcutComponent" Guid="*">
+        <Shortcut Id="StartMenuShortcut"
+                  Directory="PROGRAMMENUFOLDER"
+                  Name="The Last Settlement"
+                  Description="Launch The Last Settlement"
+                  Target="[INSTALLFOLDER]TheLastSettlement.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="DesktopShortcut"
+                  Directory="DesktopFolder"
+                  Name="The Last Settlement"
+                  Description="Launch The Last Settlement"
+                  Target="[INSTALLFOLDER]TheLastSettlement.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut Id="UninstallShortcut"
+                  Directory="PROGRAMMENUFOLDER"
+                  Name="Uninstall The Last Settlement"
+                  Target="[SystemFolder]msiexec.exe"
+                  Arguments="/x [ProductCode]" />
+        <RemoveFolder Id="RemoveProgramMenuFolder" Directory="PROGRAMMENUFOLDER" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\DPN Technology\The Last Settlement"
+                       Name="Installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Complete" Title="The Last Settlement" Level="1">
+      <ComponentRef Id="GameExeComponent" />
+      <ComponentRef Id="GamePckComponent" />
+      <ComponentRef Id="ReadmeComponent" />
+      <ComponentRef Id="ShortcutComponent" />
+    </Feature>
+  </Product>
+</Wix>
