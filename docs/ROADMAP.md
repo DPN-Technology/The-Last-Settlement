@@ -185,7 +185,7 @@
 - [ ] Defensive emplacements / automated defenses
 
 ## Milestone 1.0 — Civilization
-**Status: core started / active**
+**Status: advanced / active**
 
 - [x] Multiple player settlements
 - [x] Survivor founding teams
@@ -201,9 +201,14 @@
 - [x] Save schema version 11
 - [x] Generational simulation foundation
 - [ ] Detailed secondary settlement construction
-- [ ] Configurable freight routes
-- [ ] Civilization-wide laws / government
+- [x] Configurable freight routes
+- [x] Civilization-wide policy foundation
+- [x] Colony emergency management
+- [x] Emergency aid operations
+- [x] Colony specialization controls
+- [ ] Full civilization-wide laws / government
 - [ ] Endgame civilization recovery objectives
+- [x] Backward civilization-state normalization
 - [ ] Full save migration tooling
 - [ ] Performance profiling
 - [ ] Large-population simulation optimization
