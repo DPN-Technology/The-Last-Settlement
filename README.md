@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.3--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.4--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.3-dev
+## CURRENT TRANSMISSION // BUILD 1.0.4-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -405,6 +405,26 @@ The current foundation is already moving beyond a static colony prototype.
 - Federal emergency reserve support for colony crises
 - Save schema version 14 persistence for federal governance + founding roster
 
+### RELEASE + UPDATE CHANNEL // LIVE
+
+- Versioned Windows distribution pipeline
+- Development builds from `main`
+- Prerelease channel from hyphenated `v*` tags
+- Stable release channel from clean `vX.Y.Z` tags
+- Machine-readable `windows-release.json`
+- Release schema version 1
+- Portable ZIP SHA-256 and size metadata
+- MSI SHA-256 and size metadata
+- Save-schema compatibility metadata
+- Signing-state metadata
+- Release asset URLs on tagged builds
+- CI self-test for update-manifest hashes
+- Tag-only GitHub Release publishing
+- Job-scoped release write permission
+- Existing tagged releases updated with asset replacement instead of duplicated
+- Portable ZIP + MSI + combined checksums + update manifest published together
+- Full update-channel contract documented in `docs/UPDATE_CHANNEL.md`
+
 ### ACTIVE DEVELOPMENT
 
 - Founding-team role requirements and expedition-style loadouts
@@ -630,7 +650,7 @@ The repository is built to stay green while the simulation grows. The main CI ga
 | **DPN Settlement CodeQL** | Static security analysis |
 | **DPN Settlement Supply Chain** | Dependency / workflow supply-chain checks |
 | **Code Quality** | Repository quality and maintainability checks |
-| **Windows Build** | Checksum-verified Godot 4.3 release export, PE executable verification, portable ZIP artifact |
+| **Windows Build** | Checksum-verified Godot 4.3 export, MSI + portable packages, release manifest, tagged release publishing |
 
 The development rule is the same as the simulation rule:
 
