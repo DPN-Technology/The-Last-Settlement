@@ -60,7 +60,8 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"alive": true,
 		"position": Vector2(rng.randf_range(360, 1120), rng.randf_range(210, 700)),
 		"target": Vector2.ZERO,
-		"target_building": ""
+		"target_building": "",
+		"target_blueprint_id": 0
 	}
 
 static func skill_multiplier(citizen: Dictionary, skill: String) -> float:
