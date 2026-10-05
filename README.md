@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.2--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.3--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.2-dev
+## CURRENT TRANSMISSION // BUILD 1.0.3-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -317,7 +317,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Civilization state persisted in save version 11
 - Founding sites created from secured and cleared ruins
 
-### SYSTEM STATUS // BUILD 1.0.2-dev
+### SYSTEM STATUS // BUILD 1.0.3-dev
 
 | Layer | Status | Live Integration |
 |---|---|---|
@@ -380,9 +380,34 @@ The current foundation is already moving beyond a static colony prototype.
 - True **CIVILIZATION RESTORED** state requires all recovery projects, 3+ settlements, 90+ recovery and 75+ stability
 - Save schema version 13 persistence for colony and recovery projects
 
+### FOUNDING TEAMS + FEDERAL GOVERNANCE // LIVE
+
+- Manual four-survivor founding roster
+- Eligible colonist cycling and roster toggle controls
+- Manual founding roster persisted in saves
+- Automatic founding selection remains available when no manual roster is set
+- Survivor migration from Last Haven into established colonies
+- Colony housing capacity based on Housing Block modules
+- Migration blocked when a colony is full
+- Offsite survivors removed from Last Haven-local morale calculations
+- Settlement representatives selected from real resident survivors
+- Federal representation charter
+- Federal contribution/tithe charter
+- Federal rights charter
+- Federal legitimacy
+- Recovery-network cohesion
+- Federal reserve / treasury
+- Weekly federal council sessions
+- Council accord, session and deadlock outcomes
+- Federal disputes when cohesion collapses
+- Colony morale reactions to charter changes
+- Federal legitimacy and cohesion now feed directly into civilization stability
+- Federal emergency reserve support for colony crises
+- Save schema version 14 persistence for federal governance + founding roster
+
 ### ACTIVE DEVELOPMENT
 
-- Founding-team selection UI
+- Founding-team role requirements and expedition-style loadouts
 - Founding-team selection UI
 - Civilization-wide government
 - Full faction population/economy simulation
@@ -624,7 +649,7 @@ The development rule is the same as the simulation rule:
 | Architecture | Modular simulation systems |
 | Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
 | Validation | GitHub Actions + CodeQL + supply-chain gates |
-| Save Schema | Version 13 |
+| Save Schema | Version 14 |
 | Data Direction | Save-versioned, deterministic-friendly simulation |
 
 The simulation architecture comes first.
@@ -668,14 +693,14 @@ No external art pack is required for the current prototype.
 | **Middle Mouse Drag** | Pan map |
 | **S** | Save settlement |
 | **L** | Load settlement |
-| **T** | Toggle selected survivor day/night shift |
+| **T** | Toggle survivor shift / cycle federal representation charter in Civilization Command |
 | **P** | Cycle selected survivor job priority / freight-route priority in Civilization Command |
-| **B** | Toggle build mode |
+| **B** | Toggle build mode / spend federal reserve on selected colony emergency |
 | **Q / E** | Cycle build type; **E** refocuses selected colony in Civilization Command |
 | **F** | Rotate wall/door blueprint / cycle freight-route cargo focus |
 | **R** | Queue repair on selected structure / toggle selected freight route |
 | **X** | Demolish/salvage selected structure |
-| **U** | Cycle utility overlay: Off / Power / Water / Sewage |
+| **U** | Cycle utility overlay / cycle federal rights charter |
 | **M** | Toggle settlement / regional world map |
 | **G** | Dispatch expedition to selected discovered world location |
 | **V** | Toggle Civic Command / government panel |
@@ -683,19 +708,21 @@ No external art pack is required for the current prototype.
 | **Enter** | Change selected law / buy selected market item in Industry Command |
 | **K** | Toggle Industry + Economy Command |
 | **Backspace** | Sell selected market item in Industry Command |
-| **Y** | Repair primary vehicle using a repair kit in Industry Command |
+| **Y** | Repair primary vehicle / cycle federal contribution charter |
 | **H** | Cycle local / active caravan market in Industry Command |
 | **N** | Cycle production recipe in Industry Command / colony module in Civilization Command |
 | **C** | Queue selected production recipe / colony module |
 | **O** | Toggle Faction Command |
 | **↑ / ↓** | Cycle discovered factions in Faction Command |
 | **A** | Send aid to selected faction / emergency aid to selected colony |
-| **D** | Propose trade agreement |
+| **D** | Propose trade agreement / deploy highlighted survivor to selected colony |
 | **Z** | Offer truce to hostile faction |
 | **J** | Toggle Civilization Command |
 | **4 / 5 / 6** | Cycle Civilization autonomy / freight / security policy |
 | **7** | Cycle civilization recovery megaproject |
 | **8** | Contribute available resources to selected recovery megaproject |
+| **9** | Cycle eligible Last Haven founding/migration candidate |
+| **0** | Add/remove highlighted survivor from four-person founding roster |
 | **Left / Right** | Cycle settlements in Civilization Command |
 | **I** | Found a settlement at a selected secured world-map site |
 
@@ -723,6 +750,7 @@ The-Last-Settlement/
 │   ├── economy_simulation.gd
 │   ├── faction_simulation.gd
 │   ├── civilization_simulation.gd
+│   ├── federal_governance_simulation.gd
 │   └── settlement_simulation.gd
 │
 ├── src/
