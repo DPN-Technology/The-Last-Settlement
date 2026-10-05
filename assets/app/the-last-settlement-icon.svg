@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+      <stop offset="0" stop-color="#211719"/>
+      <stop offset="0.55" stop-color="#0d0f12"/>
+      <stop offset="1" stop-color="#050607"/>
+    </radialGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d7d0c7"/>
+      <stop offset="0.45" stop-color="#8d8179"/>
+      <stop offset="1" stop-color="#403b3a"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff4b4b"/>
+      <stop offset="1" stop-color="#8b151b"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="12" y="12" width="488" height="488" rx="92" fill="url(#bg)" stroke="#742126" stroke-width="14"/>
+  <path d="M256 54 420 118v124c0 112-62 178-164 216C154 420 92 354 92 242V118z" fill="#0b0d10" stroke="url(#steel)" stroke-width="13"/>
+  <path d="m107 145 64 29-44 18 61 25-40 18" fill="none" stroke="#42181b" stroke-width="10" opacity=".8"/>
+  <path d="M309 77 250 184h52l-86 143 36-108h-54z" fill="url(#red)" filter="url(#glow)"/>
+  <path d="M157 324h198v83H157z" fill="#171a1e" stroke="#a36b46" stroke-width="8"/>
+  <path d="m176 324 80-65 80 65" fill="#15171a" stroke="#c54040" stroke-width="10" stroke-linejoin="round"/>
+  <rect x="224" y="348" width="64" height="59" rx="5" fill="#090a0c" stroke="#786b60" stroke-width="7"/>
+  <rect x="174" y="348" width="31" height="28" fill="#c23b3b" opacity=".75"/>
+  <rect x="307" y="348" width="31" height="28" fill="#c23b3b" opacity=".75"/>
+  <text x="256" y="468" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="44" font-weight="800" letter-spacing="8" fill="#d7d0c7">TLS</text>
+  <g fill="#7d2427" opacity=".75" font-family="monospace" font-size="15">
+    <text x="118" y="128">1010</text><text x="342" y="145">0101</text>
+    <text x="117" y="277">0110</text><text x="344" y="286">1101</text>
+  </g>
+</svg>
