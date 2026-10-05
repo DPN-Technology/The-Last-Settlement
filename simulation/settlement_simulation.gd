@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -851,8 +851,11 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"next_settlement_id": civilization_simulation.next_settlement_id,
 			"next_route_id": civilization_simulation.next_route_id,
 			"next_logistics_hour": civilization_simulation.next_logistics_hour,
+			"next_colony_event_hour": civilization_simulation.next_colony_event_hour,
 			"endgame_stage": civilization_simulation.endgame_stage,
-			"milestones": civilization_simulation.milestones
+			"milestones": civilization_simulation.milestones,
+			"civilization_policies": civilization_simulation.civilization_policies,
+			"emergency_log": civilization_simulation.emergency_log
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -945,8 +948,12 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		civilization_simulation.next_settlement_id = int(civilization_state.get("next_settlement_id", civilization_simulation.next_settlement_id))
 		civilization_simulation.next_route_id = int(civilization_state.get("next_route_id", civilization_simulation.next_route_id))
 		civilization_simulation.next_logistics_hour = float(civilization_state.get("next_logistics_hour", civilization_simulation.next_logistics_hour))
+		civilization_simulation.next_colony_event_hour = float(civilization_state.get("next_colony_event_hour", civilization_simulation.next_colony_event_hour))
+		civilization_simulation.civilization_policies = civilization_state.get("civilization_policies", civilization_simulation.civilization_policies)
+		civilization_simulation.emergency_log = civilization_state.get("emergency_log", civilization_simulation.emergency_log)
 		civilization_simulation.endgame_stage = str(civilization_state.get("endgame_stage", civilization_simulation.endgame_stage))
 		civilization_simulation.milestones = civilization_state.get("milestones", civilization_simulation.milestones)
+		civilization_simulation.normalize_loaded_state()
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
