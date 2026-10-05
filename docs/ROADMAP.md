@@ -235,7 +235,11 @@
 - [x] Windows executable format verification
 - [x] SHA-256 package manifest
 - [x] DPN game icon / Windows resources
-- [x] Windows code-signing pipeline hooks\n- [ ] Production Windows code-signing certificate
+- [x] Windows code-signing pipeline hooks
+- [ ] Production Windows code-signing certificate
 - [x] Per-user MSI installer package
-- [ ] Release-channel automation / auto-update channel
+- [x] Release-channel automation
+- [x] Machine-readable update manifest
+- [x] Tagged GitHub Release publishing
+- [ ] In-game update notification / installer handoff
 - [ ] Crash reporting / diagnostic bundle
