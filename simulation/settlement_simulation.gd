@@ -794,7 +794,8 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"active_cases": governance_simulation.active_cases,
 			"next_case_id": governance_simulation.next_case_id,
 			"next_election_hour": governance_simulation.next_election_hour,
-			"last_protest_hour": governance_simulation.last_protest_hour
+			"last_protest_hour": governance_simulation.last_protest_hour,
+			"last_crisis_hour": governance_simulation.last_crisis_hour
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -847,6 +848,7 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		governance_simulation.next_case_id = int(governance.get("next_case_id", governance_simulation.next_case_id))
 		governance_simulation.next_election_hour = float(governance.get("next_election_hour", governance_simulation.next_election_hour))
 		governance_simulation.last_protest_hour = float(governance.get("last_protest_hour", governance_simulation.last_protest_hour))
+		governance_simulation.last_crisis_hour = float(governance.get("last_crisis_hour", governance_simulation.last_crisis_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
