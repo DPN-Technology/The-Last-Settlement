@@ -135,13 +135,22 @@
 - [ ] Protest demands and negotiation
 
 ## Milestone 0.8 — Industry
-- Recipes
-- Workshops
-- Factory lines
-- Fuel
-- Vehicles
-- Warehousing
-- Trade economy
+**Status: core started / active**
+
+- [x] Recipes
+- [x] Workshop production queue
+- [x] Intermediate manufactured goods
+- [x] Fuel production foundation
+- [x] Vehicle state foundation
+- [x] Trade economy
+- [x] Scarcity-based market pricing
+- [x] Economy save/load persistence
+- [ ] Multiple factory lines
+- [ ] Warehousing capacity
+- [ ] Fuel consumption
+- [ ] Vehicle repair/manufacturing
+- [ ] Trade caravans / faction markets
+- [ ] Production bottleneck visualization
 
 ## Milestone 0.9 — Factions & Conflict
 - Dynamic AI settlements
