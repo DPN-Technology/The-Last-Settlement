@@ -1,3 +1,38 @@
+## 1.0.4-dev — Windows Release & Update Channel
+
+### Added
+- Machine-readable Windows release manifest generator
+- `windows-release.json` schema version 1
+- Portable and MSI SHA-256 metadata
+- Portable and MSI size metadata
+- Development / prerelease / stable channel metadata
+- Save-schema compatibility metadata
+- Signing-state metadata
+- Release asset URLs for tagged builds
+- CI self-test for manifest hash correctness
+- Tag-triggered Windows release builds
+- Tag-only GitHub Release publishing
+- Job-scoped `contents: write` permission for release publication
+- Existing release asset replacement with `--clobber`
+- Combined Windows release checksum manifest
+- Windows release/update-channel documentation
+- Application and Windows resource version advanced to 1.0.4-dev / 1.0.4
+
+### Verified
+- 1.0.4 portable build passes Godot export and Windows PE verification
+- 1.0.4 MSI builds successfully
+- Update manifest hashes exactly match final portable ZIP and MSI
+- Update manifest asset sizes exactly match final Windows deliverables
+- Main-branch builds correctly skip release publication
+- Tagged builds are configured to publish the verified assets only after packaging succeeds
+
+### Security
+- Normal `main` Windows builds remain read-only
+- Release write permission exists only on the tag-only publish job
+- GitHub Actions remain pinned to full commit SHAs
+- Unsigned builds explicitly report unsigned signing state
+- No updater will be allowed to install an asset without hash verification
+
 ## Windows Distribution Recovery — MSI + Green Release Gates
 
 ### Added
