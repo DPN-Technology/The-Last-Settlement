@@ -104,7 +104,7 @@ func _draw_hud() -> void:
 		["FOOD", "%.0f" % sim.resources["food"]],
 		["WATER", "%.0f" % sim.resources["water"]],
 		["POWER", "%.0f%%" % sim.resources["power"]],
-		["MED", "%.0f" % sim.resources["medicine"]],
+		["MEALS", "%.0f" % sim.resources["meals"]],
 		["MORALE", "%.0f%%" % sim.get_average_morale()]
 	]
 	var sx := 390.0
@@ -117,7 +117,7 @@ func _draw_hud() -> void:
 		_draw_event_panel()
 
 	var status := "PAUSED" if sim.paused else ("x%.0f" % sim.speed)
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[LMB] INSPECT   [SPACE] PAUSE   [1/2/3] SPEED   [WHEEL] ZOOM   [MMB] PAN   [ESC] CLOSE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[LMB] INSPECT  [SPACE] PAUSE  [1/2/3] SPEED  [S/L] SAVE/LOAD  [T] SHIFT  [P] PRIORITY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 func _draw_event_panel() -> void:
@@ -160,6 +160,7 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+60), c["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+84), "AGE %d  •  %s  •  %s" % [int(c["age"]), c["job"], c["trait"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+112), "CURRENT: %s" % c["current_action"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RUST)
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+132), "SHIFT: %s  •  %s PRIORITY: %d" % [c["shift"], c["job"].to_upper(), int(c["work_priority"].get(c["job"],3))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 
 	var rows := [
 		["HEALTH", c["health"]],
@@ -170,7 +171,7 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 		["REST", 100.0 - float(c["fatigue"])],
 		["STRESS RESIST", 100.0 - float(c["stress"])]
 	]
-	var ry := y + 150.0
+	var ry := y + 168.0
 	for row in rows:
 		_draw_meter(Vector2(x+20, ry), w-40.0, row[0], float(row[1]))
 		ry += 34.0
@@ -183,6 +184,9 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 		ry += 24.0
 
 	ry += 8.0
+	if c["injury"] != "":
+		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "INJURY // %s // TREATMENT %d%%" % [c["injury"], int(c["treatment_progress"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, BAD)
+		ry += 24.0
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "POCKET INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 	ry += 28.0
 	var inv := c["inventory"]
@@ -247,6 +251,18 @@ func _unhandled_input(event: InputEvent) -> void:
 				sim.speed = 4.0
 			KEY_3:
 				sim.speed = 12.0
+			KEY_S:
+				sim.save_game()
+			KEY_L:
+				sim.load_game()
+				selected_citizen = {}
+				selected_building = {}
+			KEY_T:
+				if not selected_citizen.is_empty():
+					sim.cycle_selected_shift(selected_citizen)
+			KEY_P:
+				if not selected_citizen.is_empty():
+					sim.cycle_selected_priority(selected_citizen)
 			KEY_ESCAPE:
 				selected_citizen = {}
 				selected_building = {}
