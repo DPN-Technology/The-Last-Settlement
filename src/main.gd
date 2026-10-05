@@ -31,6 +31,8 @@ var governance_mode := false
 var economy_mode := false
 var faction_mode := false
 var faction_index := 0
+var civilization_mode := false
+var civilization_settlement_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
@@ -51,7 +53,7 @@ func _process(delta: float) -> void:
 
 func _update_citizens(delta: float) -> void:
 	for c in sim.citizens:
-		if not c["alive"]:
+		if not c["alive"] or str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
 			continue
 		if int(c.get("target_blueprint_id", 0)) > 0:
 			var bp := sim.get_blueprint_by_id(int(c["target_blueprint_id"]))
@@ -95,6 +97,8 @@ func _draw() -> void:
 		_draw_economy_panel()
 	elif faction_mode:
 		_draw_faction_panel()
+	elif civilization_mode:
+		_draw_civilization_panel()
 	else:
 		_draw_selection_panel()
 
@@ -157,6 +161,8 @@ func _draw_world() -> void:
 		draw_rect(ghost_rect, GOOD if valid else BAD, false, 2.0)
 
 	for c in sim.citizens:
+		if str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
+			continue
 		var p: Vector2 = _world_point(c["position"])
 		var col := GOOD if c["health"] > 55.0 else BAD
 		if not c["alive"]:
@@ -211,7 +217,7 @@ func _draw_world_map() -> void:
 		if not location["discovered"]:
 			draw_circle(p, 5.0, Color("#34383d"))
 			continue
-		var col := GOOD if location["type"] == "settlement" else (WARN if location["type"] == "relay" else (Color("#7ca0c2") if location["type"] == "trade_hub" else RUST))
+		var col := GOOD if location["type"] in ["settlement","player_settlement"] else (WARN if location["type"] == "relay" else (Color("#7ca0c2") if location["type"] == "trade_hub" else (BAD if location["type"] == "faction_settlement" else RUST)))
 		if location["depleted"]:
 			col = MUTED
 		draw_circle(p, 8.0, col)
@@ -262,6 +268,12 @@ func _draw_world_map() -> void:
 		if str(location["type"]) == "trade_hub":
 			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"FACTION // %s" % str(location.get("faction","UNKNOWN")).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("#7ca0c2"))
 			draw_string(ThemeDB.fallback_font,Vector2(x+20,323),"TRADE HUB // CARAVANS SERVICE LAST HAVEN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		elif str(location["type"]) == "player_settlement":
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"PLAYER SETTLEMENT // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
+		elif str(location["type"]) in ["ruin","signal"] and bool(location.get("depleted",false)):
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"SITE SECURED // [I] FOUND SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
+		elif str(location["type"]) == "faction_settlement":
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"INHABITED FACTION TERRITORY",HORIZONTAL_ALIGNMENT_LEFT,-1,11,BAD)
 		else:
 			draw_string(ThemeDB.fallback_font,Vector2(x+20,315),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
 	else:
@@ -345,6 +357,57 @@ func _draw_economy_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-78),"VEHICLE // %s  COND %.0f%%  FUEL %.1f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"REPAIR KITS %.0f   FUEL BURN %.2f/day   [Y] REPAIR VEHICLE" % [eco.repair_kits,eco.fuel_consumed_today],HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
 
+
+
+func _draw_civilization_panel() -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 540.0
+	var y := 136.0
+	var w := 520.0
+	var h := vp.y - 186.0
+	var civ := sim.civilization_simulation
+	var settlements := civ.get_settlement_list()
+	if civilization_settlement_index >= settlements.size():
+		civilization_settlement_index = 0
+
+	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
+	draw_rect(Rect2(x,y,w,h),GOOD,false,2.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+58),"PHASE // %s" % civ.endgame_stage,HORIZONTAL_ALIGNMENT_LEFT,-1,14,TEXT)
+	_draw_meter(Vector2(x+22,y+90),w-44.0,"RECOVERY",civ.recovery_score)
+	_draw_meter(Vector2(x+22,y+126),w-44.0,"STABILITY",civ.civilization_stability)
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+178),"SETTLEMENT NETWORK // %d NODES // %d ROUTES" % [settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+
+	if not settlements.is_empty():
+		var s:Dictionary = settlements[civilization_settlement_index]
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+212),"[%d/%d] %s" % [civilization_settlement_index+1,settlements.size(),s["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,20,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+238),"SPECIALIZATION // %s" % str(s["specialization"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+258),"POP %d   INFRA %.0f%%   MORALE %.0f%%   SECURITY %.0f" % [int(s["population"]),float(s["infrastructure"]),float(s["morale"]),float(s["security"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		var res:Dictionary = s["resources"]
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+281),"FOOD %.0f  WATER %.0f  MED %.0f  MAT %.0f  FUEL %.0f  PARTS %.0f" % [float(res["food"]),float(res["water"]),float(res["medicine"]),float(res["materials"]),float(res["fuel"]),float(res["parts"])],HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+305),"[LEFT / RIGHT] CYCLE SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,-1,10,GOOD)
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+345),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	var ry := y + 370.0
+	for route in civ.logistics_routes:
+		var source:Dictionary = civ.settlements[str(route["source"])]
+		var destination:Dictionary = civ.settlements[str(route["destination"])]
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"R-%02d %s → %s // LAST %.0f UNITS" % [int(route["id"]),source["name"],destination["name"],float(route["last_transfer"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,TEXT)
+		ry += 21.0
+		if ry > y+h-180:
+			break
+
+	var archive_y := maxf(ry+14.0,y+h-158.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"CIVILIZATION ARCHIVE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	archive_y += 24.0
+	var shown := 0
+	for entry in civ.history_archive:
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"D%03d // %s" % [int(entry["day"]),entry["title"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,TEXT)
+		archive_y += 18.0
+		shown += 1
+		if shown >= 5 or archive_y > y+h-20:
+			break
 
 func _draw_faction_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -497,8 +560,10 @@ func _draw_hud() -> void:
 		mode_text = "[K] CLOSE INDUSTRY COMMAND"
 	elif faction_mode:
 		mode_text = "[O] CLOSE FACTION COMMAND"
+	elif civilization_mode:
+		mode_text = "[J] CLOSE CIVILIZATION COMMAND"
 	else:
-		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS"
+		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION"
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
@@ -697,6 +762,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				economy_mode = not economy_mode
 				governance_mode = false
 				faction_mode = false
+				civilization_mode = false
 				world_map_mode = false
 				build_mode = false
 				selected_citizen = {}
@@ -705,6 +771,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				governance_mode = not governance_mode
 				economy_mode = false
 				faction_mode = false
+				civilization_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
@@ -712,10 +779,35 @@ func _unhandled_input(event: InputEvent) -> void:
 				faction_mode = not faction_mode
 				governance_mode = false
 				economy_mode = false
+				civilization_mode = false
 				world_map_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
+			KEY_J:
+				civilization_mode = not civilization_mode
+				governance_mode = false
+				economy_mode = false
+				faction_mode = false
+				world_map_mode = false
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
+			KEY_LEFT:
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						civilization_settlement_index -= 1
+						if civilization_settlement_index < 0:
+							civilization_settlement_index = settlements.size()-1
+			KEY_RIGHT:
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						civilization_settlement_index = (civilization_settlement_index+1) % settlements.size()
+			KEY_I:
+				if world_map_mode and selected_world_location_id > 1:
+					sim.civilization_simulation.found_settlement(sim,selected_world_location_id)
 			KEY_UP:
 				if faction_mode:
 					var visible := sim.faction_simulation.get_visible_factions(sim)
@@ -782,6 +874,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				governance_mode = false
 				economy_mode = false
 				faction_mode = false
+				civilization_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
@@ -802,7 +895,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if governance_mode or economy_mode or faction_mode:
+			if governance_mode or economy_mode or faction_mode or civilization_mode:
 				pass
 			elif world_map_mode:
 				_world_map_select(event.position)
