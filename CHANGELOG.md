@@ -1,3 +1,34 @@
+## Windows Distribution Recovery — MSI + Green Release Gates
+
+### Added
+- Branded The Last Settlement Windows application icon
+- Per-user WiX MSI installer
+- Desktop shortcut
+- DPN Technology Start Menu folder
+- Start Menu launch and uninstall shortcuts
+- Stable MSI component GUIDs
+- Optional Authenticode signing hooks for both EXE and MSI
+- Separate self-verifying SHA-256 manifests for portable and installer artifacts
+- Final portable and installer artifacts built from the same verified Windows payload
+
+### Fixed
+- Removed failing Windows PATH probes from installer verification
+- Corrected per-user MSI component definitions to satisfy WiX/ICE requirements
+- Replaced unstable installer component GUID generation with stable GUIDs
+- Corrected distribution manifests so each artifact can verify itself independently
+
+### Verified
+- Windows portable build: green
+- Windows MSI installer build: green
+- Godot parse/load gate: green
+- CI Gate: green
+- CodeQL: green
+- Supply Chain: green
+- Code Quality: green
+
+### Signing
+- Signing steps are ready but remain skipped until `WINDOWS_SIGN_CERT_BASE64` and `WINDOWS_SIGN_CERT_PASSWORD` are configured.
+
 ## Windows Portable Preview — Automated EXE Pipeline
 
 ### Added
