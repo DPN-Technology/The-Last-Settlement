@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.4--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.5--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.4-dev
+## CURRENT TRANSMISSION // BUILD 1.0.5-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -314,10 +314,10 @@ The current foundation is already moving beyond a static colony prototype.
 - Critical incidents automatically written into civilization history
 - Multi-settlement world-map nodes
 - Civilization Command interface
-- Civilization state persisted in save version 11
+- Civilization state persisted in save version 14
 - Founding sites created from secured and cleared ruins
 
-### SYSTEM STATUS // BUILD 1.0.3-dev
+### SYSTEM STATUS // BUILD 1.0.5-dev
 
 | Layer | Status | Live Integration |
 |---|---|---|
@@ -424,6 +424,30 @@ The current foundation is already moving beyond a static colony prototype.
 - Existing tagged releases updated with asset replacement instead of duplicated
 - Portable ZIP + MSI + combined checksums + update manifest published together
 - Full update-channel contract documented in `docs/UPDATE_CHANNEL.md`
+
+### SECURE UPDATE COMMAND // LIVE
+
+- Automatic stable-release check on Windows startup
+- Dedicated **DPN Update Command** panel
+- **F10** opens/closes Update Command and retries release checks
+- **F11** downloads the approved MSI only when a newer release is available
+- **F12** saves the settlement and explicitly approves installer handoff
+- Release manifest schema validation
+- Product and Windows-platform validation
+- Newer-version requirement / downgrade rejection
+- Save-schema downgrade protection
+- Authorized DPN GitHub release-origin policy
+- HTTPS-only update endpoints
+- Installer size metadata validation
+- SHA-256 verification after download
+- SHA-256 re-verification immediately before installer launch
+- Staged downloads under the game's user data directory
+- Failed or hash-mismatched installers are removed
+- No `OS.execute` / process-spawning updater path
+- User-approved Windows shell handoff only
+- Unsigned release state is displayed in Update Command
+- Updater security markers enforced by the repository security audit
+- Godot parser gate validates the updater as part of every green build
 
 ### ACTIVE DEVELOPMENT
 
@@ -730,6 +754,18 @@ The Windows pipeline:
 
 The PCK intentionally remains separate from the EXE. This preserves the cleaner code-signing path and reduces the risk of antivirus false positives associated with embedded PCK exports.
 
+## In-Game Update Command
+
+Windows builds now check the stable DPN release channel automatically. If a newer compatible release exists, the bottom command bar reports the available version.
+
+Press **F10** to open Update Command.
+
+- **F10** — check/recheck the stable release channel
+- **F11** — download the release MSI
+- **F12** — save the current settlement and open the installer **only after SHA-256 verification succeeds**
+
+Updates are not installed silently. The game validates the release manifest, rejects downgrades, prevents save-schema downgrade targets, restricts installer URLs to the DPN GitHub release origin, verifies the downloaded MSI, and then requires an explicit F12 approval before Windows receives the installer.
+
 ## Run From Source
 
 ### Requirements
@@ -795,6 +831,9 @@ No external art pack is required for the current prototype.
 | **8** | Contribute available resources to selected recovery megaproject |
 | **9** | Cycle eligible Last Haven founding/migration candidate |
 | **0** | Add/remove highlighted survivor from four-person founding roster |
+| **F10** | Open/close Update Command and check stable release channel |
+| **F11** | Download selected verified Windows update MSI |
+| **F12** | Save game and hand verified MSI to Windows installer |
 | **Left / Right** | Cycle settlements in Civilization Command |
 | **I** | Found a settlement at a selected secured world-map site |
 
@@ -811,6 +850,7 @@ The-Last-Settlement/
 │
 ├── docs/
 │   ├── GAME_DESIGN.md
+│   ├── UPDATE_CHANNEL.md
 │   └── ROADMAP.md
 │
 ├── simulation/
@@ -827,16 +867,20 @@ The-Last-Settlement/
 │
 ├── src/
 │   ├── Main.tscn
-│   └── main.gd
+│   ├── main.gd
+│   └── update_manager.gd
 │
 ├── tools/
+│   ├── release_manifest.py
+│   ├── security_audit.py
 │   └── validate_project.py
 │
 ├── .github/
 │   └── workflows/
 │       ├── validate.yml
 │       ├── codeql.yml
-│       └── supply-chain.yml
+│       ├── supply-chain.yml
+│       └── windows-build.yml
 │
 ├── CHANGELOG.md
 ├── project.godot
