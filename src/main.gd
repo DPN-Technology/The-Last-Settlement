@@ -24,6 +24,8 @@ var build_mode := false
 var build_catalog_index := 0
 var build_rotated := false
 var mouse_world := Vector2.ZERO
+var utility_overlay := 0
+const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
 
 func _ready() -> void:
 	set_process(true)
@@ -69,6 +71,7 @@ func _move_with_obstacle_avoidance(origin: Vector2, target: Vector2, distance: f
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), BG)
 	_draw_world()
+	_draw_utility_overlay()
 	_draw_hud()
 	_draw_selection_panel()
 
@@ -95,6 +98,14 @@ func _draw_world() -> void:
 			"farm": color = Color("#243024")
 			"industry": color = Color("#30282a")
 			"command": color = Color("#352322")
+			"generator": color = Color("#3a2f1e")
+			"battery": color = Color("#2d3022")
+			"power_pole": color = Color("#272727")
+			"water_pump": color = Color("#1d3038")
+			"purifier": color = Color("#1e3837")
+			"water_tank": color = Color("#22313a")
+			"pipe": color = Color("#26343b")
+			"sewage": color = Color("#303522")
 		draw_rect(rect, color, true)
 		var edge := ACCENT if selected_building == b else PANEL_EDGE
 		draw_rect(rect, edge, false, 2.0 if selected_building != b else 4.0)
@@ -114,7 +125,7 @@ func _draw_world() -> void:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		var ghost_pos := _world_point(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0))
 		var ghost_world_size: Vector2 = definition["size"]
-		if build_rotated and (definition["type"] == "wall" or definition["type"] == "door"):
+		if build_rotated and (definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe"):
 			ghost_world_size = Vector2(ghost_world_size.y, ghost_world_size.x)
 		var ghost_size: Vector2 = ghost_world_size * zoom
 		var ghost_rect := Rect2(ghost_pos - ghost_size/2.0, ghost_size)
@@ -134,6 +145,34 @@ func _draw_world() -> void:
 		if zoom > 0.82 and c["alive"]:
 			draw_string(ThemeDB.fallback_font, p + Vector2(8, -8), c["name"].split(" ")[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, MUTED)
 
+func _draw_utility_overlay() -> void:
+	if utility_overlay == 0:
+		return
+	var mode := UTILITY_OVERLAYS[utility_overlay]
+	var nodes: Array[Dictionary] = []
+	for b in sim.buildings:
+		var utility := str(b.get("utility", b.get("type","")))
+		if mode == "POWER" and utility in ["generator","battery","power_pole","water_pump","purifier","sewage"]:
+			nodes.append(b)
+		elif mode == "WATER" and utility in ["water_pump","purifier","water_tank","pipe","sewage"]:
+			nodes.append(b)
+		elif mode == "SEWAGE" and utility in ["sewage","pipe","water_pump","purifier","water_tank"]:
+			nodes.append(b)
+
+	for i in range(nodes.size()):
+		for j in range(i + 1, nodes.size()):
+			var a := nodes[i]
+			var b := nodes[j]
+			var max_distance := 260.0 if mode == "POWER" else 180.0
+			if a["position"].distance_to(b["position"]) <= max_distance:
+				var line_color := WARN if mode == "POWER" else (Color("#5aa7c7") if mode == "WATER" else Color("#88924b"))
+				draw_line(_world_point(a["position"]), _world_point(b["position"]), line_color, 2.0)
+
+	for node in nodes:
+		var p := _world_point(node["position"])
+		var ring := WARN if mode == "POWER" else (Color("#5aa7c7") if mode == "WATER" else Color("#88924b"))
+		draw_arc(p, 16.0 * zoom, 0.0, TAU, 24, ring, 2.0)
+
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(0, 0, vp.x, 118), Color("#07090cee"))
@@ -141,7 +180,7 @@ func _draw_hud() -> void:
 
 	draw_string(ThemeDB.fallback_font, Vector2(24,32), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, -1, 23, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(24,57), "CIVILIZATION RECOVERY COMMAND // %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
-	draw_string(ThemeDB.fallback_font, Vector2(24,89), "DAY %03d   %02d:%02d  // MAT %.0f  // BLUEPRINTS %d  // ROOMS %d" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
+	draw_string(ThemeDB.fallback_font, Vector2(24,89), "DAY %03d %02d:%02d // MAT %.0f // BP %d // ROOMS %d // GRID %.0f/%.0f // BAT %.0f%% // SAN %.0f%%" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms, float(sim.utility_state["power_generated"]), float(sim.utility_state["power_demand"]), 100.0 * float(sim.utility_state["battery_charge"]) / maxf(1.0,float(sim.utility_state["battery_capacity"])), float(sim.utility_state["sanitation"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 
 	var alive := sim.get_alive_citizens().size()
 	var stats := [
@@ -166,7 +205,7 @@ func _draw_hud() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[B] BUILD  [LMB] PLACE/INSPECT  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[B] BUILD  [U] UTIL OVERLAY:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 func _draw_event_panel() -> void:
@@ -254,7 +293,19 @@ func _draw_building_panel(b: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+92), "TYPE // %s" % str(b["type"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	_draw_meter(Vector2(x+20,y+126), w-40.0, "CONDITION", float(b["condition"]))
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+184), "WORK CAPACITY // %d" % int(b["capacity"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+214), "NODE STATUS // OPERATIONAL", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, GOOD)
+	var utility := str(b.get("utility", ""))
+	var node_status := "OPERATIONAL"
+	var node_color := GOOD
+	if utility == "generator" and sim.utility_failures["generator_trip"]:
+		node_status = "TRIPPED"
+		node_color = BAD
+	elif utility in ["water_pump","purifier"] and not sim.utility_state["water_online"]:
+		node_status = "DEGRADED"
+		node_color = WARN
+	elif utility == "sewage" and sim.utility_failures["sewage_overflow"]:
+		node_status = "OVERFLOW"
+		node_color = BAD
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+214), "NODE STATUS // %s" % node_status, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, node_color)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+240), "[R] QUEUE REPAIR   [X] DEMOLISH / SALVAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
 
 func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> void:
@@ -329,8 +380,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F:
 				if build_mode:
 					var definition := sim.get_build_catalog()[build_catalog_index]
-					if definition["type"] == "wall" or definition["type"] == "door":
+					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
+			KEY_U:
+				utility_overlay = (utility_overlay + 1) % UTILITY_OVERLAYS.size()
 			KEY_R:
 				if not selected_building.is_empty():
 					sim.queue_repair(selected_building)
