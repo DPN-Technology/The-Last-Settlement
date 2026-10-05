@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -12,7 +12,9 @@ var resources := {
 	"medicine": 28.0,
 	"materials": 120.0,
 	"scrap": 90.0,
-	"meals": 12.0
+	"meals": 12.0,
+	"raw_water": 80.0,
+	"sewage": 0.0
 }
 var stockpiles := {
 	"command": {"food": 100.0, "water": 120.0, "medicine": 18.0, "meals": 12.0},
@@ -33,6 +35,24 @@ var next_citizen_id := 1
 var next_work_order_id := 1
 var next_blueprint_id := 1
 var completed_rooms := 0
+var utility_state := {
+	"power_generated": 0.0,
+	"power_demand": 0.0,
+	"power_online": true,
+	"battery_charge": 35.0,
+	"battery_capacity": 100.0,
+	"raw_water": 80.0,
+	"clean_water_rate": 0.0,
+	"water_online": true,
+	"sewage": 0.0,
+	"sewage_capacity": 120.0,
+	"sanitation": 100.0
+}
+var utility_failures := {
+	"generator_trip": false,
+	"pump_failure": false,
+	"sewage_overflow": false
+}
 var event_director := EventDirector.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
@@ -52,7 +72,10 @@ func _create_buildings() -> void:
 		{"name":"Workshop","type":"industry","position":Vector2(930,300),"size":Vector2(180,100),"condition":78.0,"capacity":6},
 		{"name":"Clinic","type":"medical","position":Vector2(930,515),"size":Vector2(150,95),"condition":91.0,"capacity":4},
 		{"name":"Farm","type":"farm","position":Vector2(705,620),"size":Vector2(250,105),"condition":74.0,"capacity":8},
-		{"name":"Generator","type":"power","position":Vector2(1190,430),"size":Vector2(135,100),"condition":69.0,"capacity":4}
+		{"name":"Generator","type":"power","position":Vector2(1190,430),"size":Vector2(135,100),"condition":69.0,"capacity":4,"utility":"generator","output":28.0,"demand":0.0},
+		{"name":"Water Pump","type":"water","position":Vector2(1180,600),"size":Vector2(110,80),"condition":82.0,"capacity":2,"utility":"water_pump","output":12.0,"demand":4.0},
+		{"name":"Purifier","type":"water","position":Vector2(1040,650),"size":Vector2(120,80),"condition":88.0,"capacity":2,"utility":"purifier","output":9.0,"demand":5.0},
+		{"name":"Sewage Plant","type":"sewage","position":Vector2(1260,690),"size":Vector2(130,85),"condition":76.0,"capacity":3,"utility":"sewage","output":14.0,"demand":3.0}
 	]
 
 func _seed_work_orders() -> void:
@@ -82,7 +105,15 @@ func get_build_catalog() -> Array[Dictionary]:
 		{"type":"floor","name":"Floor","size":Vector2(40,40),"cost":3.0,"work":14.0,"capacity":0},
 		{"type":"door","name":"Door","size":Vector2(40,12),"cost":5.0,"work":18.0,"capacity":0},
 		{"type":"housing","name":"Shelter Module","size":Vector2(120,80),"cost":24.0,"work":85.0,"capacity":6},
-		{"type":"storage","name":"Storage Module","size":Vector2(120,80),"cost":20.0,"work":70.0,"capacity":10}
+		{"type":"storage","name":"Storage Module","size":Vector2(120,80),"cost":20.0,"work":70.0,"capacity":10},
+		{"type":"generator","name":"Generator","size":Vector2(120,90),"cost":34.0,"work":110.0,"capacity":3},
+		{"type":"battery","name":"Battery Bank","size":Vector2(100,70),"cost":26.0,"work":75.0,"capacity":2},
+		{"type":"power_pole","name":"Power Pole","size":Vector2(28,28),"cost":5.0,"work":16.0,"capacity":0},
+		{"type":"water_pump","name":"Water Pump","size":Vector2(100,70),"cost":24.0,"work":80.0,"capacity":2},
+		{"type":"purifier","name":"Water Purifier","size":Vector2(110,75),"cost":28.0,"work":88.0,"capacity":2},
+		{"type":"water_tank","name":"Water Tank","size":Vector2(95,95),"cost":22.0,"work":70.0,"capacity":0},
+		{"type":"pipe","name":"Utility Pipe","size":Vector2(40,10),"cost":3.0,"work":12.0,"capacity":0},
+		{"type":"sewage","name":"Sewage Processor","size":Vector2(120,80),"cost":30.0,"work":95.0,"capacity":2}
 	]
 
 func get_build_definition(build_type: String) -> Dictionary:
@@ -95,7 +126,7 @@ func place_blueprint(build_type: String, world_position: Vector2, rotated: bool 
 	var definition := get_build_definition(build_type)
 	var snapped := Vector2(round(world_position.x / 20.0) * 20.0, round(world_position.y / 20.0) * 20.0)
 	var placement_size: Vector2 = definition["size"]
-	if rotated and (build_type == "wall" or build_type == "door"):
+	if rotated and (build_type == "wall" or build_type == "door" or build_type == "pipe"):
 		placement_size = Vector2(placement_size.y, placement_size.x)
 	if not can_place_blueprint(snapped, placement_size):
 		add_event("BUILD BLOCKED", "Construction site overlaps an existing structure.", "warning")
@@ -225,8 +256,145 @@ func update(delta: float) -> void:
 			c["alive"] = false
 			add_event("SURVIVOR LOST", "%s has died." % c["name"], "critical")
 
+	_update_utilities(sim_hours)
+	_apply_utility_consequences(sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
+
+func _update_utilities(sim_hours: float) -> void:
+	var power_nodes: Array[Dictionary] = []
+	var water_nodes: Array[Dictionary] = []
+	var generated := 0.0
+	var demand := 0.0
+	var pump_capacity := 0.0
+	var purifier_capacity := 0.0
+	var sewage_capacity := 0.0
+	var battery_capacity := 0.0
+
+	for b in buildings:
+		var utility := str(b.get("utility", ""))
+		if utility == "":
+			match str(b.get("type","")):
+				"generator": utility = "generator"
+				"battery": utility = "battery"
+				"power_pole": utility = "power_pole"
+				"water_pump": utility = "water_pump"
+				"purifier": utility = "purifier"
+				"water_tank": utility = "water_tank"
+				"pipe": utility = "pipe"
+				"sewage": utility = "sewage"
+		if utility in ["generator","battery","power_pole","water_pump","purifier","sewage"]:
+			power_nodes.append(b)
+		if utility in ["water_pump","purifier","water_tank","pipe","sewage"]:
+			water_nodes.append(b)
+
+		var efficiency := clampf(float(b.get("condition",100.0)) / 100.0, 0.0, 1.0)
+		match utility:
+			"generator":
+				if efficiency > 0.20 and not utility_failures["generator_trip"]:
+					generated += 28.0 * efficiency
+			"battery":
+				battery_capacity += 40.0
+			"water_pump":
+				demand += 4.0
+				if efficiency > 0.25 and not utility_failures["pump_failure"]:
+					pump_capacity += 12.0 * efficiency
+			"purifier":
+				demand += 5.0
+				if efficiency > 0.25:
+					purifier_capacity += 9.0 * efficiency
+			"sewage":
+				demand += 3.0
+				if efficiency > 0.25:
+					sewage_capacity += 14.0 * efficiency
+
+	for b in buildings:
+		match str(b.get("type","")):
+			"command": demand += 4.0
+			"housing": demand += 1.4
+			"industry": demand += 5.0
+			"medical": demand += 6.0
+			"storage": demand += 1.0
+
+	utility_state["battery_capacity"] = maxf(100.0, battery_capacity)
+	utility_state["power_generated"] = generated
+	utility_state["power_demand"] = demand
+
+	var battery := float(utility_state["battery_charge"])
+	if generated >= demand:
+		var surplus := generated - demand
+		battery = minf(float(utility_state["battery_capacity"]), battery + surplus * 0.18 * sim_hours)
+		utility_state["power_online"] = true
+	else:
+		var deficit := demand - generated
+		var draw := deficit * 0.30 * sim_hours
+		if battery >= draw:
+			battery -= draw
+			utility_state["power_online"] = true
+		else:
+			battery = 0.0
+			utility_state["power_online"] = false
+	utility_state["battery_charge"] = battery
+
+	if rng.randf() < 0.00018 * sim_hours:
+		utility_failures["generator_trip"] = true
+		add_event("GRID TRIP", "Primary generator protective relay opened.", "critical")
+	if utility_failures["generator_trip"] and get_active_engineers() > 0 and rng.randf() < 0.015 * sim_hours:
+		utility_failures["generator_trip"] = false
+		add_event("GRID RESTORED", "Engineering reset the generator and re-energized the bus.", "good")
+
+	var power_factor := 1.0 if utility_state["power_online"] else 0.12
+	var extracted := pump_capacity * power_factor * sim_hours
+	utility_state["raw_water"] = minf(300.0, float(utility_state["raw_water"]) + extracted)
+	var raw_available := float(utility_state["raw_water"])
+	var clean_rate := minf(purifier_capacity * power_factor, raw_available / maxf(sim_hours, 0.001))
+	var cleaned := clean_rate * sim_hours
+	utility_state["raw_water"] = maxf(0.0, raw_available - cleaned)
+	stockpiles["command"]["water"] = minf(420.0, float(stockpiles["command"].get("water",0.0)) + cleaned)
+	utility_state["clean_water_rate"] = clean_rate
+	utility_state["water_online"] = clean_rate > 0.05
+
+	var sewage_added := get_alive_citizens().size() * 0.22 * sim_hours
+	utility_state["sewage"] = float(utility_state["sewage"]) + sewage_added
+	var treated := sewage_capacity * power_factor * sim_hours
+	utility_state["sewage"] = maxf(0.0, float(utility_state["sewage"]) - treated)
+	utility_state["sewage_capacity"] = maxf(120.0, sewage_capacity * 8.0)
+
+	if float(utility_state["sewage"]) > float(utility_state["sewage_capacity"]):
+		if not utility_failures["sewage_overflow"]:
+			utility_failures["sewage_overflow"] = true
+			add_event("SEWAGE OVERFLOW", "Waste processing capacity has been exceeded.", "critical")
+	else:
+		utility_failures["sewage_overflow"] = false
+
+	var sanitation_target := 100.0
+	if not utility_state["water_online"]:
+		sanitation_target -= 35.0
+	if utility_failures["sewage_overflow"]:
+		sanitation_target -= 45.0
+	if not utility_state["power_online"]:
+		sanitation_target -= 10.0
+	utility_state["sanitation"] = move_toward(float(utility_state["sanitation"]), clampf(sanitation_target, 0.0, 100.0), 2.0 * sim_hours)
+
+func _apply_utility_consequences(sim_hours: float) -> void:
+	if not utility_state["power_online"]:
+		for c in get_alive_citizens():
+			c["stress"] = minf(100.0, float(c["stress"]) + 0.20 * sim_hours)
+			c["morale"] = maxf(0.0, float(c["morale"]) - 0.15 * sim_hours)
+	if not utility_state["water_online"]:
+		for c in get_alive_citizens():
+			c["thirst"] = minf(100.0, float(c["thirst"]) + 0.25 * sim_hours)
+	var sanitation := float(utility_state["sanitation"])
+	if sanitation < 45.0:
+		for c in get_alive_citizens():
+			c["health"] = maxf(0.0, float(c["health"]) - (45.0 - sanitation) * 0.002 * sim_hours)
+
+func get_active_engineers() -> int:
+	var count := 0
+	for c in get_alive_citizens():
+		if c["job"] == "Engineer" and _is_shift_active(c):
+			count += 1
+	return count
 
 func _update_citizen_needs(c: Dictionary, sim_hours: float) -> void:
 	c["hunger"] = minf(100.0, c["hunger"] + 1.15 * sim_hours)
@@ -433,6 +601,25 @@ func _complete_blueprint(blueprint: Dictionary) -> void:
 		"condition": 100.0,
 		"capacity": blueprint["capacity"]
 	}
+	match str(blueprint["type"]):
+		"generator":
+			new_building["utility"] = "generator"
+			new_building["output"] = 28.0
+			new_building["demand"] = 0.0
+		"battery":
+			new_building["utility"] = "battery"
+		"power_pole":
+			new_building["utility"] = "power_pole"
+		"water_pump":
+			new_building["utility"] = "water_pump"
+		"purifier":
+			new_building["utility"] = "purifier"
+		"water_tank":
+			new_building["utility"] = "water_tank"
+		"pipe":
+			new_building["utility"] = "pipe"
+		"sewage":
+			new_building["utility"] = "sewage"
 	buildings.append(new_building)
 	blueprints.erase(blueprint)
 	completed_rooms = detect_rooms()
@@ -484,6 +671,9 @@ func _sync_resource_totals() -> void:
 	resources["materials"] = float(stockpiles["industry"].get("materials", 0.0))
 	resources["scrap"] = float(stockpiles["industry"].get("scrap", 0.0)) + float(stockpiles["command"].get("scrap", 0.0))
 	resources["meals"] = float(stockpiles["command"].get("meals", 0.0))
+	resources["raw_water"] = float(utility_state["raw_water"])
+	resources["sewage"] = float(utility_state["sewage"])
+	resources["power"] = 100.0 * minf(1.0, (float(utility_state["power_generated"]) + float(utility_state["battery_charge"]) * 0.05) / maxf(1.0, float(utility_state["power_demand"])))
 
 func get_alive_citizens() -> Array[Dictionary]:
 	var alive: Array[Dictionary] = []
@@ -541,7 +731,9 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"next_citizen_id": next_citizen_id,
 		"next_work_order_id": next_work_order_id,
 		"next_blueprint_id": next_blueprint_id,
-		"completed_rooms": completed_rooms
+		"completed_rooms": completed_rooms,
+		"utility_state": utility_state,
+		"utility_failures": utility_failures
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
@@ -573,6 +765,8 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	next_work_order_id = int(data.get("next_work_order_id", work_orders.size() + 1))
 	next_blueprint_id = int(data.get("next_blueprint_id", blueprints.size() + 1))
 	completed_rooms = int(data.get("completed_rooms", detect_rooms()))
+	utility_state = data.get("utility_state", utility_state)
+	utility_failures = data.get("utility_failures", utility_failures)
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
