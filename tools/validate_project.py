@@ -19,6 +19,7 @@ REQUIRED = [
     "simulation/federal_governance_simulation.gd",
     "docs/GAME_DESIGN.md",
     "docs/ROADMAP.md",
+    "tools/release_manifest.py",
 ]
 
 errors = []
