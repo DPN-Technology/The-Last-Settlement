@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 9
+const SAVE_VERSION := 10
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -58,6 +58,7 @@ var social_simulation := SocialSimulation.new()
 var world_simulation := WorldSimulation.new()
 var governance_simulation := GovernanceSimulation.new()
 var economy_simulation := EconomySimulation.new()
+var faction_simulation := FactionSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -69,6 +70,7 @@ func _init() -> void:
 	_seed_work_orders()
 	governance_simulation.initialize(self)
 	economy_simulation.initialize(self)
+	faction_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
 
 func _create_buildings() -> void:
@@ -279,6 +281,7 @@ func update(delta: float) -> void:
 	world_simulation.update(self, sim_hours)
 	governance_simulation.update(self, sim_hours)
 	economy_simulation.update(self, sim_hours)
+	faction_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -828,6 +831,13 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"regional_markets": economy_simulation.regional_markets,
 			"trade_caravans": economy_simulation.trade_caravans,
 			"next_caravan_id": economy_simulation.next_caravan_id
+		},
+		"factions": {
+			"factions": faction_simulation.factions,
+			"next_strategic_hour": faction_simulation.next_strategic_hour,
+			"active_raid": faction_simulation.active_raid,
+			"raid_log": faction_simulation.raid_log,
+			"last_espionage_hour": faction_simulation.last_espionage_hour
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -903,6 +913,13 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.regional_markets = economy.get("regional_markets", economy_simulation.regional_markets)
 		economy_simulation.trade_caravans = economy.get("trade_caravans", economy_simulation.trade_caravans)
 		economy_simulation.next_caravan_id = int(economy.get("next_caravan_id", economy_simulation.next_caravan_id))
+	var faction_state: Dictionary = data.get("factions", {})
+	if not faction_state.is_empty():
+		faction_simulation.factions = faction_state.get("factions", faction_simulation.factions)
+		faction_simulation.next_strategic_hour = float(faction_state.get("next_strategic_hour", faction_simulation.next_strategic_hour))
+		faction_simulation.active_raid = faction_state.get("active_raid", faction_simulation.active_raid)
+		faction_simulation.raid_log = faction_state.get("raid_log", faction_simulation.raid_log)
+		faction_simulation.last_espionage_hour = float(faction_state.get("last_espionage_hour", faction_simulation.last_espionage_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
