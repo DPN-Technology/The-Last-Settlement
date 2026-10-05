@@ -630,6 +630,7 @@ The repository is built to stay green while the simulation grows. The main CI ga
 | **DPN Settlement CodeQL** | Static security analysis |
 | **DPN Settlement Supply Chain** | Dependency / workflow supply-chain checks |
 | **Code Quality** | Repository quality and maintainability checks |
+| **Windows Build** | Checksum-verified Godot 4.3 release export, PE executable verification, portable ZIP artifact |
 
 The development rule is the same as the simulation rule:
 
@@ -643,12 +644,12 @@ The development rule is the same as the simulation rule:
 |---|---|
 | Engine | Godot 4.x |
 | Language | GDScript |
-| Platform | Windows / Linux PC |
+| Platform | Windows x86_64 portable EXE / Linux source development |
 | Current Rendering | 2D overhead |
 | Planned Rendering | 2.5D isometric or full 3D after simulation maturity |
 | Architecture | Modular simulation systems |
 | Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
-| Validation | GitHub Actions + CodeQL + supply-chain gates |
+| Validation | GitHub Actions + Godot engine parse + CodeQL + supply-chain gates |
 | Save Schema | Version 14 |
 | Data Direction | Save-versioned, deterministic-friendly simulation |
 
@@ -659,6 +660,26 @@ Visual complexity can increase dramatically later without throwing away the core
 ---
 
 # RUN THE CURRENT BUILD
+
+## Windows Portable Build — Recommended
+
+You **do not need Godot installed** to play-test the Windows build.
+
+1. Open the repository's **Actions** tab.
+2. Select **DPN Settlement Windows Build**.
+3. Open the newest successful run.
+4. Download the **TheLastSettlement-Windows-x86_64** artifact.
+5. Extract the ZIP completely.
+6. Keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
+7. Double-click **`TheLastSettlement.exe`**.
+
+The automated pipeline produces a native **Windows x86_64 GUI executable**, validates the project with Godot before export, verifies the official Godot engine/export templates against their release SHA-512 manifest, verifies the resulting executable format, generates SHA-256 checksums, and uploads a portable ZIP.
+
+> **Development-build note:** the EXE is currently unsigned. Windows SmartScreen may display an **Unknown publisher** warning until DPN Technology adds a Windows code-signing certificate to the release pipeline.
+
+The Windows package intentionally keeps the PCK separate instead of embedding it in the EXE. Godot warns that embedded PCKs on Windows can increase antivirus false positives and interfere with normal code signing.
+
+## Run From Source
 
 ### Requirements
 
