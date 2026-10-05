@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -55,11 +55,13 @@ var utility_failures := {
 }
 var event_director := EventDirector.new()
 var social_simulation := SocialSimulation.new()
+var world_simulation := WorldSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
 	rng.randomize()
 	_create_buildings()
+	world_simulation.initialize(rng)
 	for i in range(12):
 		add_citizen()
 	_seed_work_orders()
@@ -249,6 +251,8 @@ func update(delta: float) -> void:
 	resources["power"] = clampf(resources["power"] + _power_delta(population) * sim_hours, 0.0, 100.0)
 
 	for c in alive:
+		if c.get("on_expedition", false):
+			continue
 		_update_citizen_needs(c, sim_hours)
 		_choose_action(c)
 		_apply_citizen_work(c, sim_hours)
@@ -260,6 +264,7 @@ func update(delta: float) -> void:
 	_update_utilities(sim_hours)
 	_apply_utility_consequences(sim_hours)
 	social_simulation.update(self, sim_hours)
+	world_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -754,7 +759,11 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"next_blueprint_id": next_blueprint_id,
 		"completed_rooms": completed_rooms,
 		"utility_state": utility_state,
-		"utility_failures": utility_failures
+		"utility_failures": utility_failures,
+		"world_locations": _serialize_vector_dicts(world_simulation.locations),
+		"expeditions": world_simulation.expeditions,
+		"discovered_location_ids": world_simulation.discovered_location_ids,
+		"next_expedition_id": world_simulation.next_expedition_id
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
@@ -788,6 +797,10 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	completed_rooms = int(data.get("completed_rooms", detect_rooms()))
 	utility_state = data.get("utility_state", utility_state)
 	utility_failures = data.get("utility_failures", utility_failures)
+	world_simulation.locations = _restore_vector_dicts(data.get("world_locations", world_simulation.locations))
+	world_simulation.expeditions = data.get("expeditions", world_simulation.expeditions)
+	world_simulation.discovered_location_ids = data.get("discovered_location_ids", world_simulation.discovered_location_ids)
+	world_simulation.next_expedition_id = int(data.get("next_expedition_id", world_simulation.next_expedition_id))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
