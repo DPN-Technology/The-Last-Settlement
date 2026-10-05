@@ -25,6 +25,8 @@ var build_catalog_index := 0
 var build_rotated := false
 var mouse_world := Vector2.ZERO
 var utility_overlay := 0
+var world_map_mode := false
+var selected_world_location_id := 0
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
 
 func _ready() -> void:
@@ -70,8 +72,11 @@ func _move_with_obstacle_avoidance(origin: Vector2, target: Vector2, distance: f
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), BG)
-	_draw_world()
-	_draw_utility_overlay()
+	if world_map_mode:
+		_draw_world_map()
+	else:
+		_draw_world()
+		_draw_utility_overlay()
 	_draw_hud()
 	_draw_selection_panel()
 
@@ -173,6 +178,81 @@ func _draw_utility_overlay() -> void:
 		var ring := WARN if mode == "POWER" else (Color("#5aa7c7") if mode == "WATER" else Color("#88924b"))
 		draw_arc(p, 16.0 * zoom, 0.0, TAU, 24, ring, 2.0)
 
+func _draw_world_map() -> void:
+	var vp := get_viewport_rect().size
+	draw_rect(Rect2(0,118,vp.x,vp.y-118), Color("#0b0d10"))
+	draw_string(ThemeDB.fallback_font, Vector2(28,154), "REGIONAL OPERATIONS MAP // RADIO RANGE %.0f" % sim.world_simulation.get_radio_range(), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, TEXT)
+	var origin := Vector2(80,180)
+	var scale := Vector2((vp.x-500.0)/1200.0,(vp.y-250.0)/820.0)
+	var home_screen := origin + Vector2(600,410) * scale
+	draw_circle(home_screen, sim.world_simulation.get_radio_range() * minf(scale.x,scale.y), Color(0.55,0.18,0.15,0.08))
+	draw_arc(home_screen, sim.world_simulation.get_radio_range() * minf(scale.x,scale.y), 0, TAU, 64, ACCENT, 2.0)
+
+	for location in sim.world_simulation.locations:
+		var p := origin + Vector2(location["position"]) * scale
+		if not location["discovered"]:
+			draw_circle(p, 5.0, Color("#34383d"))
+			continue
+		var col := GOOD if location["type"] == "settlement" else (WARN if location["type"] == "relay" else RUST)
+		if location["depleted"]:
+			col = MUTED
+		draw_circle(p, 8.0, col)
+		if int(location["id"]) == selected_world_location_id:
+			draw_arc(p, 14.0, 0, TAU, 24, ACCENT, 2.0)
+		draw_string(ThemeDB.fallback_font, p + Vector2(12,-6), location["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT)
+
+	for expedition in sim.world_simulation.get_active_expeditions():
+		var destination := sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
+		if destination.is_empty():
+			continue
+		var start := home_screen
+		var end := origin + Vector2(destination["position"]) * scale
+		var progress := clampf(float(expedition["progress"]) / maxf(1.0,float(expedition["distance"])),0.0,1.0)
+		var p := start.lerp(end, progress if expedition["status"] == "outbound" else (1.0-progress if expedition["status"] == "returning" else 1.0))
+		draw_line(start,end,Color("#4a2c2c"),1.0)
+		draw_circle(p,6.0,ACCENT)
+		draw_string(ThemeDB.fallback_font,p+Vector2(10,4),"EXP-%02d" % int(expedition["id"]),HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
+
+	var x := vp.x - 390.0
+	draw_rect(Rect2(x,140,372,vp.y-190),PANEL_SOLID)
+	draw_rect(Rect2(x,140,372,vp.y-190),PANEL_EDGE,false,1.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,170),"WORLD INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,ACCENT)
+	var location := sim.world_simulation.get_location_by_id(selected_world_location_id)
+	if not location.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),location["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,20,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,232),"TYPE // %s" % str(location["type"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,255),"DANGER // %d%%" % int(float(location["danger"])*100.0),HORIZONTAL_ALIGNMENT_LEFT,-1,11,WARN)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,278),"STATUS // %s" % ("DEPLETED" if location["depleted"] else "AVAILABLE"),HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,315),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
+	else:
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),"Select a discovered location.",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+
+	var ey := 365.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,ey),"ACTIVE EXPEDITIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ey += 26.0
+	for expedition in sim.world_simulation.get_active_expeditions():
+		var destination := sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,ey),"EXP-%02d // %s" % [int(expedition["id"]),str(expedition["status"]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
+		ey += 18.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,ey),"TARGET: %s" % destination["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		ey += 28.0
+
+func _world_map_select(screen_pos: Vector2) -> void:
+	var vp := get_viewport_rect().size
+	var origin := Vector2(80,180)
+	var scale := Vector2((vp.x-500.0)/1200.0,(vp.y-250.0)/820.0)
+	var nearest_id := 0
+	var nearest_dist := 18.0
+	for location in sim.world_simulation.locations:
+		if not location["discovered"]:
+			continue
+		var p := origin + Vector2(location["position"]) * scale
+		var d := p.distance_to(screen_pos)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest_id = int(location["id"])
+	selected_world_location_id = nearest_id
+
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(0, 0, vp.x, 118), Color("#07090cee"))
@@ -205,7 +285,8 @@ func _draw_hud() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), "[B] BUILD  [U] UTIL OVERLAY:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+	var mode_text := "[M] SETTLEMENT MAP" if world_map_mode else "[M] WORLD MAP"
+	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 func _draw_event_panel() -> void:
@@ -399,6 +480,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					var definition := sim.get_build_catalog()[build_catalog_index]
 					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
+			KEY_M:
+				world_map_mode = not world_map_mode
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
+			KEY_G:
+				if world_map_mode and selected_world_location_id > 1:
+					sim.world_simulation.create_expedition(sim, selected_world_location_id)
 			KEY_U:
 				utility_overlay = (utility_overlay + 1) % UTILITY_OVERLAYS.size()
 			KEY_R:
@@ -413,7 +502,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if build_mode:
+			if world_map_mode:
+				_world_map_select(event.position)
+			elif build_mode:
 				var definition := sim.get_build_catalog()[build_catalog_index]
 				sim.place_blueprint(definition["type"], _screen_to_world(event.position), build_rotated)
 			else:
