@@ -33,6 +33,7 @@ var faction_mode := false
 var faction_index := 0
 var civilization_mode := false
 var civilization_settlement_index := 0
+var civilization_route_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
@@ -361,52 +362,71 @@ func _draw_economy_panel() -> void:
 
 func _draw_civilization_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 540.0
-	var y := 136.0
-	var w := 520.0
-	var h := vp.y - 186.0
+	var x := vp.x - 560.0
+	var y := 130.0
+	var w := 540.0
+	var h := vp.y - 178.0
 	var civ := sim.civilization_simulation
 	var settlements := civ.get_settlement_list()
 	if civilization_settlement_index >= settlements.size():
 		civilization_settlement_index = 0
+	if civilization_route_index >= civ.logistics_routes.size():
+		civilization_route_index = 0
 
 	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
 	draw_rect(Rect2(x,y,w,h),GOOD,false,2.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+58),"PHASE // %s" % civ.endgame_stage,HORIZONTAL_ALIGNMENT_LEFT,-1,14,TEXT)
-	_draw_meter(Vector2(x+22,y+90),w-44.0,"RECOVERY",civ.recovery_score)
-	_draw_meter(Vector2(x+22,y+126),w-44.0,"STABILITY",civ.civilization_stability)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+28),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+54),"PHASE // %s" % civ.endgame_stage,HORIZONTAL_ALIGNMENT_LEFT,-1,13,TEXT)
+	_draw_meter(Vector2(x+22,y+82),w-44.0,"RECOVERY",civ.recovery_score)
+	_draw_meter(Vector2(x+22,y+116),w-44.0,"STABILITY",civ.civilization_stability)
 
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+178),"SETTLEMENT NETWORK // %d NODES // %d ROUTES" % [settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+160),"POLICY // AUTONOMY %s // FREIGHT %s // SECURITY %s" % [civ.civilization_policies["autonomy"],civ.civilization_policies["freight"],civ.civilization_policies["security"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+178),"[4] AUTONOMY  [5] FREIGHT  [6] SECURITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+210),"SETTLEMENT NETWORK // %d NODES // %d ROUTES" % [settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
 
 	if not settlements.is_empty():
 		var s:Dictionary = settlements[civilization_settlement_index]
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+212),"[%d/%d] %s" % [civilization_settlement_index+1,settlements.size(),s["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,20,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+238),"SPECIALIZATION // %s" % str(s["specialization"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+258),"POP %d   INFRA %.0f%%   MORALE %.0f%%   SECURITY %.0f" % [int(s["population"]),float(s["infrastructure"]),float(s["morale"]),float(s["security"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+		var status := str(s.get("status","STABLE"))
+		var status_color := BAD if status == "EMERGENCY" else (WARN if status in ["DEGRADED","RECOVERING"] else GOOD)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+240),"[%d/%d] %s" % [civilization_settlement_index+1,settlements.size(),s["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,19,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+263),"STATUS // %s   SPECIALIZATION // %s" % [status,str(s["specialization"]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,10,status_color)
+		if str(s.get("emergency","")) != "":
+			draw_string(ThemeDB.fallback_font,Vector2(x+22,y+282),"EMERGENCY // %s" % str(s["emergency"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,BAD)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+302),"POP %d   INFRA %.0f%%   MORALE %.0f%%   SECURITY %.0f" % [int(s["population"]),float(s["infrastructure"]),float(s["morale"]),float(s["security"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 		var res:Dictionary = s["resources"]
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+281),"FOOD %.0f  WATER %.0f  MED %.0f  MAT %.0f  FUEL %.0f  PARTS %.0f" % [float(res["food"]),float(res["water"]),float(res["medicine"]),float(res["materials"]),float(res["fuel"]),float(res["parts"])],HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+305),"[LEFT / RIGHT] CYCLE SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,-1,10,GOOD)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+322),"FOOD %.0f WATER %.0f MED %.0f MAT %.0f FUEL %.0f PARTS %.0f" % [float(res["food"]),float(res["water"]),float(res["medicine"]),float(res["materials"]),float(res["fuel"]),float(res["parts"])],HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+342),"[LEFT/RIGHT] SETTLEMENT  [E] REFOCUS  [A] EMERGENCY AID",HORIZONTAL_ALIGNMENT_LEFT,-1,9,GOOD)
 
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+345),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	var ry := y + 370.0
-	for route in civ.logistics_routes:
-		var source:Dictionary = civ.settlements[str(route["source"])]
-		var destination:Dictionary = civ.settlements[str(route["destination"])]
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"R-%02d %s → %s // LAST %.0f UNITS" % [int(route["id"]),source["name"],destination["name"],float(route["last_transfer"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,TEXT)
-		ry += 21.0
-		if ry > y+h-180:
-			break
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+376),"REGIONAL LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	var ry := y + 398.0
+	if civ.logistics_routes.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"No regional routes. Found a second settlement.",HORIZONTAL_ALIGNMENT_LEFT,-1,9,MUTED)
+		ry += 22.0
+	else:
+		for i in range(civ.logistics_routes.size()):
+			var route:Dictionary = civ.logistics_routes[i]
+			var source:Dictionary = civ.settlements[str(route["source"])]
+			var destination:Dictionary = civ.settlements[str(route["destination"])]
+			var marker := ">" if i == civilization_route_index else " "
+			var route_status := "ON" if bool(route.get("active",true)) else "OFF"
+			var route_color := TEXT if i == civilization_route_index else MUTED
+			draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s R-%02d %s↔%s // %s P%d %s // %.0f" % [marker,int(route["id"]),source["name"],destination["name"],route_status,int(route.get("priority",2)),str(route.get("focus","Balanced")).to_upper(),float(route["last_transfer"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,8,route_color)
+			ry += 19.0
+			if ry > y+h-170:
+				break
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+2),"[UP/DOWN] ROUTE  [R] ON/OFF  [F] FOCUS  [P] PRIORITY",HORIZONTAL_ALIGNMENT_LEFT,-1,9,RUST)
+		ry += 24.0
 
-	var archive_y := maxf(ry+14.0,y+h-158.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"CIVILIZATION ARCHIVE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	archive_y += 24.0
+	var archive_y := maxf(ry+8.0,y+h-136.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"CIVILIZATION ARCHIVE",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	archive_y += 21.0
 	var shown := 0
 	for entry in civ.history_archive:
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"D%03d // %s" % [int(entry["day"]),entry["title"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,9,TEXT)
-		archive_y += 18.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,archive_y),"D%03d // %s" % [int(entry["day"]),entry["title"]],HORIZONTAL_ALIGNMENT_LEFT,w-44,8,TEXT)
+		archive_y += 16.0
 		shown += 1
-		if shown >= 5 or archive_y > y+h-20:
+		if shown >= 5 or archive_y > y+h-12:
 			break
 
 func _draw_faction_panel() -> void:
@@ -696,7 +716,7 @@ func _select_at(screen_pos: Vector2) -> void:
 	var nearest: Dictionary = {}
 	var nearest_distance := 18.0 / zoom
 	for c in sim.citizens:
-		if not c["alive"]:
+		if not c["alive"] or str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
 			continue
 		var d: float = c["position"].distance_to(world)
 		if d < nearest_distance:
@@ -738,7 +758,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not selected_citizen.is_empty():
 					sim.cycle_selected_shift(selected_citizen)
 			KEY_P:
-				if not selected_citizen.is_empty():
+				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
+					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
+					sim.civilization_simulation.cycle_route_priority(int(route["id"]))
+				elif not selected_citizen.is_empty():
 					sim.cycle_selected_priority(selected_citizen)
 			KEY_B:
 				build_mode = not build_mode
@@ -750,11 +773,19 @@ func _unhandled_input(event: InputEvent) -> void:
 					if build_catalog_index < 0:
 						build_catalog_index = sim.get_build_catalog().size() - 1
 			KEY_E:
-				if build_mode:
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						var settlement:Dictionary = settlements[civilization_settlement_index]
+						sim.civilization_simulation.cycle_settlement_specialization(sim,str(settlement["id"]))
+				elif build_mode:
 					build_catalog_index = (build_catalog_index + 1) % sim.get_build_catalog().size()
 					build_rotated = false
 			KEY_F:
-				if build_mode:
+				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
+					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
+					sim.civilization_simulation.cycle_route_focus(int(route["id"]))
+				elif build_mode:
 					var definition := sim.get_build_catalog()[build_catalog_index]
 					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
@@ -809,7 +840,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				if world_map_mode and selected_world_location_id > 1:
 					sim.civilization_simulation.found_settlement(sim,selected_world_location_id)
 			KEY_UP:
-				if faction_mode:
+				if civilization_mode:
+					if not sim.civilization_simulation.logistics_routes.is_empty():
+						civilization_route_index -= 1
+						if civilization_route_index < 0:
+							civilization_route_index = sim.civilization_simulation.logistics_routes.size()-1
+				elif faction_mode:
 					var visible := sim.faction_simulation.get_visible_factions(sim)
 					if not visible.is_empty():
 						faction_index -= 1
@@ -824,7 +860,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					if governance_law_index < 0:
 						governance_law_index = GOVERNANCE_LAWS.size()-1
 			KEY_DOWN:
-				if faction_mode:
+				if civilization_mode:
+					if not sim.civilization_simulation.logistics_routes.is_empty():
+						civilization_route_index = (civilization_route_index+1) % sim.civilization_simulation.logistics_routes.size()
+				elif faction_mode:
 					var visible := sim.faction_simulation.get_visible_factions(sim)
 					if not visible.is_empty():
 						faction_index = (faction_index+1) % visible.size()
@@ -833,7 +872,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				elif governance_mode:
 					governance_law_index = (governance_law_index+1) % GOVERNANCE_LAWS.size()
 			KEY_A:
-				if faction_mode:
+				if civilization_mode:
+					var settlements := sim.civilization_simulation.get_settlement_list()
+					if not settlements.is_empty():
+						var settlement:Dictionary = settlements[civilization_settlement_index]
+						sim.civilization_simulation.send_emergency_aid(sim,str(settlement["id"]))
+				elif faction_mode:
 					var visible := sim.faction_simulation.get_visible_factions(sim)
 					if not visible.is_empty():
 						sim.faction_simulation.send_aid(sim,visible[faction_index])
@@ -869,6 +913,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_Y:
 				if economy_mode:
 					sim.economy_simulation.repair_vehicle(sim,0)
+			KEY_4:
+				if civilization_mode:
+					sim.civilization_simulation.cycle_policy(sim,"autonomy")
+			KEY_5:
+				if civilization_mode:
+					sim.civilization_simulation.cycle_policy(sim,"freight")
+			KEY_6:
+				if civilization_mode:
+					sim.civilization_simulation.cycle_policy(sim,"security")
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
@@ -884,7 +937,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_U:
 				utility_overlay = (utility_overlay + 1) % UTILITY_OVERLAYS.size()
 			KEY_R:
-				if not selected_building.is_empty():
+				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
+					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
+					sim.civilization_simulation.toggle_route(int(route["id"]))
+				elif not selected_building.is_empty():
 					sim.queue_repair(selected_building)
 			KEY_X:
 				if not selected_building.is_empty():
