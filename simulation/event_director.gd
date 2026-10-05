@@ -30,12 +30,12 @@ func update(sim: SettlementSimulation) -> void:
 			sim.stockpiles["command"]["medicine"] = maxf(0.0, command_stock - remaining)
 		sim.add_event("CLINIC LOAD", "Several survivors required treatment supplies.", "warning")
 	elif roll < 0.88:
-		for citizen in sim.citizens:
+		for citizen in sim.get_settlement_citizens():
 			if citizen["alive"]:
 				citizen["morale"] = minf(100.0, citizen["morale"] + 2.0)
 		sim.add_event("COMMUNITY NIGHT", "A shared meal raised spirits across the settlement.", "good")
 	else:
-		var alive := sim.get_alive_citizens()
+		var alive := sim.get_settlement_citizens()
 		if not alive.is_empty():
 			var target: Dictionary = alive[sim.rng.randi_range(0, alive.size() - 1)]
 			target["stress"] = minf(100.0, target["stress"] + 12.0)
