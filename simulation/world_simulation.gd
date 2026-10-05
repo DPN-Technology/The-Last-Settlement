@@ -15,7 +15,7 @@ func initialize(rng: RandomNumberGenerator) -> void:
 	locations = [
 		{"id":1,"name":"Last Haven","type":"settlement","position":Vector2(600,410),"danger":0.0,"loot":{},"discovered":true,"depleted":false},
 		{"id":2,"name":"Ash Creek Service Station","type":"ruin","position":Vector2(780,310),"danger":0.22,"loot":{"scrap":24.0,"materials":10.0,"medicine":2.0},"discovered":false,"depleted":false},
-		{"id":3,"name":"North Ridge Relay","type":"relay","position":Vector2(520,180),"danger":0.30,"loot":{"scrap":12.0,"materials":8.0},"discovered":false,"depleted":false},
+		{"id":3,"name":"North Ridge Relay","type":"relay","position":Vector2(520,180),"danger":0.30,"loot":{"scrap":12.0,"materials":8.0},"discovered":false,"depleted":false,"restored":false},
 		{"id":4,"name":"Old County Clinic","type":"ruin","position":Vector2(360,290),"danger":0.46,"loot":{"medicine":12.0,"scrap":8.0},"discovered":false,"depleted":false},
 		{"id":5,"name":"Blackwater Farm","type":"ruin","position":Vector2(870,560),"danger":0.18,"loot":{"food":42.0,"materials":6.0},"discovered":false,"depleted":false},
 		{"id":6,"name":"East Freight Yard","type":"ruin","position":Vector2(1020,370),"danger":0.58,"loot":{"scrap":54.0,"materials":28.0},"discovered":false,"depleted":false},
@@ -54,7 +54,7 @@ func _update_fog_of_war() -> void:
 func get_radio_range() -> float:
 	var relay_bonus := 0.0
 	for location in locations:
-		if location["type"] == "relay" and location["discovered"] and not location["depleted"]:
+		if location["type"] == "relay" and location["discovered"] and bool(location.get("restored",false)):
 			relay_bonus += 140.0
 	return RADIO_BASE_RANGE + relay_bonus
 
@@ -174,7 +174,8 @@ func _collect_loot(sim: SettlementSimulation, expedition: Dictionary) -> void:
 		cargo[key] = float(cargo.get(key,0.0)) + recovered
 	location["depleted"] = true
 	if location["type"] == "relay":
-		sim.add_event("RADIO RELAY RESTORED", "The expedition restored a regional relay and extended radio range.", "good")
+		location["restored"] = true
+		sim.add_event("RADIO RELAY RESTORED", "The expedition restored a regional relay and permanently extended radio range.", "good")
 	else:
 		sim.add_event("SALVAGE SECURED", "Expedition recovered supplies from %s." % location["name"], "good")
 
