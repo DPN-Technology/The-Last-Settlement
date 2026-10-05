@@ -30,8 +30,20 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"thirst": rng.randf_range(0.0, 12.0),
 		"fatigue": rng.randf_range(0.0, 20.0),
 		"stress": rng.randf_range(5.0, 32.0),
+		"injury": "",
+		"treatment_progress": 0.0,
 		"current_action": "Idle",
 		"shift": "DAY",
+		"work_priority": {
+			"Farmer": 3,
+			"Engineer": 3,
+			"Builder": 3,
+			"Medic": 3,
+			"Scavenger": 3,
+			"Guard": 3,
+			"Cook": 3,
+			"Hauler": 3
+		},
 		"skills": {
 			"construction": rng.randi_range(10, 80),
 			"medicine": rng.randi_range(5, 80),
@@ -50,6 +62,9 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"target": Vector2.ZERO,
 		"target_building": ""
 	}
+
+static func skill_multiplier(citizen: Dictionary, skill: String) -> float:
+	return 0.65 + (float(citizen["skills"].get(skill, 25)) / 100.0)
 
 static func best_skill_for_job(citizen: Dictionary) -> String:
 	match citizen["job"]:
