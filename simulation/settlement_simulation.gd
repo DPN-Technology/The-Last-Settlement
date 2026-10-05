@@ -91,10 +91,13 @@ func get_build_definition(build_type: String) -> Dictionary:
 			return item
 	return get_build_catalog()[0]
 
-func place_blueprint(build_type: String, world_position: Vector2) -> bool:
+func place_blueprint(build_type: String, world_position: Vector2, rotated: bool = false) -> bool:
 	var definition := get_build_definition(build_type)
 	var snapped := Vector2(round(world_position.x / 20.0) * 20.0, round(world_position.y / 20.0) * 20.0)
-	if not can_place_blueprint(snapped, definition["size"]):
+	var placement_size: Vector2 = definition["size"]
+	if rotated and (build_type == "wall" or build_type == "door"):
+		placement_size = Vector2(placement_size.y, placement_size.x)
+	if not can_place_blueprint(snapped, placement_size):
 		add_event("BUILD BLOCKED", "Construction site overlaps an existing structure.", "warning")
 		return false
 	var cost := float(definition["cost"])
@@ -107,7 +110,8 @@ func place_blueprint(build_type: String, world_position: Vector2) -> bool:
 		"type": build_type,
 		"name": definition["name"],
 		"position": snapped,
-		"size": definition["size"],
+		"size": placement_size,
+		"rotated": rotated,
 		"progress": 0.0,
 		"work_required": float(definition["work"]),
 		"material_cost": cost,
@@ -119,13 +123,13 @@ func place_blueprint(build_type: String, world_position: Vector2) -> bool:
 	return true
 
 func can_place_blueprint(position: Vector2, size: Vector2) -> bool:
-	var candidate := Rect2(position - size / 2.0, size).grow(4.0)
+	var candidate := Rect2(position - size / 2.0, size)
 	for b in buildings:
-		var rect := Rect2(b["position"] - b["size"] / 2.0, b["size"]).grow(4.0)
+		var rect := Rect2(b["position"] - b["size"] / 2.0, b["size"])
 		if candidate.intersects(rect):
 			return false
 	for bp in blueprints:
-		var rect := Rect2(bp["position"] - bp["size"] / 2.0, bp["size"]).grow(4.0)
+		var rect := Rect2(bp["position"] - bp["size"] / 2.0, bp["size"])
 		if candidate.intersects(rect):
 			return false
 	return true
@@ -441,8 +445,11 @@ func _complete_order(order: Dictionary) -> void:
 		"Hauler":
 			stockpiles["command"]["food"] += 6.0
 		"Builder":
-			var workshop := get_building_by_type("industry")
-			workshop["condition"] = minf(100.0, float(workshop["condition"]) + 8.0)
+			var target_name := str(order["title"]).trim_prefix("Repair ")
+			var target := get_building_by_name(target_name)
+			if target.is_empty():
+				target = get_building_by_type("industry")
+			target["condition"] = minf(100.0, float(target["condition"]) + maxf(8.0, float(order["work_required"])))
 
 func _building_for_job(job: String) -> String:
 	match job:
@@ -490,6 +497,12 @@ func get_building_by_type(building_type: String) -> Dictionary:
 		if b["type"] == building_type:
 			return b
 	return buildings[0]
+
+func get_building_by_name(building_name: String) -> Dictionary:
+	for b in buildings:
+		if str(b["name"]) == building_name:
+			return b
+	return {}
 
 func get_average_morale() -> float:
 	var alive := get_alive_citizens()
