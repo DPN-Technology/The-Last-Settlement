@@ -222,31 +222,83 @@ func _process_logistics(sim:SettlementSimulation) -> void:
 	for route in logistics_routes:
 		if not route["active"]:
 			continue
-		var source:Dictionary = settlements[str(route["source"])]
-		var destination:Dictionary = settlements[str(route["destination"])]
+		var source_key := str(route["source"])
+		var destination_key := str(route["destination"])
+		var source:Dictionary = settlements[source_key]
+		var destination:Dictionary = settlements[destination_key]
 		if not source["active"] or not destination["active"]:
 			continue
-		var moved := _route_transfer(source,destination)
+
+		var outbound := _route_transfer(sim,source_key,destination_key)
+		var inbound := _route_transfer(sim,destination_key,source_key)
+		var moved := outbound + inbound
 		route["last_transfer"] = moved
 		route["last_day"] = sim.day
 		if moved > 0.0:
-			sim.add_event("REGIONAL LOGISTICS","Route %s → %s moved %.0f units of surplus." % [source["name"],destination["name"],moved],"intel")
+			sim.add_event("REGIONAL LOGISTICS","%s ↔ %s moved %.0f units through the recovery network." % [source["name"],destination["name"],moved],"intel")
 
-func _route_transfer(source:Dictionary, destination:Dictionary) -> float:
+func _route_transfer(sim:SettlementSimulation, source_key:String, destination_key:String) -> float:
+	var source:Dictionary = settlements[source_key]
+	var destination:Dictionary = settlements[destination_key]
 	var moved := 0.0
-	var source_res:Dictionary = source["resources"]
-	var dest_res:Dictionary = destination["resources"]
 	for item in ["food","water","medicine","materials","fuel","parts"]:
 		var source_target := maxf(4.0,float(source["population"])*2.0)
 		var dest_target := maxf(6.0,float(destination["population"])*2.5)
-		var surplus := maxf(0.0,float(source_res.get(item,0.0))-source_target)
-		var need := maxf(0.0,dest_target-float(dest_res.get(item,0.0)))
+		var source_amount := _resource_amount(sim,source_key,item)
+		var dest_amount := _resource_amount(sim,destination_key,item)
+		var surplus := maxf(0.0,source_amount-source_target)
+		var need := maxf(0.0,dest_target-dest_amount)
 		var transfer := minf(surplus,need,12.0)
 		if transfer > 0.0:
-			source_res[item] = float(source_res.get(item,0.0))-transfer
-			dest_res[item] = float(dest_res.get(item,0.0))+transfer
+			_change_resource(sim,source_key,item,-transfer)
+			_change_resource(sim,destination_key,item,transfer)
 			moved += transfer
 	return moved
+
+func _resource_amount(sim:SettlementSimulation, settlement_key:String, item:String) -> float:
+	if settlement_key != "LAST_HAVEN":
+		return float(settlements[settlement_key]["resources"].get(item,0.0))
+	match item:
+		"food":
+			return float(sim.resources["food"])
+		"water":
+			return float(sim.resources["water"])
+		"medicine":
+			return float(sim.resources["medicine"])
+		"materials":
+			return float(sim.resources["materials"])
+		"fuel":
+			return float(sim.economy_simulation.industry_stock.get("fuel",0.0))
+		"parts":
+			return float(sim.economy_simulation.industry_stock.get("parts",0.0))
+	return 0.0
+
+func _change_resource(sim:SettlementSimulation, settlement_key:String, item:String, delta:float) -> void:
+	if settlement_key != "LAST_HAVEN":
+		var resources:Dictionary = settlements[settlement_key]["resources"]
+		resources[item] = maxf(0.0,float(resources.get(item,0.0))+delta)
+		return
+	match item:
+		"food":
+			var command_food := float(sim.stockpiles["command"].get("food",0.0))
+			if delta < 0.0:
+				var from_command := minf(command_food,-delta)
+				sim.stockpiles["command"]["food"] = command_food-from_command
+				var remaining := -delta-from_command
+				if remaining > 0.0:
+					sim.stockpiles["farm"]["food"] = maxf(0.0,float(sim.stockpiles["farm"].get("food",0.0))-remaining)
+			else:
+				sim.stockpiles["command"]["food"] = command_food+delta
+		"water":
+			sim.stockpiles["command"]["water"] = maxf(0.0,float(sim.stockpiles["command"].get("water",0.0))+delta)
+		"medicine":
+			sim.stockpiles["medical"]["medicine"] = maxf(0.0,float(sim.stockpiles["medical"].get("medicine",0.0))+delta)
+		"materials":
+			sim.stockpiles["industry"]["materials"] = maxf(0.0,float(sim.stockpiles["industry"].get("materials",0.0))+delta)
+		"fuel":
+			sim.economy_simulation.industry_stock["fuel"] = maxf(0.0,float(sim.economy_simulation.industry_stock.get("fuel",0.0))+delta)
+		"parts":
+			sim.economy_simulation.industry_stock["parts"] = maxf(0.0,float(sim.economy_simulation.industry_stock.get("parts",0.0))+delta)
 
 func _create_route(source:String,destination:String) -> void:
 	logistics_routes.append({
