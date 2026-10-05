@@ -178,7 +178,7 @@ func _draw_world() -> void:
 func _draw_utility_overlay() -> void:
 	if utility_overlay == 0:
 		return
-	var mode := UTILITY_OVERLAYS[utility_overlay]
+	var mode: String = str(UTILITY_OVERLAYS[utility_overlay])
 	var nodes: Array[Dictionary] = []
 	for b in sim.buildings:
 		var utility := str(b.get("utility", b.get("type","")))
@@ -332,14 +332,14 @@ func _draw_economy_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"MARKET INDEX",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ry += 26.0
 	for i in range(ECONOMY_ITEMS.size()):
-		var item := ECONOMY_ITEMS[i]
+		var item: String = str(ECONOMY_ITEMS[i])
 		var marker := ">" if i == economy_item_index else " "
 		var col := TEXT if i == economy_item_index else MUTED
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s %.1f cr" % [marker,item.to_upper(),eco.get_trade_price(item,economy_source_index)],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
 		ry += 22.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [H] MARKET  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
 	ry += 30.0
-	var selected_recipe := ECONOMY_RECIPES[economy_recipe_index]
+	var selected_recipe: String = str(ECONOMY_RECIPES[economy_recipe_index])
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION ORDER // %s" % selected_recipe.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
 	ry += 20.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[N] NEXT RECIPE   [C] QUEUE 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
@@ -353,7 +353,7 @@ func _draw_economy_panel() -> void:
 		ry += 20.0
 		if ry > y+h-95:
 			break
-	var vehicle := eco.vehicles[0] if not eco.vehicles.is_empty() else {}
+	var vehicle: Dictionary = eco.vehicles[0] if not eco.vehicles.is_empty() else {}
 	if not vehicle.is_empty():
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-78),"VEHICLE // %s  COND %.0f%%  FUEL %.1f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"REPAIR KITS %.0f   FUEL BURN %.2f/day   [Y] REPAIR VEHICLE" % [eco.repair_kits,eco.fuel_consumed_today],HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
@@ -494,7 +494,7 @@ func _draw_governance_panel() -> void:
 
 	var gov := sim.governance_simulation
 	var leader := sim.get_citizen_by_id(gov.leader_id)
-	var leader_name := "VACANT" if leader.is_empty() else leader["name"]
+	var leader_name: String = "VACANT" if leader.is_empty() else str(leader["name"])
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"GOVERNMENT // %s" % gov.government_type,HORIZONTAL_ALIGNMENT_LEFT,-1,12,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+86),"LEADER // %s" % leader_name,HORIZONTAL_ALIGNMENT_LEFT,-1,13,RUST)
 
@@ -506,7 +506,7 @@ func _draw_governance_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"LAW REGISTER",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ry += 28.0
 	for i in range(GOVERNANCE_LAWS.size()):
-		var key := GOVERNANCE_LAWS[i]
+		var key: String = str(GOVERNANCE_LAWS[i])
 		var marker := ">" if i == governance_law_index else " "
 		var col := TEXT if i == governance_law_index else MUTED
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s // %s" % [marker,key.to_upper(),str(gov.laws[key]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
@@ -528,7 +528,7 @@ func _draw_governance_panel() -> void:
 		if case["status"] == "resolved":
 			continue
 		var suspect := sim.get_citizen_by_id(int(case["suspect_id"]))
-		var suspect_name := "UNKNOWN" if suspect.is_empty() else suspect["name"]
+		var suspect_name: String = "UNKNOWN" if suspect.is_empty() else str(suspect["name"])
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"CASE-%03d %s // %s // %d%%" % [int(case["id"]),case["type"],suspect_name,int(case["progress"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,10,TEXT)
 		ry += 22.0
 		if ry > y+h-35:
@@ -663,8 +663,8 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 		ry += 24.0
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "SOCIAL RECORD", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 	ry += 24.0
-	var children_count := c.get("children_ids", []).size()
-	var memory_count := c.get("memories", []).size()
+	var children_count: int = c.get("children_ids", []).size()
+	var memory_count: int = c.get("memories", []).size()
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "CHILDREN %d   MEMORIES %d" % [children_count, memory_count], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	ry += 22.0
 	var memories: Array = c.get("memories", [])
@@ -673,7 +673,7 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 		ry += 24.0
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "POCKET INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 	ry += 28.0
-	var inv := c["inventory"]
+	var inv: Dictionary = c["inventory"]
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "RATION %d   WATER %d   MED %d   SCRAP %d" % [int(inv["food_ration"]),int(inv["water_ration"]),int(inv["medicine"]),int(inv["scrap"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 
 func _draw_building_panel(b: Dictionary) -> void:
@@ -970,6 +970,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion:
 		mouse_world = _screen_to_world(event.position)
 		if dragging:
-			var drag_delta := event.position - drag_origin
+			var drag_delta: Vector2 = event.position - drag_origin
 			camera_offset += drag_delta / zoom
 			drag_origin = event.position
