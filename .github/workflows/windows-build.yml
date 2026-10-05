@@ -101,7 +101,11 @@ jobs:
           set -euo pipefail
           file dist/windows/TheLastSettlement.exe | tee dist/windows/EXECUTABLE-TYPE.txt
           grep -Eq 'PE32|MS Windows' dist/windows/EXECUTABLE-TYPE.txt
-          sha256sum             dist/windows/TheLastSettlement.exe             dist/windows/TheLastSettlement.pck             > dist/windows/SHA256SUMS.txt
+          (
+            cd dist/windows
+            sha256sum TheLastSettlement.exe TheLastSettlement.pck > SHA256SUMS.txt
+            sha256sum -c SHA256SUMS.txt
+          )
 
       - name: Add portable run instructions
         shell: bash
