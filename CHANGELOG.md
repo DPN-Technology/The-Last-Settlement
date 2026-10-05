@@ -1,3 +1,36 @@
+## 1.0.1-dev — Civilization Operations & Engine-Verified CI
+
+### Added
+- Colony status states: Stable, Recovering, Degraded and Emergency
+- Colony emergency simulation
+- Food shortage, water crisis, infrastructure failure, security incident, storm damage, disease cluster and equipment failure events
+- Manual emergency aid shipments from Last Haven
+- Player-controlled colony specialization changes
+- Civilization autonomy policy
+- Civilization freight policy
+- Civilization security policy
+- Configurable freight-route activation
+- Freight-route priority levels
+- Freight-route cargo focus: Balanced, Survival and Industrial
+- Policy-driven colony production, freight throughput and security growth
+- Civilization emergency log
+- Backward normalization for older civilization save data
+- Save schema version 12
+- Checksum-verified official Godot 4.3 installation in CI
+- Headless Godot project parse/load gate
+
+### Fixed
+- Invalid three-argument `minf()` logistics call detected by the new engine gate
+- Godot 4.3 Variant type-inference parse errors in civilization, governance and UI code
+- Invisible offsite colonists can no longer be selected at their old Last Haven positions
+- Founding history now records the original expedition site name correctly
+- Colony emergency events no longer create duplicate archive entries
+- Fortress Network policy now provides the intended stronger security-growth effect
+
+### Changed
+- A green CI Gate now requires Godot itself to parse/load the project successfully
+- Civilization Command now exposes colony emergencies, policy controls and configurable freight operations
+
 ## 1.0.0-dev — Civilization Network Foundation
 
 ### Added
