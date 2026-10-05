@@ -758,7 +758,7 @@ func get_building_by_name(building_name: String) -> Dictionary:
 	return {}
 
 func get_average_morale() -> float:
-	var alive := get_alive_citizens()
+	var alive := get_settlement_citizens()
 	if alive.is_empty():
 		return 0.0
 	var total := 0.0
