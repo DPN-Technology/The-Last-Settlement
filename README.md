@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.1--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.2--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -51,7 +51,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 1.0.1-dev
+## CURRENT TRANSMISSION // BUILD 1.0.2-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -317,7 +317,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Civilization state persisted in save version 11
 - Founding sites created from secured and cleared ruins
 
-### SYSTEM STATUS // BUILD 1.0.1-dev
+### SYSTEM STATUS // BUILD 1.0.2-dev
 
 | Layer | Status | Live Integration |
 |---|---|---|
@@ -350,18 +350,46 @@ The current foundation is already moving beyond a static colony prototype.
 - Save schema version 12 persistence for policies and emergencies
 - Backward normalization for older civilization saves
 
+### COLONY DEVELOPMENT + RECOVERY PROJECTS // LIVE
+
+- Permanent colony module construction
+- Housing Blocks
+- Farm Complexes
+- Clinic Modules
+- Workshop Bays
+- Defense Perimeters
+- Freight Depots
+- Radio Towers
+- Colony-local construction costs using delivered materials, parts and medicine
+- Colonist construction/engineering skill driving project speed
+- Module counts visible in Civilization Command
+- Farm modules increase colony food production
+- Clinic modules increase medicine production and can contain disease outbreaks
+- Workshop modules produce materials and machine parts
+- Defense modules strengthen colony security
+- Freight Depots increase route throughput
+- Radio Towers improve colony morale/security
+- Four civilization-scale recovery megaprojects
+- Regional Power Grid
+- Clean Water Network
+- Medical Corridor
+- Communications Backbone
+- Incremental funding from real Last Haven stockpiles
+- Recovery-project completion bonuses
+- Completed recovery projects increase civilization recovery score
+- True **CIVILIZATION RESTORED** state requires all recovery projects, 3+ settlements, 90+ recovery and 75+ stability
+- Save schema version 13 persistence for colony and recovery projects
+
 ### ACTIVE DEVELOPMENT
 
-- Detailed secondary-settlement construction
 - Founding-team selection UI
-- Two-way configurable freight routes
-- Colony emergencies and failure cascades
+- Founding-team selection UI
 - Civilization-wide government
 - Full faction population/economy simulation
 - Offensive player operations
 - Formal war declarations and peace treaties
 - Defensive emplacements and automated defenses
-- Endgame recovery objectives and victory paths
+- Expanded endgame branches and post-restoration play
 - Performance profiling for large populations
 
 ---
@@ -596,7 +624,7 @@ The development rule is the same as the simulation rule:
 | Architecture | Modular simulation systems |
 | Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
 | Validation | GitHub Actions + CodeQL + supply-chain gates |
-| Save Schema | Version 12 |
+| Save Schema | Version 13 |
 | Data Direction | Save-versioned, deterministic-friendly simulation |
 
 The simulation architecture comes first.
@@ -657,8 +685,8 @@ No external art pack is required for the current prototype.
 | **Backspace** | Sell selected market item in Industry Command |
 | **Y** | Repair primary vehicle using a repair kit in Industry Command |
 | **H** | Cycle local / active caravan market in Industry Command |
-| **N** | Cycle production recipe in Industry Command |
-| **C** | Queue selected production recipe |
+| **N** | Cycle production recipe in Industry Command / colony module in Civilization Command |
+| **C** | Queue selected production recipe / colony module |
 | **O** | Toggle Faction Command |
 | **↑ / ↓** | Cycle discovered factions in Faction Command |
 | **A** | Send aid to selected faction / emergency aid to selected colony |
@@ -666,6 +694,8 @@ No external art pack is required for the current prototype.
 | **Z** | Offer truce to hostile faction |
 | **J** | Toggle Civilization Command |
 | **4 / 5 / 6** | Cycle Civilization autonomy / freight / security policy |
+| **7** | Cycle civilization recovery megaproject |
+| **8** | Contribute available resources to selected recovery megaproject |
 | **Left / Right** | Cycle settlements in Civilization Command |
 | **I** | Found a settlement at a selected secured world-map site |
 
