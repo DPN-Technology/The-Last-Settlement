@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.6.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.7.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.6.0-dev
+## CURRENT TRANSMISSION // BUILD 0.7.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -175,18 +175,45 @@ The current foundation is already moving beyond a static colony prototype.
 - World/expedition state persisted in save version 5
 - Expedition members removed from home occupancy/social simulation while away
 
+### GOVERNMENT + SOCIETY // LIVE
+
+- Interim civic council and settlement leader
+- Recurring elections
+- Council membership
+- Government legitimacy
+- Settlement unrest
+- Crime pressure driven by scarcity, stress and security staffing
+- Political blocs / factions
+- Citizen political values: liberty, order and welfare
+- Law register
+- Rationing policy
+- Security policy
+- Labor policy
+- Justice policy
+- Speech policy
+- Citizen loyalty reactions to laws
+- Theft, assault and sabotage cases
+- Guard-driven investigations
+- Court resolution
+- Restorative, balanced and punitive justice outcomes
+- Incarceration and sentence completion
+- Protests at high unrest
+- Governance crisis escalation
+- Civic Command panel
+- Government state persisted in save version 6
+
 ### ACTIVE DEVELOPMENT
 
+- Player-selected election candidates
+- Detailed council voting
+- Political campaigns
+- Corruption and bribery
+- Prison buildings and capacity
+- Warrants and evidence
+- Coups / leadership collapse
+- Protest demands and negotiation
 - Player-picked expedition members
-- Custom loadouts
-- Encounter choices instead of automatic resolution
-- Dynamic faction settlements
-- Trade contacts
-- Weather/travel penalties
-- Vehicles and convoy travel
-- Expanded procedural world generation
-- Friendship/rival labels in the inspector
-- Family tree visualization
+- Custom expedition loadouts
 
 ---
 
@@ -468,6 +495,9 @@ No external art pack is required for the current prototype.
 | **U** | Cycle utility overlay: Off / Power / Water / Sewage |
 | **M** | Toggle settlement / regional world map |
 | **G** | Dispatch expedition to selected discovered world location |
+| **V** | Toggle Civic Command / government panel |
+| **↑ / ↓** | Select law in Civic Command |
+| **Enter** | Change selected law |
 
 ---
 
@@ -520,9 +550,9 @@ The-Last-Settlement/
  │
  ├── 0.5  RELATIONSHIPS + FAMILIES
  │
- ├── 0.6  WORLD + EXPEDITIONS     ◄── CURRENT
+ ├── 0.6  WORLD + EXPEDITIONS
  │
- ├── 0.7  GOVERNMENT + SOCIETY
+ ├── 0.7  GOVERNMENT + SOCIETY   ◄── CURRENT
  │
  ├── 0.8  INDUSTRY + ECONOMY
  │
