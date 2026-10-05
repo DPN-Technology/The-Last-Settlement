@@ -9,6 +9,7 @@ config_version=5
 config/name="The Last Settlement"
 config/version="1.0.3-dev"
 config/description="A DPN Technology post-collapse civilization recovery simulation with automated Windows portable builds."
+config/icon="res://assets/app/the-last-settlement-icon.svg"
 run/main_scene="res://src/Main.tscn"
 config/features=PackedStringArray("4.3")
 
