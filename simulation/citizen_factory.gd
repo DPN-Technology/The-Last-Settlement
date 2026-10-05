@@ -72,7 +72,14 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"memories": [],
 		"pregnancy_hours": 0.0,
 		"birthday_progress": 0.0,
-		"on_expedition": false
+		"on_expedition": false,
+		"faction": "",
+		"liberty_value": rng.randf_range(20.0, 90.0),
+		"order_value": rng.randf_range(20.0, 90.0),
+		"welfare_value": rng.randf_range(20.0, 90.0),
+		"criminal_record": 0,
+		"incarcerated": false,
+		"sentence_hours": 0.0
 	}
 
 static func skill_multiplier(citizen: Dictionary, skill: String) -> float:
