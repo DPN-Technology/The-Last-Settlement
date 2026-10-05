@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -291,6 +291,7 @@ func _update_utilities(sim_hours: float) -> void:
 	var purifier_capacity := 0.0
 	var sewage_capacity := 0.0
 	var battery_capacity := 0.0
+	var generator_count := 0
 
 	for b in buildings:
 		var utility := str(b.get("utility", ""))
@@ -313,6 +314,7 @@ func _update_utilities(sim_hours: float) -> void:
 		match utility:
 			"generator":
 				if efficiency > 0.20 and not utility_failures["generator_trip"]:
+					generator_count += 1
 					generated += 28.0 * efficiency
 			"battery":
 				battery_capacity += 40.0
@@ -337,6 +339,10 @@ func _update_utilities(sim_hours: float) -> void:
 			"medical": demand += 6.0
 			"storage": demand += 1.0
 
+	var fuel_factor := economy_simulation.consume_generator_fuel(self, sim_hours, generator_count)
+	generated *= fuel_factor
+	if fuel_factor < 0.2 and generator_count > 0:
+		utility_state["power_online"] = false
 	utility_state["battery_capacity"] = maxf(100.0, battery_capacity)
 	utility_state["power_generated"] = generated
 	utility_state["power_demand"] = demand
@@ -582,6 +588,7 @@ func _apply_citizen_work(c: Dictionary, sim_hours: float) -> void:
 			_treat_patients(c, output)
 
 func _haul_tick(_c: Dictionary, output: float) -> void:
+	output *= economy_simulation.get_logistics_multiplier(output)
 	var farm_food := float(stockpiles["farm"].get("food", 0.0))
 	if farm_food > 20.0:
 		var moved := minf(farm_food - 20.0, 0.9 * output)
@@ -808,7 +815,16 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"next_batch_id": economy_simulation.next_batch_id,
 			"price_update_hour": economy_simulation.price_update_hour,
 			"trade_log": economy_simulation.trade_log,
-			"vehicles": economy_simulation.vehicles
+			"vehicles": economy_simulation.vehicles,
+			"trade_pressure": economy_simulation.trade_pressure,
+			"warehouse_capacity": economy_simulation.warehouse_capacity,
+			"warehouse_used": economy_simulation.warehouse_used,
+			"warehouse_pressure": economy_simulation.warehouse_pressure,
+			"production_efficiency": economy_simulation.production_efficiency,
+			"bottleneck_reason": economy_simulation.bottleneck_reason,
+			"fuel_consumed_today": economy_simulation.fuel_consumed_today,
+			"next_warehouse_check_hour": economy_simulation.next_warehouse_check_hour,
+			"repair_kits": economy_simulation.repair_kits
 		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -872,6 +888,15 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.price_update_hour = float(economy.get("price_update_hour", economy_simulation.price_update_hour))
 		economy_simulation.trade_log = economy.get("trade_log", economy_simulation.trade_log)
 		economy_simulation.vehicles = economy.get("vehicles", economy_simulation.vehicles)
+		economy_simulation.trade_pressure = economy.get("trade_pressure", economy_simulation.trade_pressure)
+		economy_simulation.warehouse_capacity = float(economy.get("warehouse_capacity", economy_simulation.warehouse_capacity))
+		economy_simulation.warehouse_used = float(economy.get("warehouse_used", economy_simulation.warehouse_used))
+		economy_simulation.warehouse_pressure = float(economy.get("warehouse_pressure", economy_simulation.warehouse_pressure))
+		economy_simulation.production_efficiency = float(economy.get("production_efficiency", economy_simulation.production_efficiency))
+		economy_simulation.bottleneck_reason = str(economy.get("bottleneck_reason", economy_simulation.bottleneck_reason))
+		economy_simulation.fuel_consumed_today = float(economy.get("fuel_consumed_today", economy_simulation.fuel_consumed_today))
+		economy_simulation.next_warehouse_check_hour = float(economy.get("next_warehouse_check_hour", economy_simulation.next_warehouse_check_hour))
+		economy_simulation.repair_kits = float(economy.get("repair_kits", economy_simulation.repair_kits))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
