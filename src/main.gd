@@ -30,6 +30,7 @@ var selected_world_location_id := 0
 var governance_mode := false
 var economy_mode := false
 var economy_item_index := 0
+var economy_source_index := 0
 const ECONOMY_ITEMS := ["food","water","medicine","materials","scrap","fuel","parts"]
 var governance_law_index := 0
 const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
@@ -204,13 +205,31 @@ func _draw_world_map() -> void:
 		if not location["discovered"]:
 			draw_circle(p, 5.0, Color("#34383d"))
 			continue
-		var col := GOOD if location["type"] == "settlement" else (WARN if location["type"] == "relay" else RUST)
+		var col := GOOD if location["type"] == "settlement" else (WARN if location["type"] == "relay" else (Color("#7ca0c2") if location["type"] == "trade_hub" else RUST))
 		if location["depleted"]:
 			col = MUTED
 		draw_circle(p, 8.0, col)
 		if int(location["id"]) == selected_world_location_id:
 			draw_arc(p, 14.0, 0, TAU, 24, ACCENT, 2.0)
 		draw_string(ThemeDB.fallback_font, p + Vector2(12,-6), location["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT)
+
+	for caravan in sim.economy_simulation.get_inbound_caravans():
+		var origin_location := sim.world_simulation.get_location_by_id(int(caravan["origin_location_id"]))
+		if origin_location.is_empty():
+			continue
+		var caravan_start := origin + Vector2(origin_location["position"]) * scale
+		var caravan_end := home_screen
+		var caravan_progress := clampf(float(caravan["progress"]) / maxf(1.0,float(caravan["distance"])),0.0,1.0)
+		var caravan_pos := caravan_start
+		if caravan["status"] == "inbound":
+			caravan_pos = caravan_start.lerp(caravan_end,caravan_progress)
+		elif caravan["status"] == "trading":
+			caravan_pos = caravan_end
+		else:
+			caravan_pos = caravan_end.lerp(caravan_start,caravan_progress)
+		draw_line(caravan_start,caravan_end,Color("#3b4650"),1.0)
+		draw_rect(Rect2(caravan_pos-Vector2(5,4),Vector2(10,8)),Color("#7ca0c2"),true)
+		draw_string(ThemeDB.fallback_font,caravan_pos+Vector2(9,3),"TRD-%02d" % int(caravan["id"]),HORIZONTAL_ALIGNMENT_LEFT,-1,9,MUTED)
 
 	for expedition in sim.world_simulation.get_active_expeditions():
 		var destination := sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
@@ -271,10 +290,17 @@ func _draw_economy_panel() -> void:
 	var w := 480.0
 	var h := vp.y - 190.0
 	var eco := sim.economy_simulation
+	var trade_sources := eco.get_trade_sources()
+	if trade_sources.is_empty():
+		economy_source_index = 0
+	elif economy_source_index >= trade_sources.size():
+		economy_source_index = 0
+	var active_source := trade_sources[economy_source_index]
 	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
 	draw_rect(Rect2(x,y,w,h),RUST,false,2.0)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"INDUSTRY + ECONOMY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,-1,15,RUST)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"CREDITS // %.1f" % eco.credits,HORIZONTAL_ALIGNMENT_LEFT,-1,18,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+220,y+62),"MARKET // %s" % active_source["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD if economy_source_index>0 else MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+88),"FUEL %.1f   PARTS %.1f   TOOLS %.1f   COMPONENTS %.1f" % [float(eco.industry_stock["fuel"]),float(eco.industry_stock["parts"]),float(eco.industry_stock["tools"]),float(eco.industry_stock["components"])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+108),"WAREHOUSE %.0f/%.0f   PRESSURE %.0f%%   PROD EFF %.0f%%" % [eco.warehouse_used,eco.warehouse_capacity,eco.warehouse_pressure*100.0,eco.production_efficiency*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 	if eco.bottleneck_reason != "":
@@ -286,9 +312,9 @@ func _draw_economy_panel() -> void:
 		var item := ECONOMY_ITEMS[i]
 		var marker := ">" if i == economy_item_index else " "
 		var col := TEXT if i == economy_item_index else MUTED
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s x%.2f" % [marker,item.to_upper(),float(eco.market_index[item])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s %.1f cr" % [marker,item.to_upper(),eco.get_trade_price(item,economy_source_index)],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
 		ry += 22.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [H] MARKET  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
 	ry += 44.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION QUEUE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ry += 24.0
@@ -623,14 +649,19 @@ func _unhandled_input(event: InputEvent) -> void:
 					economy_item_index = (economy_item_index+1) % ECONOMY_ITEMS.size()
 				elif governance_mode:
 					governance_law_index = (governance_law_index+1) % GOVERNANCE_LAWS.size()
+			KEY_H:
+				if economy_mode:
+					var sources := sim.economy_simulation.get_trade_sources()
+					if not sources.is_empty():
+						economy_source_index = (economy_source_index+1) % sources.size()
 			KEY_ENTER:
 				if economy_mode:
-					sim.economy_simulation.trade(sim,ECONOMY_ITEMS[economy_item_index],1.0,true)
+					sim.economy_simulation.trade_with_source(sim,economy_source_index,ECONOMY_ITEMS[economy_item_index],1.0,true)
 				elif governance_mode:
 					sim.governance_simulation.cycle_law(sim,GOVERNANCE_LAWS[governance_law_index])
 			KEY_BACKSPACE:
 				if economy_mode:
-					sim.economy_simulation.trade(sim,ECONOMY_ITEMS[economy_item_index],1.0,false)
+					sim.economy_simulation.trade_with_source(sim,economy_source_index,ECONOMY_ITEMS[economy_item_index],1.0,false)
 			KEY_Y:
 				if economy_mode:
 					sim.economy_simulation.repair_vehicle(sim,0)
