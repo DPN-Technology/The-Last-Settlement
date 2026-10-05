@@ -185,10 +185,25 @@
 - [ ] Defensive emplacements / automated defenses
 
 ## Milestone 1.0 — Civilization
-- Multiple player settlements
-- Regional logistics
-- Generational simulation
-- Historical archive
-- Endgame civilization recovery paths
-- Full save migration/versioning
-- Performance profiling and large-population simulation
+**Status: core started / active**
+
+- [x] Multiple player settlements
+- [x] Survivor founding teams
+- [x] Secondary settlement specialization
+- [x] Regional logistics foundation
+- [x] Civilization recovery score
+- [x] Civilization stability score
+- [x] Historical archive
+- [x] Critical-event archive integration
+- [x] Recovery phase progression
+- [x] Civilization Command UI
+- [x] Civilization save/load persistence
+- [x] Save schema version 11
+- [x] Generational simulation foundation
+- [ ] Detailed secondary settlement construction
+- [ ] Configurable freight routes
+- [ ] Civilization-wide laws / government
+- [ ] Endgame civilization recovery objectives
+- [ ] Full save migration tooling
+- [ ] Performance profiling
+- [ ] Large-population simulation optimization
