@@ -364,7 +364,7 @@ func _update_utilities(sim_hours: float) -> void:
 	utility_state["clean_water_rate"] = clean_rate
 	utility_state["water_online"] = clean_rate > 0.05
 
-	var sewage_added := get_alive_citizens().size() * 0.22 * sim_hours
+	var sewage_added := get_settlement_citizens().size() * 0.22 * sim_hours
 	utility_state["sewage"] = float(utility_state["sewage"]) + sewage_added
 	var treated := sewage_capacity * power_factor * sim_hours
 	utility_state["sewage"] = maxf(0.0, float(utility_state["sewage"]) - treated)
@@ -701,6 +701,13 @@ func get_alive_citizens() -> Array[Dictionary]:
 		if c["alive"]:
 			alive.append(c)
 	return alive
+
+func get_settlement_citizens() -> Array[Dictionary]:
+	var present: Array[Dictionary] = []
+	for c in citizens:
+		if c["alive"] and not c.get("on_expedition", false):
+			present.append(c)
+	return present
 
 func get_building_by_type(building_type: String) -> Dictionary:
 	for b in buildings:
