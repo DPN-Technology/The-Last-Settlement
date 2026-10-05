@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.8.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.9.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.8.0-dev
+## CURRENT TRANSMISSION // BUILD 0.9.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -259,16 +259,46 @@ The current foundation is already moving beyond a static colony prototype.
 - Utility-truck manufacturing
 - Regional trade state persisted in save version 9
 
+### FACTIONS + CONFLICT // LIVE
+
+- Regional AI faction settlements
+- Cedar Union, Riverbend Collective, Iron Pact and Lantern Medics
+- Faction reputation
+- Neutral / friendly / allied / hostile dispositions
+- Faction strength, wealth and intelligence
+- Diplomacy command interface
+- Aid shipments that improve relations
+- Trade agreements
+- Trade-agreement caravan discounts
+- Truce offers
+- Hostile espionage
+- Infrastructure sabotage
+- Raid warnings with ETA
+- Raid attack strength
+- Settlement defense score
+- Guards contributing security skill
+- Walls and command infrastructure contributing defense
+- Raid victories and breaches
+- Resource theft after breaches
+- Building damage
+- Guard injuries
+- Morale and government-unrest consequences
+- Friendly/allied support events
+- Conflict history
+- Faction state persisted in save version 10
+- Radio relay progression fixed so restoration permanently extends range
+
 ### ACTIVE DEVELOPMENT
 
-- Additional vehicle classes
-- Factory-specific recipe assignment
+- Full faction population/economy simulation
+- Offensive player operations
+- Formal war declarations and peace treaties
+- Prisoner exchange
+- Defensive emplacements and automated defenses
+- Espionage missions initiated by the player
 - Freight contracts
+- Factory-specific recipe assignment
 - Advanced warehouse zoning
-- Regional trade agreements
-- Player-selected election candidates
-- Detailed council voting
-- Dynamic diplomacy-driven tariffs
 
 ---
 
@@ -559,6 +589,11 @@ No external art pack is required for the current prototype.
 | **H** | Cycle local / active caravan market in Industry Command |
 | **N** | Cycle production recipe in Industry Command |
 | **C** | Queue selected production recipe |
+| **O** | Toggle Faction Command |
+| **↑ / ↓** | Cycle discovered factions in Faction Command |
+| **A** | Send aid to selected faction |
+| **D** | Propose trade agreement |
+| **Z** | Offer truce to hostile faction |
 
 ---
 
@@ -578,6 +613,11 @@ The-Last-Settlement/
 ├── simulation/
 │   ├── citizen_factory.gd
 │   ├── event_director.gd
+│   ├── social_simulation.gd
+│   ├── world_simulation.gd
+│   ├── governance_simulation.gd
+│   ├── economy_simulation.gd
+│   ├── faction_simulation.gd
 │   └── settlement_simulation.gd
 │
 ├── src/
@@ -615,9 +655,9 @@ The-Last-Settlement/
  │
  ├── 0.7  GOVERNMENT + SOCIETY
  │
- ├── 0.8  INDUSTRY + ECONOMY     ◄── CURRENT
+ ├── 0.8  INDUSTRY + ECONOMY
  │
- ├── 0.9  FACTIONS + CONFLICT
+ ├── 0.9  FACTIONS + CONFLICT    ◄── CURRENT
  │
  └── 1.0  CIVILIZATION
 ```
