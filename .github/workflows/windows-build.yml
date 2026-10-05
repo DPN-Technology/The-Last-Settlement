@@ -10,6 +10,7 @@ on:
       - "simulation/**"
       - "assets/**"
       - ".github/workflows/windows-build.yml"
+      - "packaging/windows/**"
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,8 @@ env:
   GODOT_TEMPLATE_VERSION: "4.3.stable"
   GODOT_ASSET: "Godot_v4.3-stable_linux.x86_64.zip"
   GODOT_TEMPLATES: "Godot_v4.3-stable_export_templates.tpz"
+  PACKAGE_VERSION: "1.0.3"
+  DISPLAY_VERSION: "1.0.3-dev"
 
 jobs:
   build-windows:
@@ -146,3 +149,127 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+
+
+  package-windows:
+    name: Windows Installer + Final Portable Package
+    needs: build-windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      WINDOWS_SIGN_CERT_BASE64: ${{ secrets.WINDOWS_SIGN_CERT_BASE64 }}
+      WINDOWS_SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERT_PASSWORD }}
+
+    steps:
+      - name: Checkout packaging sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download verified portable payload
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: TheLastSettlement-Windows-x86_64
+          path: incoming
+
+      - name: Extract and verify payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Expand-Archive -Path "incoming\TheLastSettlement-Windows-x86_64.zip" -DestinationPath "payload" -Force
+          Get-Content "payload\SHA256SUMS.txt" | ForEach-Object {
+            $parts = $_ -split "\s+", 2
+            $expected = $parts[0].ToLowerInvariant()
+            $file = Join-Path "payload" $parts[1]
+            $actual = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $expected) { throw "Checksum mismatch: $file" }
+          }
+          $type = & "C:\Windows\System32\where.exe" "TheLastSettlement.exe" 2>$null
+          Get-Item "payload\TheLastSettlement.exe" | Format-List FullName,Length
+
+      - name: Sign game executable when DPN certificate is configured
+        if: env.WINDOWS_SIGN_CERT_BASE64 != ''
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pfx = Join-Path $env:RUNNER_TEMP "dpn-windows-signing.pfx"
+          [IO.File]::WriteAllBytes($pfx,[Convert]::FromBase64String($env:WINDOWS_SIGN_CERT_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          & $signtool sign /fd SHA256 /f $pfx /p $env:WINDOWS_SIGN_CERT_PASSWORD /tr "http://timestamp.digicert.com" /td SHA256 "payload\TheLastSettlement.exe"
+          & $signtool verify /pa /v "payload\TheLastSettlement.exe"
+          Remove-Item $pfx -Force
+
+      - name: Rebuild final portable ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $exeHash = (Get-FileHash "payload\TheLastSettlement.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $pckHash = (Get-FileHash "payload\TheLastSettlement.pck" -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            "$exeHash  TheLastSettlement.exe"
+            "$pckHash  TheLastSettlement.pck"
+          ) | Set-Content "payload\SHA256SUMS.txt" -Encoding ascii
+          New-Item -ItemType Directory -Force -Path "dist" | Out-Null
+          Compress-Archive -Path "payload\TheLastSettlement.exe","payload\TheLastSettlement.pck","payload\README-WINDOWS.txt","payload\SHA256SUMS.txt" -DestinationPath "dist\TheLastSettlement-Windows-x86_64.zip" -CompressionLevel Optimal -Force
+
+      - name: Build per-user MSI installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "installer" | Out-Null
+          $candle = Get-ChildItem "${env:ProgramFiles(x86)}\WiX Toolset v3.*\bin\candle.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          $light = Get-ChildItem "${env:ProgramFiles(x86)}\WiX Toolset v3.*\bin\light.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $candle -or -not $light) { throw "WiX Toolset v3 was not found on windows-latest." }
+          $payload = (Resolve-Path "payload").Path
+          & $candle "-dPayloadDir=$payload" "-dProductVersion=$env:PACKAGE_VERSION" "packaging\windows\TheLastSettlement.wxs" -out "installer\TheLastSettlement.wixobj"
+          if ($LASTEXITCODE -ne 0) { throw "WiX candle failed" }
+          & $light "installer\TheLastSettlement.wixobj" -out "dist\TheLastSettlement-Setup-x64.msi"
+          if ($LASTEXITCODE -ne 0) { throw "WiX light failed" }
+          if (-not (Test-Path "dist\TheLastSettlement-Setup-x64.msi")) { throw "MSI was not produced" }
+
+      - name: Sign installer when DPN certificate is configured
+        if: env.WINDOWS_SIGN_CERT_BASE64 != ''
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pfx = Join-Path $env:RUNNER_TEMP "dpn-windows-signing.pfx"
+          [IO.File]::WriteAllBytes($pfx,[Convert]::FromBase64String($env:WINDOWS_SIGN_CERT_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /fd SHA256 /f $pfx /p $env:WINDOWS_SIGN_CERT_PASSWORD /tr "http://timestamp.digicert.com" /td SHA256 "dist\TheLastSettlement-Setup-x64.msi"
+          & $signtool verify /pa /v "dist\TheLastSettlement-Setup-x64.msi"
+          Remove-Item $pfx -Force
+
+      - name: Write distribution checksums
+        shell: pwsh
+        run: |
+          $portable = (Get-FileHash "dist\TheLastSettlement-Windows-x86_64.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $installer = (Get-FileHash "dist\TheLastSettlement-Setup-x64.msi" -Algorithm SHA256).Hash.ToLowerInvariant()
+          @(
+            "$portable  TheLastSettlement-Windows-x86_64.zip"
+            "$installer  TheLastSettlement-Setup-x64.msi"
+          ) | Set-Content "dist\SHA256SUMS-WINDOWS.txt" -Encoding ascii
+
+      - name: Upload final portable Windows package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-Portable-Final
+          path: |
+            dist/TheLastSettlement-Windows-x86_64.zip
+            dist/SHA256SUMS-WINDOWS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Windows MSI installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-Installer
+          path: |
+            dist/TheLastSettlement-Setup-x64.msi
+            dist/SHA256SUMS-WINDOWS.txt
+          if-no-files-found: error
+          retention-days: 30
