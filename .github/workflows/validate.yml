@@ -51,6 +51,38 @@ jobs:
             grep -q '^extends ' "$file" || { echo "::error::$file has no extends declaration"; exit 1; }
           done
 
+      - name: Install pinned Godot 4.3 engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_ASSET="Godot_v4.3-stable_linux.x86_64.zip"
+          GODOT_BASE="https://github.com/godotengine/godot-builds/releases/download/4.3-stable"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "$GODOT_BASE/$GODOT_ASSET" -o godot.zip
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error             "$GODOT_BASE/SHA512-SUMS.txt" -o SHA512-SUMS.txt
+          EXPECTED="$(grep "  $GODOT_ASSET$" SHA512-SUMS.txt | awk '{print $1}')"
+          test -n "$EXPECTED"
+          ACTUAL="$(sha512sum godot.zip | awk '{print $1}')"
+          test "$ACTUAL" = "$EXPECTED"
+          mkdir -p .godot-ci
+          unzip -q godot.zip -d .godot-ci
+          chmod +x ".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          ".godot-ci/Godot_v4.3-stable_linux.x86_64" --version
+
+      - name: Godot project parse gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          set +e
+          "$GODOT" --headless --path . --editor --quit-after 2 2>&1 | tee godot-parse.log
+          GODOT_EXIT="${PIPESTATUS[0]}"
+          set -e
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|Parser Error' godot-parse.log; then
+            echo "::error::Godot reported a GDScript parse/load failure."
+            exit 1
+          fi
+          test "$GODOT_EXIT" -eq 0
+
   policy:
     name: Security Policy Surface
     runs-on: ubuntu-latest
