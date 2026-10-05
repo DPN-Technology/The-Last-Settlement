@@ -20,7 +20,9 @@ func initialize(rng: RandomNumberGenerator) -> void:
 		{"id":5,"name":"Blackwater Farm","type":"ruin","position":Vector2(870,560),"danger":0.18,"loot":{"food":42.0,"materials":6.0},"discovered":false,"depleted":false},
 		{"id":6,"name":"East Freight Yard","type":"ruin","position":Vector2(1020,370),"danger":0.58,"loot":{"scrap":54.0,"materials":28.0},"discovered":false,"depleted":false},
 		{"id":7,"name":"Unknown Signal","type":"signal","position":Vector2(260,610),"danger":0.65,"loot":{"medicine":5.0,"scrap":20.0},"discovered":false,"depleted":false},
-		{"id":8,"name":"Collapsed Subdivision","type":"ruin","position":Vector2(690,690),"danger":0.36,"loot":{"food":18.0,"materials":18.0,"scrap":12.0},"discovered":false,"depleted":false}
+		{"id":8,"name":"Collapsed Subdivision","type":"ruin","position":Vector2(690,690),"danger":0.36,"loot":{"food":18.0,"materials":18.0,"scrap":12.0},"discovered":false,"depleted":false},
+		{"id":9,"name":"Cedar Junction","type":"trade_hub","position":Vector2(930,180),"danger":0.24,"loot":{},"discovered":false,"depleted":false,"faction":"Cedar Union"},
+		{"id":10,"name":"Riverbend Enclave","type":"trade_hub","position":Vector2(190,420),"danger":0.32,"loot":{},"discovered":false,"depleted":false,"faction":"Riverbend Collective"}
 	]
 	discovered_location_ids = [1]
 	_update_fog_of_war()
