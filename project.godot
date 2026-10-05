@@ -7,8 +7,8 @@ config_version=5
 [application]
 
 config/name="The Last Settlement"
-config/version="1.0.4-dev"
-config/description="A DPN Technology post-collapse civilization recovery simulation with automated Windows release and update-channel builds."
+config/version="1.0.5-dev"
+config/description="A DPN Technology post-collapse civilization recovery simulation with secure in-game Windows update checks and verified installer handoff."
 config/icon="res://assets/app/the-last-settlement-icon.svg"
 run/main_scene="res://src/Main.tscn"
 config/features=PackedStringArray("4.3")
@@ -30,3 +30,10 @@ textures/default_filters/use_nearest_mipmap_filter=false
 [environment]
 
 defaults/default_clear_color=Color(0.035, 0.038, 0.043, 1)
+
+
+[dpn_update]
+
+auto_check=true
+channel="stable"
+manifest_url="https://github.com/DPN-Technology/The-Last-Settlement/releases/latest/download/windows-release.json"
