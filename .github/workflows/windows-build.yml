@@ -20,8 +20,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: settlement-windows-${{ github.ref }}
-  cancel-in-progress: true
+  group: settlement-windows-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   GODOT_VERSION: "4.3-stable"
