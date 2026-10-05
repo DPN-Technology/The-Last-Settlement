@@ -81,7 +81,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Camera pan and zoom
 - DPN reconstruction-command HUD
 
-### LIVE NOW — NEXT LAYER
+### SETTLEMENT OPERATIONS // LIVE
 
 - Physical stockpiles by settlement zone
 - Item movement through hauler work
@@ -305,7 +305,7 @@ The current foundation is already moving beyond a static colony prototype.
 - Independent colony food, water, medicine, materials, fuel and parts stores
 - Secondary-settlement morale, infrastructure and security
 - Automatic permanent logistics routes
-- Daily regional surplus transfers
+- Daily bidirectional regional surplus transfers using real settlement stockpiles
 - Civilization recovery score
 - Civilization stability score
 - Recovery phases: Survive → Stabilize → Expand → Regional Power → Rebuild Civilization
