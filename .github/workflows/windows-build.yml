@@ -184,7 +184,6 @@ jobs:
             $actual = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($actual -ne $expected) { throw "Checksum mismatch: $file" }
           }
-          $type = & "C:\Windows\System32\where.exe" "TheLastSettlement.exe" 2>$null
           Get-Item "payload\TheLastSettlement.exe" | Format-List FullName,Length
 
       - name: Sign game executable when DPN certificate is configured
