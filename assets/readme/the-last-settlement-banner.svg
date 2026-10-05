@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050607"/>
+      <stop offset=".52" stop-color="#120b0b"/>
+      <stop offset="1" stop-color="#21120d"/>
+    </linearGradient>
+    <linearGradient id="rust" x1="0" x2="1">
+      <stop stop-color="#7d2d2d"/>
+      <stop offset=".52" stop-color="#d14a3f"/>
+      <stop offset="1" stop-color="#9a6039"/>
+    </linearGradient>
+    <pattern id="bits" width="42" height="42" patternUnits="userSpaceOnUse">
+      <text x="0" y="15" fill="#471818" opacity=".32" font-family="monospace" font-size="13">1010</text>
+      <text x="8" y="34" fill="#643025" opacity=".22" font-family="monospace" font-size="12">011</text>
+    </pattern>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1400" height="420" fill="url(#bg)"/>
+  <rect width="1400" height="420" fill="url(#bits)"/>
+  <path d="M0 334 L94 318 L145 325 L202 284 L260 310 L327 269 L388 301 L446 250 L520 286 L593 225 L674 272 L730 198 L802 244 L861 191 L930 232 L1010 176 L1077 229 L1150 191 L1210 220 L1280 185 L1400 208 L1400 420 L0 420Z" fill="#090909"/>
+  <g fill="#161313" stroke="#3d2420" stroke-width="2">
+    <rect x="112" y="260" width="115" height="90"/><rect x="245" y="238" width="150" height="112"/>
+    <rect x="425" y="278" width="120" height="72"/><rect x="570" y="222" width="180" height="128"/>
+    <rect x="782" y="250" width="128" height="100"/><rect x="946" y="214" width="175" height="136"/>
+  </g>
+  <path d="M1075 32 L1036 110 L1081 98 L1016 192" stroke="#df4e44" stroke-width="6" fill="none" filter="url(#glow)" opacity=".9"/>
+  <path d="M1115 44 L1086 104 L1112 100 L1072 158" stroke="#8a2929" stroke-width="3" fill="none"/>
+  <rect x="54" y="46" width="9" height="220" fill="#c93d38"/>
+  <text x="92" y="95" fill="#b06942" font-family="monospace" font-size="18" letter-spacing="5">DPN TECHNOLOGY // CIVILIZATION RECOVERY NETWORK</text>
+  <text x="92" y="172" fill="#f0e7df" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="800" letter-spacing="3">THE LAST SETTLEMENT</text>
+  <text x="95" y="216" fill="#c94640" font-family="monospace" font-size="22" letter-spacing="4">THE OLD WORLD DIED. BUILD THE NEXT ONE.</text>
+  <line x1="94" y1="245" x2="755" y2="245" stroke="url(#rust)" stroke-width="3"/>
+  <text x="95" y="282" fill="#867a70" font-family="monospace" font-size="15">SURVIVAL // SIMULATION // RECONSTRUCTION // GOVERNANCE // LEGACY</text>
+  <text x="1160" y="382" fill="#7c342d" font-family="monospace" font-size="13">TRANSMISSION: ACTIVE</text>
+</svg>
