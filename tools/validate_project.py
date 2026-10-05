@@ -7,6 +7,8 @@ REQUIRED = [
     "README.md",
     "src/Main.tscn",
     "src/main.gd",
+    "docs/UPDATE_CHANNEL.md",
+    "src/update_manager.gd",
     "simulation/settlement_simulation.gd",
     "simulation/citizen_factory.gd",
     "simulation/event_director.gd",
