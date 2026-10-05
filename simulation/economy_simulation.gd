@@ -31,7 +31,8 @@ var recipes := {
 	"Components":{"input":{"parts":1.0,"materials":1.0},"output":{"components":2.0},"work":20.0},
 	"Tool Kit":{"input":{"parts":2.0,"materials":2.0},"output":{"tools":1.0},"work":32.0},
 	"Fuel Blend":{"input":{"scrap":1.0,"materials":1.0},"output":{"fuel":3.0},"work":18.0},
-	"Vehicle Repair Kit":{"input":{"parts":2.0,"tools":1.0,"components":2.0},"output":{"repair_kits":1.0},"work":38.0}
+	"Vehicle Repair Kit":{"input":{"parts":2.0,"tools":1.0,"components":2.0},"output":{"repair_kits":1.0},"work":38.0},
+	"Utility Truck":{"input":{"parts":8.0,"tools":2.0,"components":6.0,"materials":8.0},"output":{"vehicle":1.0},"work":120.0}
 }
 var production_queue: Array[Dictionary] = []
 var next_batch_id := 1
@@ -164,6 +165,8 @@ func _finish_batch(sim:SettlementSimulation,batch:Dictionary,recipe:Dictionary) 
 	for key in recipe["output"].keys():
 		if key == "repair_kits":
 			repair_kits += float(recipe["output"][key])
+		elif key == "vehicle":
+			_create_utility_truck()
 		else:
 			industry_stock[key] = float(industry_stock.get(key,0.0)) + float(recipe["output"][key])
 	sim.add_event("PRODUCTION COMPLETE","%s batch completed." % batch["recipe"],"good")
@@ -329,6 +332,17 @@ func get_active_batch() -> Dictionary:
 		if batch["status"] != "complete":
 			return batch
 	return {}
+
+func _create_utility_truck() -> void:
+	var truck_number := vehicles.size() + 1
+	vehicles.append({
+		"name":"Utility Truck %02d" % truck_number,
+		"type":"truck",
+		"condition":100.0,
+		"fuel":8.0,
+		"capacity":30.0,
+		"operational":true
+	})
 
 
 func _update_regional_trade(sim:SettlementSimulation, sim_hours:float) -> void:
