@@ -249,6 +249,12 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+84), "AGE %d  •  %s  •  %s" % [int(c["age"]), c["job"], c["trait"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+112), "CURRENT: %s" % c["current_action"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RUST)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+132), "SHIFT: %s  •  %s PRIORITY: %d" % [c["shift"], c["job"].to_upper(), int(c["work_priority"].get(c["job"],3))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+	var partner_name := "NONE"
+	if int(c.get("partner_id",0)) > 0:
+		var partner := sim.get_citizen_by_id(int(c["partner_id"]))
+		if not partner.is_empty():
+			partner_name = partner["name"]
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+150), "SEX: %s  •  PARTNER: %s" % [str(c.get("sex","UNKNOWN")).to_upper(), partner_name], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 
 	var rows := [
 		["HEALTH", c["health"]],
@@ -257,9 +263,10 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 		["HUNGER", 100.0 - float(c["hunger"])],
 		["THIRST", 100.0 - float(c["thirst"])],
 		["REST", 100.0 - float(c["fatigue"])],
-		["STRESS RESIST", 100.0 - float(c["stress"])]
+		["STRESS RESIST", 100.0 - float(c["stress"])],
+		["SOCIAL", 100.0 - float(c.get("social_need",0.0))]
 	]
-	var ry := y + 168.0
+	var ry := y + 186.0
 	for row in rows:
 		_draw_meter(Vector2(x+20, ry), w-40.0, row[0], float(row[1]))
 		ry += 34.0
@@ -274,6 +281,16 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	ry += 8.0
 	if c["injury"] != "":
 		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "INJURY // %s // TREATMENT %d%%" % [c["injury"], int(c["treatment_progress"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, BAD)
+		ry += 24.0
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "SOCIAL RECORD", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
+	ry += 24.0
+	var children_count := c.get("children_ids", []).size()
+	var memory_count := c.get("memories", []).size()
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "CHILDREN %d   MEMORIES %d" % [children_count, memory_count], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+	ry += 22.0
+	var memories: Array = c.get("memories", [])
+	if not memories.is_empty():
+		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "LATEST // %s" % str(memories[0]["text"]), HORIZONTAL_ALIGNMENT_LEFT, w-40, 10, TEXT)
 		ry += 24.0
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "POCKET INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 	ry += 28.0
