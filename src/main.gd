@@ -16,6 +16,7 @@ const RUST := Color("#a46d45")
 var sim := SettlementSimulation.new()
 var update_manager := UpdateManager.new()
 var update_mode := false
+var help_mode := true
 var camera_offset := Vector2.ZERO
 var zoom := 1.0
 var dragging := false
@@ -103,7 +104,9 @@ func _draw() -> void:
 		_draw_world()
 		_draw_utility_overlay()
 	_draw_hud()
-	if update_mode:
+	if help_mode:
+		_draw_help_panel()
+	elif update_mode:
 		_draw_update_panel()
 	elif governance_mode:
 		_draw_governance_panel()
@@ -550,6 +553,33 @@ func _draw_faction_panel() -> void:
 		if ry > y+h-35:
 			break
 
+func _draw_help_panel() -> void:
+	var vp := get_viewport_rect().size
+	var w := minf(760.0, vp.x - 60.0)
+	var h := minf(610.0, vp.y - 80.0)
+	var x := (vp.x - w) * 0.5
+	var y := (vp.y - h) * 0.5
+	draw_rect(Rect2(x,y,w,h),Color("#090b0ef2"),true)
+	draw_rect(Rect2(x,y,w,h),ACCENT,false,3.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+42),"DPN // FIELD COMMAND ORIENTATION",HORIZONTAL_ALIGNMENT_LEFT,w-56,22,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+70),"LAST HAVEN SURVIVAL CONSOLE // QUICK START",HORIZONTAL_ALIGNMENT_LEFT,w-56,11,RUST)
+	var lines := [
+		["1 // KEEP PEOPLE ALIVE","Watch FOOD, WATER, POWER and MORALE. Select survivors to inspect health, needs, job, shift and skills."],
+		["2 // BUILD THE SETTLEMENT","Press B for construction. Q/E changes the blueprint, F rotates compatible pieces, then left-click to place."],
+		["3 // CONTROL TIME","SPACE pauses. 1 / 2 / 3 sets normal, fast and emergency simulation speed."],
+		["4 // EXPAND BEYOND LAST HAVEN","Press M for the regional map. Select discovered sites, G dispatches expeditions, I founds eligible settlements."],
+		["5 // RUN THE RECOVERY","V opens government, K industry, O factions and J civilization command. These systems become critical as the network grows."],
+		["6 // PROTECT YOUR RUN","S saves, L loads. F10 opens the verified Windows update command."]
+	]
+	var ry := y + 112.0
+	for row in lines:
+		draw_string(ThemeDB.fallback_font,Vector2(x+28,ry),row[0],HORIZONTAL_ALIGNMENT_LEFT,w-56,12,ACCENT)
+		ry += 23.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+28,ry),row[1],HORIZONTAL_ALIGNMENT_LEFT,w-56,10,MUTED)
+		ry += 48.0
+	draw_line(Vector2(x+28,y+h-82),Vector2(x+w-28,y+h-82),PANEL_EDGE,1.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+h-48),"F1 // CLOSE OR REOPEN FIELD GUIDE     ESC // CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-56,12,GOOD)
+
 func _draw_update_panel() -> void:
 	var vp := get_viewport_rect().size
 	var x := vp.x-520.0
@@ -712,7 +742,7 @@ func _draw_hud() -> void:
 	elif civilization_mode:
 		mode_text = "[J] CLOSE CIVILIZATION COMMAND"
 	else:
-		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION  [F10] UPDATE"
+		mode_text += "  [F1] GUIDE  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION  [F10] UPDATE"
 	var update_alert := ""
 	if update_manager.get_state_label() == "AVAILABLE":
 		update_alert = "  // UPDATE %s AVAILABLE" % update_manager.available_version
@@ -874,6 +904,8 @@ func _select_at(screen_pos: Vector2) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
+			KEY_F1:
+				help_mode = not help_mode
 			KEY_SPACE:
 				sim.paused = not sim.paused
 			KEY_1:
@@ -1148,7 +1180,9 @@ func _unhandled_input(event: InputEvent) -> void:
 					sim.demolish_building(selected_building)
 					selected_building = {}
 			KEY_ESCAPE:
-				if update_mode:
+				if help_mode:
+					help_mode = false
+				elif update_mode:
 					update_mode = false
 				else:
 					selected_citizen = {}
