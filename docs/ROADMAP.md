@@ -198,7 +198,7 @@
 - [x] Recovery phase progression
 - [x] Civilization Command UI
 - [x] Civilization save/load persistence
-- [x] Save schema version 11
+- [x] Save schema version 14
 - [x] Generational simulation foundation
 - [x] Detailed secondary settlement construction foundation
 - [x] Configurable freight routes
