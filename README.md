@@ -75,16 +75,28 @@ The current foundation is already moving beyond a static colony prototype.
 - Camera pan and zoom
 - DPN reconstruction-command HUD
 
+### LIVE NOW — NEXT LAYER
+
+- Physical stockpiles by settlement zone
+- Item movement through hauler work
+- Work-order queue
+- Survivor-specific work priorities
+- Day / night shift assignment
+- Skill-based production efficiency
+- Injury states
+- Medical treatment progress
+- Meals as a separate consumable
+- Save/load to JSON
+- Incidents that now damage or add to real stockpiles
+
 ### ACTIVE DEVELOPMENT
 
-- Work orders
-- Physical storage inventories
-- Item hauling
-- Skill-based efficiency
-- Injuries and treatment
-- Shift controls
-- Work priorities
-- Save/load
+- Player-created work orders
+- Full stockpile inspection UI
+- Manual job reassignment
+- Forbidden work toggles
+- Physical item entities
+- Advanced pathfinding
 - Deterministic simulation seeds
 
 ---
@@ -355,6 +367,10 @@ No external art pack is required for the current prototype.
 | **3** | Very fast simulation |
 | **Mouse Wheel** | Zoom |
 | **Middle Mouse Drag** | Pan map |
+| **S** | Save settlement |
+| **L** | Load settlement |
+| **T** | Toggle selected survivor day/night shift |
+| **P** | Cycle selected survivor job priority |
 
 ---
 
