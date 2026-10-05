@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.7.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.8.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.7.0-dev
+## CURRENT TRANSMISSION // BUILD 0.8.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -202,18 +202,36 @@ The current foundation is already moving beyond a static colony prototype.
 - Civic Command panel
 - Government state persisted in save version 6
 
+### INDUSTRY + ECONOMY // LIVE
+
+- Manufacturing recipes
+- Workshop production queue
+- Skill-weighted production speed
+- Machine parts
+- Components
+- Tool kits
+- Fuel blending
+- Industrial stock
+- Settlement credits
+- Scarcity-driven market prices
+- Buying and selling
+- Trade log
+- Vehicle condition and fuel foundation
+- Industry/economy command panel
+- Economy state persisted in save version 7
+
 ### ACTIVE DEVELOPMENT
 
+- Multi-workshop production lines
+- Warehouses and storage limits
+- Fuel consumption by generators/vehicles
+- Trade caravans and faction markets
+- Vehicle repair/manufacturing
+- Production bottlenecks
+- Player-created production orders
+- Dynamic regional prices
 - Player-selected election candidates
 - Detailed council voting
-- Political campaigns
-- Corruption and bribery
-- Prison buildings and capacity
-- Warrants and evidence
-- Coups / leadership collapse
-- Protest demands and negotiation
-- Player-picked expedition members
-- Custom expedition loadouts
 
 ---
 
@@ -497,7 +515,9 @@ No external art pack is required for the current prototype.
 | **G** | Dispatch expedition to selected discovered world location |
 | **V** | Toggle Civic Command / government panel |
 | **↑ / ↓** | Select law in Civic Command |
-| **Enter** | Change selected law |
+| **Enter** | Change selected law / buy selected market item in Industry Command |
+| **K** | Toggle Industry + Economy Command |
+| **Backspace** | Sell selected market item in Industry Command |
 
 ---
 
@@ -552,9 +572,9 @@ The-Last-Settlement/
  │
  ├── 0.6  WORLD + EXPEDITIONS
  │
- ├── 0.7  GOVERNMENT + SOCIETY   ◄── CURRENT
+ ├── 0.7  GOVERNMENT + SOCIETY
  │
- ├── 0.8  INDUSTRY + ECONOMY
+ ├── 0.8  INDUSTRY + ECONOMY     ◄── CURRENT
  │
  ├── 0.9  FACTIONS + CONFLICT
  │
