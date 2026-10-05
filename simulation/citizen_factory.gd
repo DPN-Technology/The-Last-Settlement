@@ -73,6 +73,7 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 		"pregnancy_hours": 0.0,
 		"birthday_progress": 0.0,
 		"on_expedition": false,
+		"home_settlement": "LAST_HAVEN",
 		"faction": "",
 		"liberty_value": rng.randf_range(20.0, 90.0),
 		"order_value": rng.randf_range(20.0, 90.0),
