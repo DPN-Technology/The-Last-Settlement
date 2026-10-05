@@ -1,3 +1,27 @@
+## 1.0.5 — First Stable Windows Release
+
+### Released
+- Published GitHub Release `v1.0.5`
+- Published `TheLastSettlement-Setup-x64.msi`
+- Published `TheLastSettlement-Windows-x86_64.zip`
+- Published `SHA256SUMS-WINDOWS.txt`
+- Published stable `windows-release.json`
+- Stable release points to verified source commit `fd1e5cd403ac7d1d9325f2057dd9b7b15afa4e86`
+- In-game Update Command now has a live stable GitHub `releases/latest` target
+
+### Promotion Gates
+- Windows Build: green
+- CI Gate: green
+- CodeQL: green
+- Supply Chain: green
+- Code Quality: green
+
+### Packaging
+- Application version: `1.0.5`
+- MSI package version: `1.0.5`
+- Save schema: `14`
+- Current signing state: unsigned
+
 ## 1.0.5-dev — Secure In-Game Update Command
 
 ### Added
