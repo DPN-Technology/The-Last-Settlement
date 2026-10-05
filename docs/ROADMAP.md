@@ -200,15 +200,18 @@
 - [x] Civilization save/load persistence
 - [x] Save schema version 11
 - [x] Generational simulation foundation
-- [ ] Detailed secondary settlement construction
+- [x] Detailed secondary settlement construction foundation
 - [x] Configurable freight routes
 - [x] Civilization-wide policy foundation
 - [x] Colony emergency management
 - [x] Emergency aid operations
 - [x] Colony specialization controls
 - [ ] Full civilization-wide laws / government
-- [ ] Endgame civilization recovery objectives
+- [x] Endgame civilization recovery objectives
 - [x] Backward civilization-state normalization
+- [x] Colony module construction
+- [x] Civilization recovery megaprojects
+- [x] Explicit restoration-state requirements
 - [ ] Full save migration tooling
 - [ ] Performance profiling
 - [ ] Large-population simulation optimization
