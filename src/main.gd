@@ -14,6 +14,8 @@ const ACCENT := Color("#c64242")
 const RUST := Color("#a46d45")
 
 var sim := SettlementSimulation.new()
+var update_manager := UpdateManager.new()
+var update_mode := false
 var camera_offset := Vector2.ZERO
 var zoom := 1.0
 var dragging := false
@@ -49,6 +51,10 @@ const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
 
 func _ready() -> void:
+	add_child(update_manager)
+	update_manager.configure(SettlementSimulation.SAVE_VERSION)
+	update_manager.state_changed.connect(queue_redraw)
+	update_manager.call_deferred("auto_check_if_enabled")
 	set_process(true)
 	queue_redraw()
 
@@ -97,7 +103,9 @@ func _draw() -> void:
 		_draw_world()
 		_draw_utility_overlay()
 	_draw_hud()
-	if governance_mode:
+	if update_mode:
+		_draw_update_panel()
+	elif governance_mode:
 		_draw_governance_panel()
 	elif economy_mode:
 		_draw_economy_panel()
@@ -542,6 +550,65 @@ func _draw_faction_panel() -> void:
 		if ry > y+h-35:
 			break
 
+func _draw_update_panel() -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x-520.0
+	var y := 138.0
+	var w := 500.0
+	var h := minf(520.0,vp.y-180.0)
+	var state_label := update_manager.get_state_label()
+	var state_color := WARN
+	if state_label in ["CURRENT","VERIFIED"]:
+		state_color = GOOD
+	elif state_label == "ERROR":
+		state_color = BAD
+
+	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
+	draw_rect(Rect2(x,y,w,h),state_color,false,2.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+32),"DPN UPDATE COMMAND // WINDOWS RELEASE CHANNEL",HORIZONTAL_ALIGNMENT_LEFT,w-44,14,state_color)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+66),"CURRENT // %s" % update_manager.current_version,HORIZONTAL_ALIGNMENT_LEFT,-1,12,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+260,y+66),"SAVE SCHEMA // %d" % SettlementSimulation.SAVE_VERSION,HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+96),"STATE // %s" % state_label,HORIZONTAL_ALIGNMENT_LEFT,-1,13,state_color)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+122),update_manager.message,HORIZONTAL_ALIGNMENT_LEFT,w-44,10,MUTED)
+
+	var ry := y+164.0
+	if not update_manager.manifest.is_empty():
+		var signing := str(update_manager.manifest.get("signing_status","unknown")).to_upper()
+		var channel := str(update_manager.manifest.get("channel","stable")).to_upper()
+		var target_schema := int(update_manager.manifest.get("save_schema",0))
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"TARGET // %s   CHANNEL // %s" % [update_manager.available_version,channel],HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
+		ry += 24.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"TARGET SAVE SCHEMA // %d   SIGNING // %s" % [target_schema,signing],HORIZONTAL_ALIGNMENT_LEFT,-1,10,WARN if signing=="UNSIGNED" else GOOD)
+		ry += 32.0
+
+	if state_label == "DOWNLOADING":
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"DOWNLOAD // %.1f%%" % update_manager.get_download_percent(),HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+		_draw_meter(Vector2(x+22,ry+18),w-44.0,"INSTALLER",update_manager.get_download_percent())
+		ry += 64.0
+	elif state_label == "AVAILABLE":
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[F11] DOWNLOAD + VERIFY MSI",HORIZONTAL_ALIGNMENT_LEFT,-1,12,GOOD)
+		ry += 32.0
+	elif state_label == "VERIFIED":
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"SHA-256 VERIFIED // INSTALLER STAGED",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
+		ry += 26.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[F12] SAVE GAME + OPEN WINDOWS INSTALLER",HORIZONTAL_ALIGNMENT_LEFT,-1,12,GOOD)
+		ry += 36.0
+	elif state_label in ["ERROR","CURRENT","IDLE"]:
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[F10] CLOSE / REOPEN TO CHECK AGAIN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+		ry += 34.0
+
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"UPDATE SAFETY POLICY",HORIZONTAL_ALIGNMENT_LEFT,-1,11,ACCENT)
+	ry += 24.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"• HTTPS release manifest from the DPN GitHub release origin only",HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+	ry += 19.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"• Newer version required; downgrade packages are rejected",HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+	ry += 19.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"• Save schema may advance but may not downgrade current saves",HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+	ry += 19.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"• MSI must match release SHA-256 before installer handoff",HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+	ry += 19.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"• F12 explicitly approves installer launch; updates are never silent",HORIZONTAL_ALIGNMENT_LEFT,w-44,9,MUTED)
+
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
 	var x := vp.x - 500.0
@@ -634,7 +701,9 @@ func _draw_hud() -> void:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
 	var mode_text := "[M] SETTLEMENT MAP" if world_map_mode else "[M] WORLD MAP"
-	if governance_mode:
+	if update_mode:
+		mode_text = "[F10] CLOSE UPDATE COMMAND"
+	elif governance_mode:
 		mode_text = "[V] CLOSE CIVIC COMMAND"
 	elif economy_mode:
 		mode_text = "[K] CLOSE INDUSTRY COMMAND"
@@ -643,8 +712,13 @@ func _draw_hud() -> void:
 	elif civilization_mode:
 		mode_text = "[J] CLOSE CIVILIZATION COMMAND"
 	else:
-		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION"
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+		mode_text += "  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION  [F10] UPDATE"
+	var update_alert := ""
+	if update_manager.get_state_label() == "AVAILABLE":
+		update_alert = "  // UPDATE %s AVAILABLE" % update_manager.available_version
+	elif update_manager.get_state_label() == "VERIFIED":
+		update_alert = "  // UPDATE VERIFIED"
+	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text + update_alert, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOOD if not update_alert.is_empty() else MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 func _draw_event_panel() -> void:
@@ -825,6 +899,26 @@ func _unhandled_input(event: InputEvent) -> void:
 					sim.civilization_simulation.cycle_route_priority(int(route["id"]))
 				elif not selected_citizen.is_empty():
 					sim.cycle_selected_priority(selected_citizen)
+			KEY_F10:
+				update_mode = not update_mode
+				governance_mode = false
+				economy_mode = false
+				faction_mode = false
+				civilization_mode = false
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
+				if update_mode and update_manager.get_state_label() in ["IDLE","ERROR","CURRENT"]:
+					update_manager.check_for_updates()
+			KEY_F11:
+				if update_mode:
+					update_manager.download_update()
+			KEY_F12:
+				if update_mode and update_manager.get_state_label() == "VERIFIED":
+					if sim.save_game():
+						sim.paused = true
+						if not update_manager.handoff_installer():
+							sim.paused = false
 			KEY_B:
 				if civilization_mode:
 					var settlements := sim.civilization_simulation.get_settlement_list()
@@ -1054,11 +1148,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					sim.demolish_building(selected_building)
 					selected_building = {}
 			KEY_ESCAPE:
-				selected_citizen = {}
-				selected_building = {}
+				if update_mode:
+					update_mode = false
+				else:
+					selected_citizen = {}
+					selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if governance_mode or economy_mode or faction_mode or civilization_mode:
+			if update_mode or governance_mode or economy_mode or faction_mode or civilization_mode:
 				pass
 			elif world_map_mode:
 				_world_map_select(event.position)
