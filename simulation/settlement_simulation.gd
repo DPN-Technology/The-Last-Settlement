@@ -1,7 +1,7 @@
 class_name SettlementSimulation
 extends RefCounted
 
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -56,6 +56,7 @@ var utility_failures := {
 var event_director := EventDirector.new()
 var social_simulation := SocialSimulation.new()
 var world_simulation := WorldSimulation.new()
+var governance_simulation := GovernanceSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
 func _init() -> void:
@@ -65,6 +66,7 @@ func _init() -> void:
 	for i in range(12):
 		add_citizen()
 	_seed_work_orders()
+	governance_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
 
 func _create_buildings() -> void:
@@ -253,6 +255,14 @@ func update(delta: float) -> void:
 	for c in alive:
 		if c.get("on_expedition", false):
 			continue
+		if c.get("incarcerated", false):
+			c["sentence_hours"] = maxf(0.0, float(c.get("sentence_hours",0.0)) - sim_hours)
+			c["current_action"] = "Incarcerated"
+			c["stress"] = minf(100.0,float(c["stress"])+0.08*sim_hours)
+			if float(c["sentence_hours"]) <= 0.0:
+				c["incarcerated"] = false
+				add_event("SENTENCE COMPLETE","%s was released from custody." % c["name"],"intel")
+			continue
 		_update_citizen_needs(c, sim_hours)
 		_choose_action(c)
 		_apply_citizen_work(c, sim_hours)
@@ -265,6 +275,7 @@ func update(delta: float) -> void:
 	_apply_utility_consequences(sim_hours)
 	social_simulation.update(self, sim_hours)
 	world_simulation.update(self, sim_hours)
+	governance_simulation.update(self, sim_hours)
 	_sync_resource_totals()
 	event_director.update(self)
 
@@ -770,7 +781,21 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"world_locations": _serialize_vector_dicts(world_simulation.locations),
 		"expeditions": world_simulation.expeditions,
 		"discovered_location_ids": world_simulation.discovered_location_ids,
-		"next_expedition_id": world_simulation.next_expedition_id
+		"next_expedition_id": world_simulation.next_expedition_id,
+		"governance": {
+			"government_type": governance_simulation.government_type,
+			"laws": governance_simulation.laws,
+			"leader_id": governance_simulation.leader_id,
+			"council_ids": governance_simulation.council_ids,
+			"factions": governance_simulation.factions,
+			"unrest": governance_simulation.unrest,
+			"legitimacy": governance_simulation.legitimacy,
+			"crime_pressure": governance_simulation.crime_pressure,
+			"active_cases": governance_simulation.active_cases,
+			"next_case_id": governance_simulation.next_case_id,
+			"next_election_hour": governance_simulation.next_election_hour,
+			"last_protest_hour": governance_simulation.last_protest_hour
+		}
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
@@ -808,6 +833,20 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	world_simulation.expeditions = data.get("expeditions", world_simulation.expeditions)
 	world_simulation.discovered_location_ids = data.get("discovered_location_ids", world_simulation.discovered_location_ids)
 	world_simulation.next_expedition_id = int(data.get("next_expedition_id", world_simulation.next_expedition_id))
+	var governance: Dictionary = data.get("governance", {})
+	if not governance.is_empty():
+		governance_simulation.government_type = str(governance.get("government_type", governance_simulation.government_type))
+		governance_simulation.laws = governance.get("laws", governance_simulation.laws)
+		governance_simulation.leader_id = int(governance.get("leader_id", governance_simulation.leader_id))
+		governance_simulation.council_ids = governance.get("council_ids", governance_simulation.council_ids)
+		governance_simulation.factions = governance.get("factions", governance_simulation.factions)
+		governance_simulation.unrest = float(governance.get("unrest", governance_simulation.unrest))
+		governance_simulation.legitimacy = float(governance.get("legitimacy", governance_simulation.legitimacy))
+		governance_simulation.crime_pressure = float(governance.get("crime_pressure", governance_simulation.crime_pressure))
+		governance_simulation.active_cases = governance.get("active_cases", governance_simulation.active_cases)
+		governance_simulation.next_case_id = int(governance.get("next_case_id", governance_simulation.next_case_id))
+		governance_simulation.next_election_hour = float(governance.get("next_election_hour", governance_simulation.next_election_hour))
+		governance_simulation.last_protest_hour = float(governance.get("last_protest_hour", governance_simulation.last_protest_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
