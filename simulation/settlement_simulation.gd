@@ -21,6 +21,7 @@ var stockpiles := {
 	"medical": {"medicine": 10.0}
 }
 var work_orders: Array[Dictionary] = []
+var blueprints: Array[Dictionary] = []
 var buildings: Array[Dictionary] = []
 var events: Array[Dictionary] = []
 var total_hours := 0.0
@@ -30,6 +31,8 @@ var speed := 1.0
 var paused := false
 var next_citizen_id := 1
 var next_work_order_id := 1
+var next_blueprint_id := 1
+var completed_rooms := 0
 var event_director := EventDirector.new()
 var settlement_name := "LAST HAVEN // SITE-01"
 
@@ -72,6 +75,127 @@ func add_work_order(title: String, job: String, work_required: float, priority: 
 func add_citizen() -> void:
 	citizens.append(CitizenFactory.create(next_citizen_id, rng))
 	next_citizen_id += 1
+
+func get_build_catalog() -> Array[Dictionary]:
+	return [
+		{"type":"wall","name":"Wall","size":Vector2(40,12),"cost":4.0,"work":20.0,"capacity":0},
+		{"type":"floor","name":"Floor","size":Vector2(40,40),"cost":3.0,"work":14.0,"capacity":0},
+		{"type":"door","name":"Door","size":Vector2(40,12),"cost":5.0,"work":18.0,"capacity":0},
+		{"type":"housing","name":"Shelter Module","size":Vector2(120,80),"cost":24.0,"work":85.0,"capacity":6},
+		{"type":"storage","name":"Storage Module","size":Vector2(120,80),"cost":20.0,"work":70.0,"capacity":10}
+	]
+
+func get_build_definition(build_type: String) -> Dictionary:
+	for item in get_build_catalog():
+		if item["type"] == build_type:
+			return item
+	return get_build_catalog()[0]
+
+func place_blueprint(build_type: String, world_position: Vector2) -> bool:
+	var definition := get_build_definition(build_type)
+	var snapped := Vector2(round(world_position.x / 20.0) * 20.0, round(world_position.y / 20.0) * 20.0)
+	if not can_place_blueprint(snapped, definition["size"]):
+		add_event("BUILD BLOCKED", "Construction site overlaps an existing structure.", "warning")
+		return false
+	var cost := float(definition["cost"])
+	if float(stockpiles["industry"].get("materials", 0.0)) < cost:
+		add_event("MATERIAL SHORTAGE", "Not enough construction materials for %s." % definition["name"], "warning")
+		return false
+	stockpiles["industry"]["materials"] -= cost
+	blueprints.append({
+		"id": next_blueprint_id,
+		"type": build_type,
+		"name": definition["name"],
+		"position": snapped,
+		"size": definition["size"],
+		"progress": 0.0,
+		"work_required": float(definition["work"]),
+		"material_cost": cost,
+		"capacity": int(definition["capacity"]),
+		"assigned_builder": 0
+	})
+	next_blueprint_id += 1
+	add_event("BLUEPRINT PLACED", "%s queued for construction." % definition["name"], "intel")
+	return true
+
+func can_place_blueprint(position: Vector2, size: Vector2) -> bool:
+	var candidate := Rect2(position - size / 2.0, size).grow(4.0)
+	for b in buildings:
+		var rect := Rect2(b["position"] - b["size"] / 2.0, b["size"]).grow(4.0)
+		if candidate.intersects(rect):
+			return false
+	for bp in blueprints:
+		var rect := Rect2(bp["position"] - bp["size"] / 2.0, bp["size"]).grow(4.0)
+		if candidate.intersects(rect):
+			return false
+	return true
+
+func get_blueprint_by_id(id: int) -> Dictionary:
+	for bp in blueprints:
+		if int(bp["id"]) == id:
+			return bp
+	return {}
+
+func get_available_blueprint() -> Dictionary:
+	for bp in blueprints:
+		if int(bp["assigned_builder"]) == 0:
+			return bp
+	return {}
+
+func cancel_blueprint(id: int) -> bool:
+	for i in range(blueprints.size()):
+		if int(blueprints[i]["id"]) == id:
+			var refund := float(blueprints[i]["material_cost"]) * 0.75
+			stockpiles["industry"]["materials"] += refund
+			blueprints.remove_at(i)
+			add_event("BLUEPRINT CANCELED", "Recovered %.0f construction materials." % refund, "intel")
+			return true
+	return false
+
+func demolish_building(building: Dictionary) -> bool:
+	if building.is_empty():
+		return false
+	if str(building.get("type","")) == "command":
+		add_event("DEMOLITION DENIED", "Command cannot be demolished.", "warning")
+		return false
+	var recovered := maxf(2.0, float(building["size"].x * building["size"].y) / 900.0)
+	stockpiles["industry"]["materials"] += recovered
+	stockpiles["industry"]["scrap"] += recovered * 0.5
+	buildings.erase(building)
+	add_event("STRUCTURE SALVAGED", "%s demolished; materials recovered." % building["name"], "good")
+	completed_rooms = detect_rooms()
+	return true
+
+func queue_repair(building: Dictionary) -> void:
+	if building.is_empty() or float(building["condition"]) >= 99.5:
+		return
+	add_work_order("Repair %s" % building["name"], "Builder", maxf(20.0, 100.0 - float(building["condition"])), 1)
+	add_event("REPAIR QUEUED", "%s added to builder work queue." % building["name"], "intel")
+
+func detect_rooms() -> int:
+	var floor_tiles: Array[Dictionary] = []
+	var wall_tiles: Array[Dictionary] = []
+	for b in buildings:
+		if b["type"] == "floor":
+			floor_tiles.append(b)
+		elif b["type"] == "wall":
+			wall_tiles.append(b)
+	var rooms := 0
+	for floor in floor_tiles:
+		var p: Vector2 = floor["position"]
+		var enclosed := true
+		for dir in [Vector2(40,0), Vector2(-40,0), Vector2(0,40), Vector2(0,-40)]:
+			var found := false
+			for wall in wall_tiles:
+				if wall["position"].distance_to(p + dir) <= 12.0:
+					found = true
+					break
+			if not found:
+				enclosed = false
+				break
+		if enclosed:
+			rooms += 1
+	return rooms
 
 func update(delta: float) -> void:
 	if paused:
@@ -148,6 +272,18 @@ func _choose_action(c: Dictionary) -> void:
 		_set_action(c, "Sleep" if c["fatigue"] >= 60.0 else "Free Time", "housing")
 		return
 
+	if c["job"] == "Builder":
+		var blueprint := get_blueprint_by_id(int(c.get("target_blueprint_id", 0)))
+		if blueprint.is_empty():
+			blueprint = get_available_blueprint()
+			if not blueprint.is_empty():
+				blueprint["assigned_builder"] = int(c["id"])
+				c["target_blueprint_id"] = int(blueprint["id"])
+		if not blueprint.is_empty():
+			_set_action(c, "Build: %s" % blueprint["name"], "industry")
+			c["target"] = blueprint["position"]
+			return
+
 	var order := _best_work_order_for(c)
 	if not order.is_empty():
 		_set_action(c, "Order: %s" % order["title"], _building_for_job(order["job"]))
@@ -194,6 +330,19 @@ func _best_work_order_for(c: Dictionary) -> Dictionary:
 func _apply_citizen_work(c: Dictionary, sim_hours: float) -> void:
 	var action: String = c["current_action"]
 	var output := sim_hours
+
+	if action.begins_with("Build: "):
+		var blueprint := get_blueprint_by_id(int(c.get("target_blueprint_id", 0)))
+		if blueprint.is_empty():
+			c["target_blueprint_id"] = 0
+			return
+		if c["position"].distance_to(blueprint["position"]) <= 18.0:
+			blueprint["progress"] += output * 10.0 * CitizenFactory.skill_multiplier(c, "construction")
+			if blueprint["progress"] >= blueprint["work_required"]:
+				_complete_blueprint(blueprint)
+				c["target_blueprint_id"] = 0
+				c["target"] = Vector2.ZERO
+		return
 
 	if action.begins_with("Order: "):
 		var order := _best_work_order_for(c)
@@ -270,6 +419,20 @@ func _assign_injury(c: Dictionary, injury: String, damage: float) -> void:
 	c["health"] = maxf(0.0, c["health"] - damage)
 	c["treatment_progress"] = 0.0
 	add_event("INJURY", "%s suffered a %s." % [c["name"], injury], "warning")
+
+func _complete_blueprint(blueprint: Dictionary) -> void:
+	var new_building := {
+		"name": blueprint["name"],
+		"type": blueprint["type"],
+		"position": blueprint["position"],
+		"size": blueprint["size"],
+		"condition": 100.0,
+		"capacity": blueprint["capacity"]
+	}
+	buildings.append(new_building)
+	blueprints.erase(blueprint)
+	completed_rooms = detect_rooms()
+	add_event("CONSTRUCTION COMPLETE", "%s entered service." % new_building["name"], "good")
 
 func _complete_order(order: Dictionary) -> void:
 	match order["job"]:
@@ -359,10 +522,13 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"resources": resources,
 		"stockpiles": stockpiles,
 		"work_orders": work_orders,
+		"blueprints": _serialize_vector_dicts(blueprints),
 		"buildings": _serialize_vector_dicts(buildings),
 		"citizens": _serialize_vector_dicts(citizens),
 		"next_citizen_id": next_citizen_id,
-		"next_work_order_id": next_work_order_id
+		"next_work_order_id": next_work_order_id,
+		"next_blueprint_id": next_blueprint_id,
+		"completed_rooms": completed_rooms
 	}
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
@@ -387,10 +553,13 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	resources = data.get("resources", resources)
 	stockpiles = data.get("stockpiles", stockpiles)
 	work_orders = data.get("work_orders", work_orders)
+	blueprints = _restore_vector_dicts(data.get("blueprints", []))
 	buildings = _restore_vector_dicts(data.get("buildings", []))
 	citizens = _restore_vector_dicts(data.get("citizens", []))
 	next_citizen_id = int(data.get("next_citizen_id", citizens.size() + 1))
 	next_work_order_id = int(data.get("next_work_order_id", work_orders.size() + 1))
+	next_blueprint_id = int(data.get("next_blueprint_id", blueprints.size() + 1))
+	completed_rooms = int(data.get("completed_rooms", detect_rooms()))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
 
