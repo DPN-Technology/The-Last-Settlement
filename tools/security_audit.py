@@ -108,14 +108,6 @@ if main_scene.exists():
     if "res://src/main.gd" not in text:
         errors.append("src/Main.tscn does not reference res://src/main.gd")
 
-if errors:
-    print("THE LAST SETTLEMENT SECURITY AUDIT: FAILED")
-    for error in errors:
-        print(f" - {error}")
-    sys.exit(1)
-
-print("THE LAST SETTLEMENT SECURITY AUDIT: PASS")
-print("No embedded credential patterns, prohibited source binaries, unpinned third-party actions, or high-risk GDScript APIs detected.")
 
 
 UPDATE_MANAGER_REQUIRED_MARKERS = [
@@ -137,3 +129,12 @@ else:
     for marker in UPDATE_MANAGER_REQUIRED_MARKERS:
         if marker not in updater_text:
             errors.append(f"update manager security marker missing: {marker}")
+
+if errors:
+    print("THE LAST SETTLEMENT SECURITY AUDIT: FAILED")
+    for error in errors:
+        print(f" - {error}")
+    sys.exit(1)
+
+print("THE LAST SETTLEMENT SECURITY AUDIT: PASS")
+print("No embedded credential patterns, prohibited source binaries, unpinned third-party actions, or high-risk GDScript APIs detected.")
