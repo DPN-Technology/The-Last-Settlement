@@ -10,7 +10,7 @@
 <p align="center">
   <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
   <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-0.2.0--dev-c94640?style=for-the-badge">
+  <img alt="Build" src="https://img.shields.io/badge/Build-0.3.0--dev-c94640?style=for-the-badge">
   <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
 </p>
 
@@ -45,7 +45,7 @@ The long-term goal is to rebuild **civilization itself**.
 
 ---
 
-## CURRENT TRANSMISSION // BUILD 0.2.0-dev
+## CURRENT TRANSMISSION // BUILD 0.3.0-dev
 
 The current foundation is already moving beyond a static colony prototype.
 
@@ -89,14 +89,33 @@ The current foundation is already moving beyond a static colony prototype.
 - Save/load to JSON
 - Incidents that now damage or add to real stockpiles
 
+### CONSTRUCTION SYSTEM // LIVE
+
+- Toggleable build mode
+- Grid-snapped blueprint placement
+- Wall construction
+- Floor construction
+- Door construction
+- Rotatable walls and doors
+- Shelter modules
+- Storage modules
+- Construction material costs
+- Builder assignment to active blueprints
+- Construction-skill-based build speed
+- Visible blueprint completion progress
+- Demolition and salvage recovery
+- Repair work orders
+- Basic enclosed-room detection
+- Wall-aware survivor movement
+- Construction state saved and restored
+
 ### ACTIVE DEVELOPMENT
 
-- Player-created work orders
-- Full stockpile inspection UI
-- Manual job reassignment
-- Forbidden work toggles
+- Blueprint cancellation UI
+- Multi-tile drag construction
+- Advanced A* pathfinding
+- Room roles and environmental stats
 - Physical item entities
-- Advanced pathfinding
 - Deterministic simulation seeds
 
 ---
@@ -371,6 +390,11 @@ No external art pack is required for the current prototype.
 | **L** | Load settlement |
 | **T** | Toggle selected survivor day/night shift |
 | **P** | Cycle selected survivor job priority |
+| **B** | Toggle build mode |
+| **Q / E** | Cycle build type |
+| **F** | Rotate wall/door blueprint |
+| **R** | Queue repair on selected structure |
+| **X** | Demolish/salvage selected structure |
 
 ---
 
@@ -415,9 +439,9 @@ The-Last-Settlement/
 ```text
 0.1  FOUNDATION
  │
- ├── 0.2  NEEDS + WORK             ◄── CURRENT
+ ├── 0.2  NEEDS + WORK
  │
- ├── 0.3  CONSTRUCTION
+ ├── 0.3  CONSTRUCTION            ◄── CURRENT
  │
  ├── 0.4  UTILITIES
  │
