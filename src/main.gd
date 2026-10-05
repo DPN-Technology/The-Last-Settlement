@@ -28,6 +28,9 @@ var utility_overlay := 0
 var world_map_mode := false
 var selected_world_location_id := 0
 var governance_mode := false
+var economy_mode := false
+var economy_item_index := 0
+const ECONOMY_ITEMS := ["food","water","medicine","materials","scrap","fuel","parts"]
 var governance_law_index := 0
 const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
@@ -83,6 +86,8 @@ func _draw() -> void:
 	_draw_hud()
 	if governance_mode:
 		_draw_governance_panel()
+	elif economy_mode:
+		_draw_economy_panel()
 	else:
 		_draw_selection_panel()
 
@@ -259,6 +264,42 @@ func _world_map_select(screen_pos: Vector2) -> void:
 			nearest_id = int(location["id"])
 	selected_world_location_id = nearest_id
 
+func _draw_economy_panel() -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 500.0
+	var y := 138.0
+	var w := 480.0
+	var h := vp.y - 190.0
+	var eco := sim.economy_simulation
+	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
+	draw_rect(Rect2(x,y,w,h),RUST,false,2.0)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"INDUSTRY + ECONOMY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,-1,15,RUST)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"CREDITS // %.1f" % eco.credits,HORIZONTAL_ALIGNMENT_LEFT,-1,18,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+88),"FUEL %.1f   PARTS %.1f   TOOLS %.1f   COMPONENTS %.1f" % [float(eco.industry_stock["fuel"]),float(eco.industry_stock["parts"]),float(eco.industry_stock["tools"]),float(eco.industry_stock["components"])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+	var ry := y + 126.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"MARKET INDEX",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ry += 26.0
+	for i in range(ECONOMY_ITEMS.size()):
+		var item := ECONOMY_ITEMS[i]
+		var marker := ">" if i == economy_item_index else " "
+		var col := TEXT if i == economy_item_index else MUTED
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s x%.2f" % [marker,item.to_upper(),float(eco.market_index[item])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
+		ry += 22.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
+	ry += 44.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION QUEUE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
+	ry += 24.0
+	for batch in eco.production_queue:
+		var recipe := str(batch["recipe"])
+		var status := str(batch["status"]).to_upper()
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"BATCH-%03d // %s // %s" % [int(batch["id"]),recipe,status],HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
+		ry += 20.0
+		if ry > y+h-95:
+			break
+	var vehicle := eco.vehicles[0] if not eco.vehicles.is_empty() else {}
+	if not vehicle.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"VEHICLE // %s  COND %.0f%%  FUEL %.0f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
 	var x := vp.x - 500.0
@@ -353,8 +394,10 @@ func _draw_hud() -> void:
 	var mode_text := "[M] SETTLEMENT MAP" if world_map_mode else "[M] WORLD MAP"
 	if governance_mode:
 		mode_text = "[V] CLOSE CIVIC COMMAND"
+	elif economy_mode:
+		mode_text = "[K] CLOSE INDUSTRY COMMAND"
 	else:
-		mode_text += "  [V] CIVIC COMMAND"
+		mode_text += "  [V] CIVIC COMMAND  [K] INDUSTRY"
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
@@ -549,22 +592,41 @@ func _unhandled_input(event: InputEvent) -> void:
 					var definition := sim.get_build_catalog()[build_catalog_index]
 					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
+			KEY_K:
+				economy_mode = not economy_mode
+				governance_mode = false
+				world_map_mode = false
+				build_mode = false
+				selected_citizen = {}
+				selected_building = {}
 			KEY_V:
 				governance_mode = not governance_mode
+				economy_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
 			KEY_UP:
-				if governance_mode:
+				if economy_mode:
+					economy_item_index -= 1
+					if economy_item_index < 0:
+						economy_item_index = ECONOMY_ITEMS.size()-1
+				elif governance_mode:
 					governance_law_index -= 1
 					if governance_law_index < 0:
 						governance_law_index = GOVERNANCE_LAWS.size()-1
 			KEY_DOWN:
-				if governance_mode:
+				if economy_mode:
+					economy_item_index = (economy_item_index+1) % ECONOMY_ITEMS.size()
+				elif governance_mode:
 					governance_law_index = (governance_law_index+1) % GOVERNANCE_LAWS.size()
 			KEY_ENTER:
-				if governance_mode:
+				if economy_mode:
+					sim.economy_simulation.trade(sim,ECONOMY_ITEMS[economy_item_index],1.0,true)
+				elif governance_mode:
 					sim.governance_simulation.cycle_law(sim,GOVERNANCE_LAWS[governance_law_index])
+			KEY_BACKSPACE:
+				if economy_mode:
+					sim.economy_simulation.trade(sim,ECONOMY_ITEMS[economy_item_index],1.0,false)
 			KEY_M:
 				world_map_mode = not world_map_mode
 				governance_mode = false
@@ -588,7 +650,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if governance_mode:
+			if governance_mode or economy_mode:
 				pass
 			elif world_map_mode:
 				_world_map_select(event.position)
