@@ -1,3 +1,34 @@
+## 1.0.0-dev — Civilization Network Foundation
+
+### Added
+- Civilization-wide simulation layer
+- Player-founded secondary settlements
+- Founding requirements tied to real materials, meals, water and machine parts
+- Live survivor colonist assignment
+- Survivor home-settlement tracking
+- Secondary-settlement specializations
+- Independent colony resource stores
+- Colony morale, infrastructure and security
+- Automatic regional logistics routes
+- Daily surplus transfer between recovery-network settlements
+- Civilization recovery score
+- Civilization stability score
+- Recovery phase progression
+- Civilization milestones
+- Civilization history archive
+- Automatic archival of critical incidents
+- Civilization Command UI
+- Settlement network telemetry
+- Founding controls on secured world-map sites
+- Player-settlement world-map state
+- Civilization persistence in save schema version 11
+- Civilization simulation module validation in CI
+
+### Changed
+- Colonists assigned to secondary settlements no longer render, move, socialize or consume local occupancy at Last Haven
+- Local random incidents now target Last Haven residents rather than colonists assigned elsewhere
+- README upgraded for build 1.0.0-dev with live security badges, system-status matrix and civilization documentation
+
 ## 0.9.0-dev — Factions, Diplomacy & Conflict
 
 ### Added
