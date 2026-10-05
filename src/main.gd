@@ -42,7 +42,7 @@ func _update_citizens(delta: float) -> void:
 			var bp := sim.get_blueprint_by_id(int(c["target_blueprint_id"]))
 			if not bp.is_empty():
 				c["target"] = bp["position"]
-				c["position"] = c["position"].move_toward(c["target"], 25.0 * delta * maxf(0.5, sim.speed))
+				c["position"] = _move_with_obstacle_avoidance(c["position"], c["target"], 25.0 * delta * maxf(0.5, sim.speed))
 				continue
 		if c["target"] == Vector2.ZERO or c["position"].distance_to(c["target"]) < 8.0:
 			var b := sim.get_building_by_type(c["target_building"])
@@ -50,7 +50,21 @@ func _update_citizens(delta: float) -> void:
 				sim.rng.randf_range(-float(b["size"].x) * 0.34, float(b["size"].x) * 0.34),
 				sim.rng.randf_range(-float(b["size"].y) * 0.28, float(b["size"].y) * 0.28)
 			)
-		c["position"] = c["position"].move_toward(c["target"], 25.0 * delta * maxf(0.5, sim.speed))
+		c["position"] = _move_with_obstacle_avoidance(c["position"], c["target"], 25.0 * delta * maxf(0.5, sim.speed))
+
+func _move_with_obstacle_avoidance(origin: Vector2, target: Vector2, distance: float) -> Vector2:
+	var direct := origin.move_toward(target, distance)
+	for b in sim.buildings:
+		if b["type"] != "wall":
+			continue
+		var rect := Rect2(b["position"] - b["size"]/2.0, b["size"]).grow(5.0)
+		if rect.has_point(direct):
+			var direction := (target - origin).normalized()
+			var perpendicular := Vector2(-direction.y, direction.x)
+			var option_a := origin + perpendicular * distance
+			var option_b := origin - perpendicular * distance
+			return option_a if option_a.distance_to(target) <= option_b.distance_to(target) else option_b
+	return direct
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), BG)
@@ -127,7 +141,7 @@ func _draw_hud() -> void:
 
 	draw_string(ThemeDB.fallback_font, Vector2(24,32), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, -1, 23, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(24,57), "CIVILIZATION RECOVERY COMMAND // %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
-	draw_string(ThemeDB.fallback_font, Vector2(24,89), "DAY %03d   %02d:%02d" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0)], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, ACCENT)
+	draw_string(ThemeDB.fallback_font, Vector2(24,89), "DAY %03d   %02d:%02d  // MAT %.0f  // BLUEPRINTS %d  // ROOMS %d" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
 
 	var alive := sim.get_alive_citizens().size()
 	var stats := [
