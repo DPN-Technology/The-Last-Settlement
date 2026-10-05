@@ -21,6 +21,7 @@ static func create(id: int, rng: RandomNumberGenerator) -> Dictionary:
 			LAST_NAMES[rng.randi_range(0, LAST_NAMES.size() - 1)]
 		],
 		"age": rng.randi_range(18, 58),
+		"sex": "Female" if rng.randf() < 0.5 else "Male",
 		"job": job,
 		"trait": TRAITS[rng.randi_range(0, TRAITS.size() - 1)],
 		"health": rng.randf_range(78.0, 100.0),
@@ -90,3 +91,34 @@ static func best_skill_for_job(citizen: Dictionary) -> String:
 			return "security"
 		_:
 			return "construction"
+
+
+static func create_child(id: int, rng: RandomNumberGenerator, mother: Dictionary, partner: Dictionary) -> Dictionary:
+	var family_name := str(mother.get("family_name",""))
+	if family_name == "":
+		family_name = str(mother["name"]).split(" ")[-1]
+	var child := create(id, rng)
+	child["name"] = "%s %s" % [FIRST_NAMES[rng.randi_range(0, FIRST_NAMES.size() - 1)], family_name]
+	child["age"] = 0
+	child["job"] = "Child"
+	child["health"] = rng.randf_range(86.0, 100.0)
+	child["morale"] = 75.0
+	child["loyalty"] = 80.0
+	child["hunger"] = 8.0
+	child["thirst"] = 6.0
+	child["fatigue"] = 12.0
+	child["stress"] = 2.0
+	child["position"] = mother["position"] + Vector2(rng.randf_range(-8.0,8.0), rng.randf_range(-8.0,8.0))
+	child["target"] = child["position"]
+	child["family_name"] = family_name
+	child["relationships"] = {}
+	child["partner_id"] = 0
+	child["parent_ids"] = []
+	child["children_ids"] = []
+	child["memories"] = [{"text":"Born into the settlement.","kind":"family","day":0,"hour":0.0}]
+	child["pregnancy_hours"] = 0.0
+	child["birthday_progress"] = 0.0
+	if not partner.is_empty():
+		child["relationships"][str(int(partner["id"]))] = 65.0
+	child["relationships"][str(int(mother["id"]))] = 75.0
+	return child
