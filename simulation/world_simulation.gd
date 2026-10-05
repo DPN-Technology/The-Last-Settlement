@@ -22,7 +22,9 @@ func initialize(rng: RandomNumberGenerator) -> void:
 		{"id":7,"name":"Unknown Signal","type":"signal","position":Vector2(260,610),"danger":0.65,"loot":{"medicine":5.0,"scrap":20.0},"discovered":false,"depleted":false},
 		{"id":8,"name":"Collapsed Subdivision","type":"ruin","position":Vector2(690,690),"danger":0.36,"loot":{"food":18.0,"materials":18.0,"scrap":12.0},"discovered":false,"depleted":false},
 		{"id":9,"name":"Cedar Junction","type":"trade_hub","position":Vector2(930,180),"danger":0.24,"loot":{},"discovered":false,"depleted":false,"faction":"Cedar Union"},
-		{"id":10,"name":"Riverbend Enclave","type":"trade_hub","position":Vector2(190,420),"danger":0.32,"loot":{},"discovered":false,"depleted":false,"faction":"Riverbend Collective"}
+		{"id":10,"name":"Riverbend Enclave","type":"trade_hub","position":Vector2(190,420),"danger":0.32,"loot":{},"discovered":false,"depleted":false,"faction":"Riverbend Collective"},
+		{"id":11,"name":"Ironwood Hold","type":"faction_settlement","position":Vector2(1080,650),"danger":0.74,"loot":{},"discovered":false,"depleted":false,"faction":"Iron Pact"},
+		{"id":12,"name":"Lantern Station","type":"faction_settlement","position":Vector2(315,145),"danger":0.18,"loot":{},"discovered":false,"depleted":false,"faction":"Lantern Medics"}
 	]
 	discovered_location_ids = [1]
 	_update_fog_of_war()
@@ -67,8 +69,8 @@ func create_expedition(sim: SettlementSimulation, location_id: int, max_members:
 	var destination := get_location_by_id(location_id)
 	if destination.is_empty() or not destination["discovered"] or destination["depleted"]:
 		return false
-	if str(destination["type"]) == "trade_hub":
-		sim.add_event("EXPEDITION BLOCKED", "%s is an active trade settlement, not a salvage site." % destination["name"], "warning")
+	if str(destination["type"]) in ["trade_hub","faction_settlement"]:
+		sim.add_event("EXPEDITION BLOCKED", "%s is an inhabited settlement, not a salvage site." % destination["name"], "warning")
 		return false
 	var members: Array[int] = []
 	for citizen in sim.get_alive_citizens():
