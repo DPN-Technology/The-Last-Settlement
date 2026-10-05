@@ -1,3 +1,27 @@
+## 0.3.0-dev — Construction & Reclamation
+
+### Added
+- Player build mode
+- Grid-snapped blueprint placement
+- Build catalog for walls, floors, doors, shelter modules and storage modules
+- Wall/door rotation
+- Construction material costs
+- Builder reservation and assignment to active blueprints
+- Skill-based construction progress
+- Blueprint progress rendering
+- Completed structures entering the live settlement
+- Demolition and salvage
+- Repair work orders targeting selected buildings
+- Basic enclosed-room detection
+- Wall-aware survivor movement
+- Construction telemetry in the command HUD
+- Construction/blueprint persistence in save files
+
+### Changed
+- Save schema advanced to version 2
+- Builders prioritize active blueprints before ordinary builder work orders
+- Modular construction pieces may touch adjacent pieces without false overlap rejection
+
 # Changelog
 
 All notable development changes to **The Last Settlement** are tracked here.
