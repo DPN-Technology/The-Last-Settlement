@@ -1,26 +1,90 @@
-name: Project Validation
+name: DPN Settlement CI Gate
 
 on:
   push:
-    branches: ["main"]
+    branches: [main]
   pull_request:
-    branches: ["main"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: settlement-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  structure:
-    name: Validate project structure
+  integrity:
+    name: Source Integrity
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-
-      - name: Validate repository
+          cache: pip
+          cache-dependency-path: tools/requirements*.txt
+      - name: Validate repository structure
         run: python tools/validate_project.py
+      - name: Security and workflow integrity audit
+        run: python tools/security_audit.py
+      - name: Conflict marker guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE '^(<<<<<<<|=======|>>>>>>>)' --exclude-dir=.git .; then
+            echo "::error::Merge conflict markers detected."
+            exit 1
+          fi
+      - name: GDScript hygiene checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s project.godot
+          test -s src/Main.tscn
+          test -s src/main.gd
+          find src simulation -type f -name '*.gd' -print0 | while IFS= read -r -d '' file; do
+            grep -q '^extends ' "$file" || { echo "::error::$file has no extends declaration"; exit 1; }
+          done
+
+  policy:
+    name: Security Policy Surface
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Verify governance files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s SECURITY.md
+          test -s CONTRIBUTING.md
+          test -s .github/CODEOWNERS
+          test -s .github/dependabot.yml
+          test -s docs/SECURITY_GATES.md
+
+  green-gate:
+    name: Settlement Green Gate
+    if: always()
+    needs: [integrity, policy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate required jobs
+        env:
+          INTEGRITY: ${{ needs.integrity.result }}
+          POLICY: ${{ needs.policy.result }}
+        run: |
+          echo "Source Integrity: $INTEGRITY"
+          echo "Security Policy Surface: $POLICY"
+          test "$INTEGRITY" = "success"
+          test "$POLICY" = "success"
+          echo "DPN THE LAST SETTLEMENT: GREEN"
