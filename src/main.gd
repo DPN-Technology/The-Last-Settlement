@@ -791,7 +791,8 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+60), c["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+84), "AGE %d  •  %s  •  %s" % [int(c["age"]), c["job"], c["trait"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+112), "CURRENT: %s" % c["current_action"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RUST)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+132), "SHIFT: %s  •  %s PRIORITY: %d" % [c["shift"], c["job"].to_upper(), int(c["work_priority"].get(c["job"],3))], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+	var duty_enabled := sim.is_selected_work_enabled(c)
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+132), "SHIFT: %s  •  %s PRIORITY: %s  •  DUTY: %s" % [c["shift"], c["job"].to_upper(), "-" if not duty_enabled else str(int(c["work_priority"].get(c["job"],3))), "ACTIVE" if duty_enabled else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOOD if duty_enabled else WARN)
 	var partner_name := "NONE"
 	if int(c.get("partner_id",0)) > 0:
 		var partner := sim.get_citizen_by_id(int(c["partner_id"]))
@@ -839,6 +840,8 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	ry += 28.0
 	var inv: Dictionary = c["inventory"]
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "RATION %d   WATER %d   MED %d   SCRAP %d" % [int(inv["food_ration"]),int(inv["water_ration"]),int(inv["medicine"]),int(inv["scrap"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
+	ry += 28.0
+	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "[T] SHIFT   [P] PRIORITY   [W] TOGGLE DUTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
 
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
