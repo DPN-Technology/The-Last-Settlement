@@ -492,6 +492,9 @@ func _choose_action(c: Dictionary) -> void:
 	if c["fatigue"] >= 72.0 or not _is_shift_active(c):
 		_set_action(c, "Sleep" if c["fatigue"] >= 60.0 else "Free Time", "housing")
 		return
+	if _needs_stress_recovery(c):
+		_set_action(c, "Decompress", "housing")
+		return
 
 	if c["job"] == "Builder":
 		var blueprint := get_blueprint_by_id(int(c.get("target_blueprint_id", 0)))
@@ -530,6 +533,26 @@ func _choose_action(c: Dictionary) -> void:
 		_:
 			_set_action(c, "Idle", "command")
 
+func _needs_stress_recovery(c: Dictionary) -> bool:
+	var stress_limit := 82.0
+	var morale_limit := 24.0
+	match str(c.get("trait", "")):
+		"Stoic":
+			stress_limit = 90.0
+		"Optimist":
+			morale_limit = 16.0
+		"Empathetic":
+			stress_limit = 86.0
+		"Stubborn":
+			stress_limit = 88.0
+	return float(c.get("stress", 0.0)) >= stress_limit or float(c.get("morale", 100.0)) <= morale_limit
+
+func _work_readiness(c: Dictionary) -> float:
+	var stress_penalty := clampf((float(c.get("stress", 0.0)) - 45.0) / 100.0, 0.0, 0.35)
+	var morale_penalty := clampf((40.0 - float(c.get("morale", 100.0))) / 100.0, 0.0, 0.25)
+	var fatigue_penalty := clampf((float(c.get("fatigue", 0.0)) - 55.0) / 120.0, 0.0, 0.20)
+	return clampf(1.0 - stress_penalty - morale_penalty - fatigue_penalty, 0.45, 1.0)
+
 func _is_shift_active(c: Dictionary) -> bool:
 	if c["shift"] == "NIGHT":
 		return hour >= 19.0 or hour < 7.0
@@ -550,7 +573,13 @@ func _best_work_order_for(c: Dictionary) -> Dictionary:
 
 func _apply_citizen_work(c: Dictionary, sim_hours: float) -> void:
 	var action: String = c["current_action"]
-	var output := sim_hours
+	var output := sim_hours * _work_readiness(c)
+
+	if action == "Decompress":
+		c["stress"] = maxf(0.0, float(c["stress"]) - 3.2 * sim_hours)
+		c["morale"] = minf(100.0, float(c["morale"]) + 1.1 * sim_hours)
+		c["fatigue"] = maxf(0.0, float(c["fatigue"]) - 0.7 * sim_hours)
+		return
 
 	if action.begins_with("Build: "):
 		var blueprint := get_blueprint_by_id(int(c.get("target_blueprint_id", 0)))
