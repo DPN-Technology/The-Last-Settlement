@@ -35,7 +35,7 @@
 - [x] Injuries and treatment workflow
 - [x] Shift reassignment controls
 - [x] Priority controls
-- [ ] Forbidden-work controls
+- [x] Survivor duty restriction controls
 
 ## Milestone 0.3 — Construction
 **Status: core complete / expanding**

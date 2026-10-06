@@ -495,6 +495,9 @@ func _choose_action(c: Dictionary) -> void:
 	if _needs_stress_recovery(c):
 		_set_action(c, "Decompress", "housing")
 		return
+	if not is_selected_work_enabled(c):
+		_set_action(c, "Off Duty", "housing")
+		return
 
 	if c["job"] == "Builder":
 		var blueprint := get_blueprint_by_id(int(c.get("target_blueprint_id", 0)))
@@ -801,11 +804,32 @@ func cycle_selected_shift(c: Dictionary) -> void:
 
 func cycle_selected_priority(c: Dictionary) -> void:
 	var current := int(c["work_priority"].get(c["job"], 3))
-	current += 1
-	if current > 4:
+	if current <= 0:
 		current = 1
+	else:
+		current += 1
+		if current > 4:
+			current = 1
 	c["work_priority"][c["job"]] = current
 	add_event("WORK PRIORITY", "%s %s priority set to %d." % [c["name"], c["job"], current], "intel")
+
+func is_selected_work_enabled(c: Dictionary) -> bool:
+	return int(c.get("work_priority", {}).get(c.get("job", ""), 3)) > 0
+
+func toggle_selected_work(c: Dictionary) -> void:
+	var job := str(c.get("job", ""))
+	if job == "" or job == "Child":
+		return
+	var current := int(c["work_priority"].get(job, 3))
+	if current > 0:
+		c["work_priority"][job] = 0
+		c["target_blueprint_id"] = 0
+		c["target"] = Vector2.ZERO
+		_set_action(c, "Off Duty", "housing")
+		add_event("DUTY PAUSED", "%s removed from %s duty." % [c["name"], job], "warning")
+	else:
+		c["work_priority"][job] = 3
+		add_event("DUTY RESTORED", "%s returned to %s duty." % [c["name"], job], "good")
 
 func save_game(path: String = "user://settlement_save.json") -> bool:
 	var data := {

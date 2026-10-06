@@ -22,6 +22,12 @@
 - Save schema: `14`
 - Current signing state: unsigned
 
+
+### Added
+- Player-controlled survivor duty restrictions from the survivor inspector
+- Off-duty AI state that prevents restricted survivors from taking job work while preserving survival, rest, treatment and stress-recovery behavior
+- Survivor inspector duty telemetry and direct `[W]` toggle control
+
 ## 1.0.5-dev — Secure In-Game Update Command
 
 ### Added
