@@ -564,7 +564,7 @@ func _draw_help_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+42),"DPN // FIELD COMMAND ORIENTATION",HORIZONTAL_ALIGNMENT_LEFT,w-56,22,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+70),"LAST HAVEN SURVIVAL CONSOLE // QUICK START",HORIZONTAL_ALIGNMENT_LEFT,w-56,11,RUST)
 	var lines := [
-		["1 // KEEP PEOPLE ALIVE","Watch FOOD, WATER, POWER and MORALE. Select survivors to inspect health, needs, job, shift and skills."],
+		["1 // KEEP PEOPLE ALIVE","Watch FOOD, WATER, POWER and MORALE. Select a survivor and press W to toggle duty; off-duty survivors still recover."],
 		["2 // BUILD THE SETTLEMENT","Press B for construction. Q/E changes the blueprint, F rotates compatible pieces, then left-click to place."],
 		["3 // CONTROL TIME","SPACE pauses. 1 / 2 / 3 sets normal, fast and emergency simulation speed."],
 		["4 // EXPAND BEYOND LAST HAVEN","Press M for the regional map. Select discovered sites, G dispatches expeditions, I founds eligible settlements."],
