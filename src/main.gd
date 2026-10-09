@@ -249,35 +249,37 @@ func _draw_world_map() -> void:
 		draw_circle(p,6.0,ACCENT)
 		draw_string(ThemeDB.fallback_font,p+Vector2(10,4),"EXP-%02d" % int(expedition["id"]),HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
 
-	var x := vp.x - 390.0
-	draw_rect(Rect2(x,140,372,vp.y-190),PANEL_SOLID)
-	draw_rect(Rect2(x,140,372,vp.y-190),PANEL_EDGE,false,1.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,170),"WORLD INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,ACCENT)
+	var bounds := SettlementUILayout.side_panel(vp,372.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	_draw_ui_panel(bounds,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+30),"WORLD INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,ACCENT)
 	var location := sim.world_simulation.get_location_by_id(selected_world_location_id)
 	if not location.is_empty():
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),location["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,20,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,232),"TYPE // %s" % str(location["type"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,255),"DANGER // %d%%" % int(float(location["danger"])*100.0),HORIZONTAL_ALIGNMENT_LEFT,-1,11,WARN)
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,278),"STATUS // %s" % ("DEPLETED" if location["depleted"] else "AVAILABLE"),HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+65),location["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,20,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+92),"TYPE // %s" % str(location["type"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+115),"DANGER // %d%%" % int(float(location["danger"])*100.0),HORIZONTAL_ALIGNMENT_LEFT,-1,11,WARN)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+138),"STATUS // %s" % ("DEPLETED" if location["depleted"] else "AVAILABLE"),HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
 		if str(location["type"]) == "trade_hub":
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"FACTION // %s" % str(location.get("faction","UNKNOWN")).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("#7ca0c2"))
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,323),"TRADE HUB // CARAVANS SERVICE LAST HAVEN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+161),"FACTION // %s" % str(location.get("faction","UNKNOWN")).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("#7ca0c2"))
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+183),"TRADE HUB // CARAVANS SERVICE LAST HAVEN",HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
 		elif str(location["type"]) == "player_settlement":
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"PLAYER SETTLEMENT // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+161),"PLAYER SETTLEMENT // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
 		elif str(location["type"]) in ["ruin","signal"] and bool(location.get("depleted",false)):
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"SITE SECURED // [I] FOUND SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+161),"SITE SECURED // [I] FOUND SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD)
 		elif str(location["type"]) == "faction_settlement":
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,301),"INHABITED FACTION TERRITORY",HORIZONTAL_ALIGNMENT_LEFT,-1,11,BAD)
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+161),"INHABITED FACTION TERRITORY",HORIZONTAL_ALIGNMENT_LEFT,-1,11,BAD)
 		else:
-			draw_string(ThemeDB.fallback_font,Vector2(x+20,315),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
+			draw_string(ThemeDB.fallback_font,Vector2(x+20,y+175),"[G] DISPATCH EXPEDITION",HORIZONTAL_ALIGNMENT_LEFT,-1,12,RUST)
 	else:
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),"Select a discovered location.",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+65),"Select a discovered location.",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
 
 	var can_dispatch := not location.is_empty() and int(location.get("id", 0)) > 1 and bool(location.get("discovered", false)) and not bool(location.get("depleted", false)) and str(location.get("type","")) not in ["trade_hub", "faction_settlement", "player_settlement"]
-	draw_rect(Rect2(x + 20, 329, 326, 34), Color("#365f50") if can_dispatch else Color("#283438"))
-	draw_rect(Rect2(x + 20, 329, 326, 34), GOOD if can_dispatch else MUTED, false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(x + 30, 350), "DISPATCH SALVAGE TEAM  [G]" if can_dispatch else "SELECT A VALID SALVAGE SITE", HORIZONTAL_ALIGNMENT_LEFT, 310, 12, TEXT if can_dispatch else MUTED)
-	var ey := 380.0
+	draw_rect(Rect2(x + 20, y+189, w-40, 34), Color("#365f50") if can_dispatch else Color("#283438"))
+	draw_rect(Rect2(x + 20, y+189, w-40, 34), GOOD if can_dispatch else MUTED, false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 30, y+210), "DISPATCH SALVAGE TEAM  [G]" if can_dispatch else "SELECT A VALID SALVAGE SITE", HORIZONTAL_ALIGNMENT_LEFT, w-55, 12, TEXT if can_dispatch else MUTED)
+	var ey := y+240.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,ey),"ACTIVE EXPEDITIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ey += 26.0
 	for expedition in sim.world_simulation.get_active_expeditions():
@@ -289,7 +291,7 @@ func _draw_world_map() -> void:
 
 func _world_map_select(screen_pos: Vector2) -> void:
 	var vp := get_viewport_rect().size
-	var origin := Vector2(80,180)
+	var origin := Vector2(80,SettlementUILayout.TOP_H+57.0)
 	var scale := Vector2((vp.x-500.0)/1200.0,(vp.y-250.0)/820.0)
 	var nearest_id := 0
 	var nearest_dist := 18.0
@@ -536,30 +538,32 @@ func _draw_faction_panel() -> void:
 
 func _draw_help_panel() -> void:
 	var vp := get_viewport_rect().size
-	var w := minf(760.0, vp.x - 60.0)
-	var h := minf(610.0, vp.y - 80.0)
-	var x := (vp.x - w) * 0.5
-	var y := (vp.y - h) * 0.5
-	draw_rect(Rect2(x,y,w,h),Color("#090b0ef2"),true)
-	draw_rect(Rect2(x,y,w,h),ACCENT,false,3.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+42),"DPN // FIELD COMMAND ORIENTATION",HORIZONTAL_ALIGNMENT_LEFT,w-56,22,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+70),"LAST HAVEN SURVIVAL CONSOLE // QUICK START",HORIZONTAL_ALIGNMENT_LEFT,w-56,11,RUST)
-	var lines := [
-		["1 // KEEP PEOPLE ALIVE","Watch FOOD, WATER, POWER and MORALE. Select survivors to inspect health, needs, job, shift and skills."],
-		["2 // BUILD THE SETTLEMENT","Press B for construction. Q/E changes the blueprint, F rotates compatible pieces, then left-click to place."],
-		["3 // CONTROL TIME","SPACE pauses. 1 / 2 / 3 sets normal, fast and emergency simulation speed."],
-		["4 // EXPAND BEYOND LAST HAVEN","Press M for the regional map. Select discovered sites, G dispatches expeditions, I founds eligible settlements."],
-		["5 // RUN THE RECOVERY","V opens government, K industry, O factions and J civilization command. These systems become critical as the network grows."],
-		["6 // PROTECT YOUR RUN","S saves, L loads. F9 writes diagnostics; F2 opens incidents. Right-drag pans."]
+	var usable_height := vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-18.0
+	var w := minf(692.0,vp.x-32.0)
+	var h := minf(492.0,usable_height)
+	var x := (vp.x-w)*0.5
+	var y := SettlementUILayout.TOP_H+maxf(8.0,(usable_height-h)*0.5)
+	var rect := Rect2(x,y,w,h)
+	_draw_ui_panel(rect,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+31),"FIELD GUIDE  /  QUICK START",HORIZONTAL_ALIGNMENT_LEFT,w-40,19,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+52),"ESC or F1 to return to the live settlement",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,GOOD)
+	var lessons := [
+		["SURVIVE","Keep an eye on FOOD, WATER, POWER and morale in the compact top row. Hover a metric for its meaning."],
+		["BUILD","Press B to select a blueprint. Q/E changes structures, F rotates compatible items, click terrain to place."],
+		["INSPECT","Left-click a survivor or building to open details. F3 expands the opening objectives."],
+		["EXPAND","M opens the region. Select a discovered location and dispatch a salvage expedition with G."],
+		["COMMAND","V governs, K opens industry, O tracks factions, J manages civilization. Use ESC to close."],
+		["TIME & FILES","SPACE pauses; 1/2/3 sets time speed. S saves, L loads, F8 captures screenshots, F9 logs diagnostics."]
 	]
-	var ry := y + 112.0
-	for row in lines:
-		draw_string(ThemeDB.fallback_font,Vector2(x+28,ry),row[0],HORIZONTAL_ALIGNMENT_LEFT,w-56,12,ACCENT)
-		ry += 23.0
-		draw_string(ThemeDB.fallback_font,Vector2(x+28,ry),row[1],HORIZONTAL_ALIGNMENT_LEFT,w-56,10,MUTED)
-		ry += 48.0
-	draw_line(Vector2(x+28,y+h-82),Vector2(x+w-28,y+h-82),PANEL_EDGE,1.0)
-	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+h-48),"F1 // CLOSE OR REOPEN FIELD GUIDE     ESC // CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-56,12,GOOD)
+	var line_height := minf(62.0, maxf(39.0,(h-112.0)/6.0))
+	for i in range(lessons.size()):
+		var ry := y+87.0+float(i)*line_height
+		if ry>y+h-28.0:
+			break
+		var row: Array = lessons[i]
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,ry),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,ry+19),str(row[1]),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+h-15),"F4  FULLSCREEN    •    F8  SCREENSHOT    •    F9  PLAYTEST REPORT",HORIZONTAL_ALIGNMENT_LEFT,w-40,10,GOOD)
 
 func _draw_update_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -1034,7 +1038,8 @@ func _handle_inspector_click(position: Vector2) -> bool:
 				return true
 		return Rect2(x, y, 350, h).has_point(position)
 	if not selected_building.is_empty():
-		if SettlementUILayout.side_panel(vp,372.0).has_point(position):
+		var selected_bounds := SettlementUILayout.side_panel(vp,372.0)
+		if Rect2(selected_bounds.position,Vector2(selected_bounds.size.x,minf(270.0,selected_bounds.size.y))).has_point(position):
 			return true
 	return false
 
@@ -1480,10 +1485,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			if world_map_mode:
 				var vp := get_viewport_rect().size
-				if Rect2(vp.x - 370, 329, 326, 34).has_point(event.position):
+				var side := SettlementUILayout.side_panel(vp,372.0)
+				if Rect2(side.position+Vector2(20,189),Vector2(side.size.x-40,34)).has_point(event.position):
 					if selected_world_location_id > 1:
 						sim.world_simulation.create_expedition(sim, selected_world_location_id)
-				elif event.position.x < vp.x - 390.0:
+				elif event.position.x < side.position.x:
 					_world_map_select(event.position)
 				return
 			if governance_mode or economy_mode or faction_mode or civilization_mode:
