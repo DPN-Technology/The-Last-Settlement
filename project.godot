@@ -26,9 +26,8 @@ window/handheld/orientation=1
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-; Production 3D profile is selected by script for the SubViewport.
-; Windows playtest retains the widely compatible renderer until PBR assets and
-; renderer QA support a required Vulkan/Forward+ baseline.
+; Compatibility remains the fallback for lower-end PCs. The Windows
+; 3D playtest profile can be changed to Forward+ after renderer validation.
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [environment]
