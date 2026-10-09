@@ -198,9 +198,9 @@ func _draw_utility_overlay() -> void:
 
 func _draw_world_map() -> void:
 	var vp := get_viewport_rect().size
-	draw_rect(Rect2(0,118,vp.x,vp.y-118), Color("#0b0d10"))
-	draw_string(ThemeDB.fallback_font, Vector2(28,154), "REGIONAL OPERATIONS MAP // RADIO RANGE %.0f" % sim.world_simulation.get_radio_range(), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, TEXT)
-	var origin := Vector2(80,180)
+	draw_rect(Rect2(0,SettlementUILayout.TOP_H,vp.x,vp.y-SettlementUILayout.TOP_H), Color("#0b0d10"))
+	draw_string(ThemeDB.fallback_font, Vector2(28,SettlementUILayout.TOP_H+35.0), "REGIONAL OPERATIONS MAP // RADIO RANGE %.0f" % sim.world_simulation.get_radio_range(), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, TEXT)
+	var origin := Vector2(80,SettlementUILayout.TOP_H+57.0)
 	var scale := Vector2((vp.x-500.0)/1200.0,(vp.y-250.0)/820.0)
 	var home_screen := origin + Vector2(600,410) * scale
 	draw_circle(home_screen, sim.world_simulation.get_radio_range() * minf(scale.x,scale.y), Color(0.55,0.18,0.15,0.08))
@@ -305,10 +305,11 @@ func _world_map_select(screen_pos: Vector2) -> void:
 
 func _draw_economy_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 500.0
-	var y := 138.0
-	var w := 480.0
-	var h := vp.y - 190.0
+	var bounds := SettlementUILayout.side_panel(vp,480.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := bounds.size.y
 	var eco := sim.economy_simulation
 	var trade_sources := eco.get_trade_sources()
 	if trade_sources.is_empty():
@@ -316,8 +317,7 @@ func _draw_economy_panel() -> void:
 	elif economy_source_index >= trade_sources.size():
 		economy_source_index = 0
 	var active_source := trade_sources[economy_source_index]
-	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h),RUST,false,2.0)
+	_draw_ui_panel(bounds,RUST)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"INDUSTRY + ECONOMY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,-1,15,RUST)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"CREDITS // %.1f" % eco.credits,HORIZONTAL_ALIGNMENT_LEFT,-1,18,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+220,y+62),"MARKET // %s" % active_source["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD if economy_source_index>0 else MUTED)
@@ -359,10 +359,11 @@ func _draw_economy_panel() -> void:
 
 func _draw_civilization_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := maxf(18.0,vp.x-720.0)
-	var y := 112.0
-	var w := minf(700.0,vp.x-36.0)
-	var h := vp.y-150.0
+	var bounds := SettlementUILayout.side_panel(vp,700.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := bounds.size.y
 	var civ := sim.civilization_simulation
 	var fed := sim.federal_governance_simulation
 	var settlements: Array[Dictionary] = civ.get_settlement_list()
@@ -378,8 +379,7 @@ func _draw_civilization_panel() -> void:
 	if civilization_candidate_index >= founding_candidates.size():
 		civilization_candidate_index = 0
 
-	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h),GOOD,false,2.0)
+	_draw_ui_panel(bounds,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+26),"CIVILIZATION COMMAND // RECOVERY NETWORK",HORIZONTAL_ALIGNMENT_LEFT,-1,14,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+50),"PHASE // %s   NODES %d   ROUTES %d" % [civ.endgame_stage,settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,TEXT)
 	_draw_meter(Vector2(x+20,y+72),310.0,"RECOVERY",civ.recovery_score)
@@ -483,17 +483,17 @@ func _draw_civilization_panel() -> void:
 
 func _draw_faction_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 500.0
-	var y := 138.0
-	var w := 480.0
-	var h := vp.y - 190.0
+	var bounds := SettlementUILayout.side_panel(vp,480.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := bounds.size.y
 	var fs := sim.faction_simulation
 	var visible := fs.get_visible_factions(sim)
 	if faction_index >= visible.size():
 		faction_index = 0
 
-	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h),BAD,false,2.0)
+	_draw_ui_panel(bounds,BAD)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"FACTION COMMAND // REGIONAL INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,BAD)
 
 	if visible.is_empty():
@@ -563,10 +563,11 @@ func _draw_help_panel() -> void:
 
 func _draw_update_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x-520.0
-	var y := 138.0
-	var w := 500.0
-	var h := minf(520.0,vp.y-180.0)
+	var bounds := SettlementUILayout.side_panel(vp,500.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := minf(520.0,bounds.size.y)
 	var state_label := update_manager.get_state_label()
 	var state_color := WARN
 	if state_label in ["CURRENT","VERIFIED"]:
@@ -574,8 +575,7 @@ func _draw_update_panel() -> void:
 	elif state_label == "ERROR":
 		state_color = BAD
 
-	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h),state_color,false,2.0)
+	_draw_ui_panel(Rect2(x,y,w,h),state_color)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+32),"DPN UPDATE COMMAND // WINDOWS RELEASE CHANNEL",HORIZONTAL_ALIGNMENT_LEFT,w-44,14,state_color)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+66),"CURRENT // %s" % update_manager.current_version,HORIZONTAL_ALIGNMENT_LEFT,-1,12,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+260,y+66),"SAVE SCHEMA // %d" % SettlementSimulation.SAVE_VERSION,HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
@@ -622,12 +622,12 @@ func _draw_update_panel() -> void:
 
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 500.0
-	var y := 138.0
-	var w := 480.0
-	var h := vp.y - 190.0
-	draw_rect(Rect2(x,y,w,h),PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h),ACCENT,false,2.0)
+	var bounds := SettlementUILayout.side_panel(vp,480.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := bounds.size.y
+	_draw_ui_panel(bounds,ACCENT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"CIVIC COMMAND // GOVERNANCE",HORIZONTAL_ALIGNMENT_LEFT,-1,15,ACCENT)
 
 	var gov := sim.governance_simulation
@@ -919,7 +919,7 @@ func _handle_toolbar_click(position: Vector2) -> bool:
 func _draw_event_toasts() -> void:
 	var vp := get_viewport_rect().size
 	var left := vp.x - 334.0
-	var y := vp.y - 215.0
+	var y := vp.y - SettlementUILayout.BOTTOM_H - 123.0
 	draw_rect(Rect2(left, y, 309, 106), Color("#111b1bd9"), true)
 	draw_line(Vector2(left, y), Vector2(left + 309, y), ACCENT, 2.0)
 	draw_string(ThemeDB.fallback_font, Vector2(left + 13, y + 20), "SETTLEMENT ACTIVITY    [F2] EXPAND", HORIZONTAL_ALIGNMENT_LEFT, 289, 11, TEXT)
@@ -937,9 +937,8 @@ func _draw_event_panel() -> void:
 	var vp := get_viewport_rect().size
 	var panel_w := 350.0
 	var panel_x := vp.x - panel_w - 18
-	var panel_y := 140.0
-	draw_rect(Rect2(panel_x, panel_y, panel_w, vp.y - panel_y - 48), PANEL)
-	draw_rect(Rect2(panel_x, panel_y, panel_w, vp.y - panel_y - 48), PANEL_EDGE, false, 1.0)
+	var panel_y := SettlementUILayout.TOP_H + 10.0
+	_draw_ui_panel(Rect2(panel_x,panel_y,panel_w,vp.y-panel_y-SettlementUILayout.BOTTOM_H-10),ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(panel_x + 18, panel_y + 30), "/// SETTLEMENT INCIDENT CHANNEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT)
 	var ey := panel_y + 60.0
 	for e in sim.events:
@@ -952,7 +951,7 @@ func _draw_event_panel() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(panel_x + 34, ey), "%s // D%d" % [e["title"], int(e["day"])], HORIZONTAL_ALIGNMENT_LEFT, panel_w - 50, 11, TEXT)
 		draw_string(ThemeDB.fallback_font, Vector2(panel_x + 34, ey + 18), e["body"], HORIZONTAL_ALIGNMENT_LEFT, panel_w - 55, 10, MUTED)
 		ey += 58.0
-		if ey > vp.y - 70:
+		if ey > vp.y - SettlementUILayout.BOTTOM_H - 16:
 			break
 
 func _draw_selection_panel() -> void:
@@ -965,12 +964,12 @@ func _draw_selection_panel() -> void:
 
 func _draw_citizen_panel(c: Dictionary) -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 370.0
-	var y := 139.0
-	var w := 350.0
-	var h := minf(465.0, vp.y - 250.0)
-	draw_rect(Rect2(x, y, w, h), PANEL_SOLID)
-	draw_rect(Rect2(x, y, w, h), ACCENT, false, 2.0)
+	var bounds := SettlementUILayout.side_panel(vp,350.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := minf(465.0,bounds.size.y)
+	_draw_ui_panel(Rect2(x,y,w,h),ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 27), "SURVIVOR // %03d" % int(c["id"]), HORIZONTAL_ALIGNMENT_LEFT, w - 34, 11, ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 58), str(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, w - 32, 21, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 80), "%s // AGE %d // %s SHIFT" % [str(c["job"]), int(c["age"]), str(c["shift"])], HORIZONTAL_ALIGNMENT_LEFT, w - 34, 11, MUTED)
@@ -998,10 +997,10 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 
 func _draw_blueprint_panel(blueprint: Dictionary) -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 370.0
-	var y := 139.0
-	draw_rect(Rect2(x, y, 350, 206), PANEL_SOLID)
-	draw_rect(Rect2(x, y, 350, 206), ACCENT, false, 2.0)
+	var bounds := SettlementUILayout.side_panel(vp,350.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	_draw_ui_panel(Rect2(x,y,bounds.size.x,206.0),ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 27), "CONSTRUCTION IN PROGRESS", HORIZONTAL_ALIGNMENT_LEFT, 314, 12, WARN)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 56), str(blueprint["name"]), HORIZONTAL_ALIGNMENT_LEFT, 314, 21, TEXT)
 	var percentage := 100.0 * float(blueprint["progress"]) / maxf(1.0, float(blueprint["work_required"]))
@@ -1013,8 +1012,9 @@ func _draw_blueprint_panel(blueprint: Dictionary) -> void:
 
 func _handle_inspector_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 370.0
-	var y := 139.0
+	var bounds := SettlementUILayout.side_panel(vp,350.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
 	if not selected_blueprint.is_empty():
 		if Rect2(x + 16, y + 152, 316, 37).has_point(position):
 			sim.cancel_blueprint(int(selected_blueprint["id"]))
@@ -1022,7 +1022,7 @@ func _handle_inspector_click(position: Vector2) -> bool:
 			return true
 		return Rect2(x, y, 350, 206).has_point(position)
 	if not selected_citizen.is_empty():
-		var h := minf(465.0, vp.y - 250.0)
+		var h := minf(465.0,bounds.size.y)
 		for i in range(3):
 			if Rect2(x + 12 + float(i) * 112.0, y + h - 57.0, 106, 39).has_point(position):
 				if i == 0:
@@ -1034,18 +1034,18 @@ func _handle_inspector_click(position: Vector2) -> bool:
 				return true
 		return Rect2(x, y, 350, h).has_point(position)
 	if not selected_building.is_empty():
-		if Rect2(vp.x - 370.0, 139, 350, 270).has_point(position):
+		if SettlementUILayout.side_panel(vp,372.0).has_point(position):
 			return true
 	return false
 
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 390.0
-	var y := 140.0
-	var w := 372.0
-	var h := 270.0
-	draw_rect(Rect2(x,y,w,h), PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h), ACCENT, false, 2.0)
+	var bounds := SettlementUILayout.side_panel(vp,372.0)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := minf(270.0,bounds.size.y)
+	_draw_ui_panel(Rect2(x,y,w,h),ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+30), "INFRASTRUCTURE NODE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+64), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+92), "TYPE // %s" % str(b["type"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
@@ -1466,12 +1466,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			if help_mode or update_mode:
 				return
-			if event.position.y < 116.0:
+			if event.position.y < SettlementUILayout.TOP_H:
 				return
 			if build_mode and _handle_build_palette_click(event.position):
 				return
 			if not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and selected_citizen.is_empty() and selected_building.is_empty() and selected_blueprint.is_empty():
-				if not field_directives_visible and Rect2(18, 139, 308, 43).has_point(event.position):
+				if not field_directives_visible and SettlementUILayout.directive_tab().has_point(event.position):
 					field_directives_visible = true
 					return
 				if field_directives_visible and _handle_objective_click(event.position):
@@ -1489,7 +1489,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if governance_mode or economy_mode or faction_mode or civilization_mode:
 				return
 			if build_mode:
-				if event.position.y >= get_viewport_rect().size.y - 88.0:
+				if event.position.y >= get_viewport_rect().size.y - SettlementUILayout.BOTTOM_H:
 					return
 				var definition := sim.get_build_catalog()[build_catalog_index]
 				if sim.place_blueprint(definition["type"], _screen_to_world(event.position), build_rotated):
