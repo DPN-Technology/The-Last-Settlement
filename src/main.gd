@@ -35,6 +35,7 @@ var selected_building: Dictionary = {}
 var selected_blueprint: Dictionary = {}
 var build_mode := false
 var build_catalog_index := 0
+var build_category := "ALL"
 var build_rotated := false
 var mouse_world := Vector2.ZERO
 var utility_overlay := 0
@@ -1013,37 +1014,98 @@ func _handle_objective_click(position: Vector2) -> bool:
 func _focus_world_position(world: Vector2) -> void:
 	settlement_world.focus_game(world)
 
+func _set_build_category(category: String) -> void:
+	if not category in SettlementCommandCatalog.CATEGORIES:
+		return
+	build_category = category
+	var indices := SettlementCommandCatalog.category_indices(sim.get_build_catalog(),build_category)
+	if indices.is_empty():
+		return
+	if not build_catalog_index in indices:
+		build_catalog_index = indices[0]
+	build_rotated = false
+
+func _cycle_build_selection(direction: int) -> void:
+	build_catalog_index = SettlementCommandCatalog.selection_in_category(sim.get_build_catalog(),build_category,build_catalog_index,direction)
+	build_rotated = false
+
 func _draw_build_palette() -> void:
 	var catalog := sim.get_build_catalog()
-	var rect := SettlementUILayout.build_palette(get_viewport_rect().size,catalog.size())
-	var rows := SettlementUILayout.palette_rows(get_viewport_rect().size,catalog.size())
-	var first := SettlementUILayout.palette_first(build_catalog_index,catalog.size(),rows)
-	_draw_ui_panel(rect,WARN)
-	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,22),"BUILD  //  INFRASTRUCTURE",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,13,TEXT)
-	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,41),"MAT %.0f    Q/E OR WHEEL CYCLE   F ROTATE" % float(sim.stockpiles["industry"].get("materials",0.0)),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,MUTED)
-	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,58),"%d-%d OF %d   •   CLICK STRUCTURE TO SELECT" % [first+1,first+rows,catalog.size()],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,WARN)
+	var vp := get_viewport_rect().size
+	var rect := SettlementUILayout.build_palette(vp,catalog.size())
+	var indices := SettlementCommandCatalog.category_indices(catalog,build_category)
+	var rows := SettlementUILayout.palette_rows(vp,indices.size())
+	var active_local := maxi(0,indices.find(build_catalog_index))
+	var first := SettlementUILayout.palette_first(active_local,indices.size(),rows)
+	_draw_ui_panel(rect,ACCENT)
+	draw_rect(Rect2(rect.position+Vector2(10,7),Vector2(4,18)),ACCENT)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(20,22),"CONSTRUCTION  /  BUILD MENU",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-29,14,TEXT)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,48),"Available materials: %.0f   •   %d projects queued" % [float(sim.stockpiles["industry"].get("materials",0.0)),sim.blueprints.size()],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-23,11,MUTED)
+	for j in range(SettlementCommandCatalog.CATEGORIES.size()):
+		var box := SettlementUILayout.build_category_rect(vp,j)
+		var category := str(SettlementCommandCatalog.CATEGORIES[j])
+		var active := category == build_category
+		var hover := box.has_point(get_local_mouse_position())
+		draw_rect(box,Color("#753034") if active else (Color("#293c43") if hover else Color("#18272f")))
+		draw_rect(box,ACCENT if active else Color("#4c616c"),false,1.0)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(7,17),category,HORIZONTAL_ALIGNMENT_LEFT,box.size.x-12,10,TEXT if active else MUTED)
+	var total := indices.size()
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(13,127),"%d BUILDINGS  /  Q-E OR WHEEL TO BROWSE" % total,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,GOOD)
 	for row in range(rows):
-		var i := first+row
-		var entry: Dictionary = catalog[i]
-		var y := rect.position.y+70.0+float(row)*28.0
-		var active := i==build_catalog_index
-		var affordable := float(sim.stockpiles["industry"].get("materials",0.0)) >= float(entry["cost"])
+		var idx := first+row
+		if idx >= indices.size():
+			break
+		var entry: Dictionary = catalog[indices[idx]]
+		var box := SettlementUILayout.build_row_rect(vp,row)
+		var active := indices[idx] == build_catalog_index
+		var affordable := SettlementCommandCatalog.can_afford(entry,float(sim.stockpiles["industry"].get("materials",0.0)))
+		draw_rect(box,Color("#392429") if active else (Color("#27353a") if box.has_point(get_local_mouse_position()) else Color("#121f26")))
 		if active:
-			draw_rect(Rect2(rect.position.x+6,y,rect.size.x-12,27),Color("#54422c"))
-		draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+12,y+18),str(entry["name"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-105,11,TEXT if affordable else MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-90,y+18),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,78,10,GOOD if affordable else BAD)
+			draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-94,12,TEXT if affordable else MUTED)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x-85,18),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,80,10,GOOD if affordable else BAD)
+	var selected: Dictionary = catalog[build_catalog_index]
+	var divider_y := rect.end.y-108.0
+	draw_line(Vector2(rect.position.x+12,divider_y),Vector2(rect.end.x-12,divider_y),Color("#58616a"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+20),str(selected["name"]).to_upper()+"  /  "+str(selected["capacity"])+" CAPACITY",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,12,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+38),SettlementCommandCatalog.purpose(str(selected["type"])),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+55),"Cost: %.0f materials   •   Build effort: %.0f" % [float(selected["cost"]),float(selected["work"])],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,10,GOOD)
+	for idx in range(2):
+		var action_rect := SettlementUILayout.build_action_rect(vp,idx)
+		var can_rotate := SettlementCommandCatalog.rotate_allowed(str(selected["type"]))
+		var action_name := ("ROTATE [F]" if can_rotate else "FIXED SHAPE") if idx == 0 else "DONE [ESC]"
+		var usable := idx != 0 or can_rotate
+		draw_rect(action_rect,Color("#5e272e") if idx==1 else Color("#21353b"))
+		draw_rect(action_rect,ACCENT if idx==1 else Color("#536a73"),false,1)
+		draw_string(ThemeDB.fallback_font,action_rect.position+Vector2(9,18),action_name,HORIZONTAL_ALIGNMENT_LEFT,action_rect.size.x-18,10,TEXT if usable else MUTED)
 
 func _handle_build_palette_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
 	var catalog := sim.get_build_catalog()
-	var rect := SettlementUILayout.build_palette(get_viewport_rect().size,catalog.size())
+	var rect := SettlementUILayout.build_palette(vp,catalog.size())
 	if not rect.has_point(position):
 		return false
-	var rows := SettlementUILayout.palette_rows(get_viewport_rect().size,catalog.size())
-	var first := SettlementUILayout.palette_first(build_catalog_index,catalog.size(),rows)
-	var row := int(floor((position.y-rect.position.y-70.0)/28.0))
-	if row >= 0 and row < rows:
-		build_catalog_index = first+row
-		build_rotated = false
+	for i in range(SettlementCommandCatalog.CATEGORIES.size()):
+		if SettlementUILayout.build_category_rect(vp,i).has_point(position):
+			_set_build_category(str(SettlementCommandCatalog.CATEGORIES[i]))
+			return true
+	for i in range(2):
+		if not SettlementUILayout.build_action_rect(vp,i).has_point(position):
+			continue
+		if i == 0 and SettlementCommandCatalog.rotate_allowed(str(catalog[build_catalog_index]["type"])):
+			build_rotated = not build_rotated
+		elif i == 1:
+			build_mode = false
+		return true
+	var indices := SettlementCommandCatalog.category_indices(catalog,build_category)
+	var rows := SettlementUILayout.palette_rows(vp,indices.size())
+	var active_local := maxi(0,indices.find(build_catalog_index))
+	var first := SettlementUILayout.palette_first(active_local,indices.size(),rows)
+	for row in range(rows):
+		if first+row < indices.size() and SettlementUILayout.build_row_rect(vp,row).has_point(position):
+			build_catalog_index = indices[first+row]
+			build_rotated = false
+			return true
 	return true
 
 func _draw_toolbar() -> void:
@@ -1411,9 +1473,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					selected_building = {}
 			KEY_Q:
 				if build_mode:
-					build_catalog_index -= 1
-					if build_catalog_index < 0:
-						build_catalog_index = sim.get_build_catalog().size() - 1
+					_cycle_build_selection(-1)
 			KEY_E:
 				if civilization_mode:
 					var settlements := sim.civilization_simulation.get_settlement_list()
@@ -1421,8 +1481,7 @@ func _unhandled_input(event: InputEvent) -> void:
 						var settlement:Dictionary = settlements[civilization_settlement_index]
 						sim.civilization_simulation.cycle_settlement_specialization(sim,str(settlement["id"]))
 				elif build_mode:
-					build_catalog_index = (build_catalog_index + 1) % sim.get_build_catalog().size()
-					build_rotated = false
+					_cycle_build_selection(1)
 			KEY_F:
 				if civilization_mode and not sim.civilization_simulation.logistics_routes.is_empty():
 					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
@@ -1697,14 +1756,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
-				build_catalog_index = maxi(0,build_catalog_index-1)
-				build_rotated = false
+				_cycle_build_selection(-1)
 			else:
 				settlement_world.zoom_camera(-1.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
 			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
-				build_catalog_index = mini(sim.get_build_catalog().size()-1,build_catalog_index+1)
-				build_rotated = false
+				_cycle_build_selection(1)
 			else:
 				settlement_world.zoom_camera(1.0)
 		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
