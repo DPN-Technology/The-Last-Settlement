@@ -28,8 +28,11 @@ Use a successful `main` Windows Build run. The `TheLastSettlement-Windows-Portab
 
 ## 4. In-game playtest workflow
 
-- **F1** — first-run field guide
+- **F1** — optional field guide (not forced at startup)
 - **Space** — pause/resume; **1/2/3** — simulation speed
+- **Right or middle mouse drag** — pan around the wasteland; **mouse wheel** — cursor-anchored zoom
+- **Clickable bottom toolbar** — build, map, governance, economy, factions, civilization, save, load and guide
+- **F2** — expand/collapse the settlement incident feed
 - **B**, then **Q/E** and mouse click — place a structure
 - **M** — world map; **V / K / O / J** — governance, economy, factions and civilization screens
 - **S / L** — save/load
