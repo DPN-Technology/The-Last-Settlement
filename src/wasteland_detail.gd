@@ -208,3 +208,92 @@ static func detail_ruins(terrain: Node3D, mats: Dictionary) -> void:
 			box(terrain,Vector3(x,1.05,z),Vector3(0.15,2.1,0.15),mats["rust"])
 			box(terrain,Vector3(x+1.9,0.8,z),Vector3(3.65,0.07,0.1),mats["steel"])
 			box(terrain,Vector3(x+1.9,1.45,z),Vector3(3.65,0.07,0.1),mats["steel"])
+
+
+static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
+	# MultiMesh minimizes individual draw calls. Ground patches / scrap are
+	# decorative only; the center of the base is left free for gameplay.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 991427
+	var gravel_mesh := BoxMesh.new()
+	gravel_mesh.size = Vector3(1.0, 0.045, 1.0)
+	var gravel := MultiMesh.new()
+	gravel.transform_format = MultiMesh.TRANSFORM_3D
+	gravel.mesh = gravel_mesh
+	gravel.instance_count = 260
+	var gravel_layer := MultiMeshInstance3D.new()
+	gravel_layer.name = "DarkSoilGravelAndRubble"
+	gravel_layer.multimesh = gravel
+	gravel_layer.material_override = mats["stone"]
+	parent.add_child(gravel_layer)
+	for i in range(gravel.instance_count):
+		var x := rng.randf_range(-84.0, 88.0)
+		var z := rng.randf_range(-73.0, 69.0)
+		# Stay off hard-surfaced service roads and future build plots.
+		if absf(x) < 28.0 and absf(z) < 26.0:
+			x += 33.0 if x > 0.0 else -33.0
+		var obj_transform := Transform3D(Basis.IDENTITY, Vector3(x, 0.075, z))
+		obj_transform.basis = Basis(Vector3.UP, rng.randf_range(-PI, PI))
+		obj_transform.basis = obj_transform.basis.scaled(Vector3(rng.randf_range(0.35, 2.4), 1.0, rng.randf_range(0.45, 1.8)))
+		gravel.set_instance_transform(i, obj_transform)
+
+	var metal_mesh := BoxMesh.new()
+	metal_mesh.size = Vector3(0.86, 0.10, 0.40)
+	var metal := MultiMesh.new()
+	metal.transform_format = MultiMesh.TRANSFORM_3D
+	metal.mesh = metal_mesh
+	metal.instance_count = 110
+	var scrap := MultiMeshInstance3D.new()
+	scrap.name = "ScatteredCollapsedMetal"
+	scrap.multimesh = metal
+	scrap.material_override = mats["rust"]
+	parent.add_child(scrap)
+	for i in range(metal.instance_count):
+		var x := rng.randf_range(-75.0, 79.0)
+		var z := rng.randf_range(-55.0, 62.0)
+		if absf(x) < 28.0 and absf(z) < 26.0:
+			z += 30.0 if z > 0.0 else -30.0
+		var t := Transform3D(Basis(Vector3.UP, rng.randf_range(0.0, TAU)), Vector3(x, 0.12, z))
+		t.basis = t.basis.scaled(Vector3(rng.randf_range(0.6, 1.8), 1.0, rng.randf_range(0.6, 1.3)))
+		metal.set_instance_transform(i, t)
+
+	# Remains of former settlement infrastructure, not a repeating flat field.
+	for ix in range(5):
+		for iz in range(3):
+			var base := Vector3(-64.0 + float(ix)*6.5, 0, -38.0 + float(iz)*6.0)
+			box(parent, base + Vector3(0, 0.06, 0), Vector3(4.5, 0.12, 4.0), mats["concrete"])
+			if (ix+iz) % 2 == 0:
+				box(parent, base + Vector3(-1.65, 0.72, 0), Vector3(0.22, 1.44, 3.8), mats["rust"])
+				box(parent, base + Vector3(0, 0.72, 1.7), Vector3(3.4, 1.44, 0.22), mats["concrete"])
+	for pos in [Vector3(-32,0,-24), Vector3(52,0,-26)]:
+		_build_watchpost(parent, pos, mats)
+	for pos in [Vector3(-24,0,31), Vector3(33,0,32), Vector3(-18,0,-28)]:
+		_drum_stack(parent, pos, mats)
+
+static func _build_watchpost(parent: Node3D, pos: Vector3, mats: Dictionary) -> void:
+	var root := Node3D.new()
+	root.position = pos
+	root.name = "PerimeterWatchtower"
+	parent.add_child(root)
+	for dx in [-1.8, 1.8]:
+		for dz in [-1.8, 1.8]:
+			box(root, Vector3(dx, 3.4, dz), Vector3(0.35, 6.8, 0.35), mats["steel"])
+	box(root, Vector3(0, 6.7, 0), Vector3(5.2, 0.35, 5.2), mats["concrete"])
+	box(root, Vector3(0, 8.4, 0), Vector3(5.5, 0.35, 5.5), mats["rust"])
+	for side in [-1.0,1.0]:
+		box(root, Vector3(0, 7.6, side*2.5), Vector3(5.1, 1.5, 0.24), mats["steel"])
+		box(root, Vector3(side*2.5, 7.6, 0), Vector3(0.24, 1.5, 5.1), mats["steel"])
+	box(root, Vector3(0, 3.0, -2.0), Vector3(0.22, 6.0, 0.16), mats["rust"])
+	for rung in range(12):
+		box(root, Vector3(0, 0.45 + float(rung)*0.45, -2.1), Vector3(1.3, 0.10, 0.14), mats["steel"])
+
+static func _drum_stack(parent: Node3D, center: Vector3, mats: Dictionary) -> void:
+	var root := Node3D.new()
+	root.name = "AbandonedFuelDrums"
+	root.position = center
+	parent.add_child(root)
+	for i in range(5):
+		var x := float(i%3) * 0.8
+		var z := float(i/3) * 0.95
+		cylinder(root, Vector3(x, 0.55, z), 0.32, 1.1, mats["rust"])
+		cylinder(root, Vector3(x, 1.1, z), 0.31, 0.04, mats["darkmetal"])
