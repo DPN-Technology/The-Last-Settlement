@@ -275,6 +275,29 @@ func _smoke() -> void:
 		push_error("SMOKE: Real CC0 glTF survivor did not replace the capsule placeholder")
 		quit(1)
 		return
+	# The external GLB was previously displayed as a white mannequin whose
+	# height was inconsistent with the modular architecture. Validate that
+	# every spawned survivor is scaled, costumed and equipped.
+	for entry in world.people.values():
+		var person := entry as Node3D
+		var rig := person.get_node_or_null("ProductionArt") as Node3D
+		if rig == null:
+			push_error("SMOKE: A survivor reverted to placeholder geometry")
+			quit(1)
+			return
+		var rendered_height := float(rig.get_meta("visual_height_m", -1.0))
+		if rendered_height < 1.6 or rendered_height > 2.1:
+			push_error("SMOKE: Human rig not scaled to plausible world dimensions")
+			quit(1)
+			return
+		if int(rig.get_meta("garment_mesh_count", 0)) < 1:
+			push_error("SMOKE: White source mannequin was not recolored")
+			quit(1)
+			return
+		if person.get_node_or_null("SurvivorEquipment/Backpack") == null:
+			push_error("SMOKE: Survival equipment is missing from rigged character")
+			quit(1)
+			return
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
 	if skeletons.is_empty():
 		push_error("SMOKE: Imported survivor lacks rigged human skeleton")
@@ -290,11 +313,35 @@ func _smoke() -> void:
 		push_error("SMOKE: Animated glTF survivor cannot play movement clip")
 		quit(1)
 		return
+	# The initial settlement must contain actual modular architecture,
+	# with visible door openings instead of a single solid building cube.
+	for structure in world.structure_layer.get_children():
+		var shell := structure.get_node_or_null("RearWall")
+		if shell == null:
+			continue
+		if structure.get_node_or_null("EntryDoor") == null:
+			push_error("SMOKE: Building shell missing its real front access opening")
+			quit(1)
+			return
+	var house_found := false
+	var clinic_found := false
+	var workshop_found := false
+	for structure in world.structure_layer.get_children():
+		if structure.get_node_or_null("PitchedHousingRoof") != null:
+			house_found = true
+		if structure.get_node_or_null("ClinicRoof") != null:
+			clinic_found = true
+		if structure.get_node_or_null("RaisedMachineRoom") != null:
+			workshop_found = true
+	if not house_found or not clinic_found or not workshop_found:
+		push_error("SMOKE: Unique housing, medical or workshop roof geometry missing")
+		quit(1)
+		return
 	var workwear := world.materials["workwear"] as StandardMaterial3D
 	if workwear == null or workwear.emission_enabled:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: CC0 animated skeleton, scanned PBR diffuse and normals, crops, world, saves and controls")
+	print("PLAYTEST SMOKE PASS: clothed/scaled rig, architectural doors and roofs, PBR normals, crops, world and saves")
 	instance.queue_free()
 	quit(0)
