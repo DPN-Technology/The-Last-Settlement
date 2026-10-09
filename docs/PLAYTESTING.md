@@ -17,7 +17,7 @@ Stable updates use the game's **F10** Update Command. Development artifacts are 
 
 - Run `Launch-TheLastSettlement.cmd` for the 3D build.
 - If the game shows a graphics API/driver error, try `Launch-TheLastSettlement-Compatibility.cmd` (OpenGL Compatibility). Update GPU drivers when possible.
-- **Right or middle drag** pans the 3D camera; the wheel zooms perspective; **Home** recenters the command site.
+- **Right or middle drag** pans the 3D camera; **Alt + right drag** orbits the camera; the wheel zooms perspective; **Home** recenters the command site.
 - The new scene keeps mouse construction, survivors, expeditions and save/load. Controls and campaign UI have not yet received a complete 3D-era redesign.
 - The current environment geometry is authored procedurally as a **3D technical foundation**; realism requires imported high-quality meshes, photo-based PBR surfaces, animation, particle/weather systems and gameplay captures. Read [3D production art requirements](THREE_D_PRODUCTION.md).
 
@@ -40,7 +40,7 @@ Use a successful `main` Windows Build run. The `TheLastSettlement-Windows-Portab
 
 - **F1** — optional field guide (not forced at startup)
 - **Space** — pause/resume; **1/2/3** — simulation speed
-- **Right or middle mouse drag** — pan the real 3D camera; **mouse wheel** — 3D perspective zoom; **Home** — center Last Haven
+- **Right or middle mouse drag** — pan the real 3D camera; **Alt + right drag** — 3D orbit; **mouse wheel** — 3D perspective zoom; **Home** — center Last Haven
 - **Clickable bottom toolbar** — build, map, governance, economy, factions, civilization, save, load and guide
 - **F2** — expand/collapse the settlement incident feed
 - **B**, then **Q/E** and mouse click — place a structure
