@@ -23,6 +23,7 @@ var update_mode := false
 var help_mode := false
 var incident_panel_visible := false
 var field_directives_visible := false
+var overview_visible := false
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var camera_offset := Vector2(-75, -34)
@@ -159,6 +160,8 @@ func _draw() -> void:
 	# Action buttons are drawn after command content and use the same hitboxes
 	# as input handling. Keyboard-only workflows now have mouse equivalents.
 	_draw_panel_actions()
+	if overview_visible:
+		_draw_overview()
 
 func _panel_action_items() -> Array:
 	if help_mode:
@@ -764,7 +767,7 @@ func _active_screen_label() -> String:
 		return "UPDATES"
 	if help_mode:
 		return "FIELD GUIDE"
-	return "LAST HAVEN"
+	return "WORLD VIEW"
 
 func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
 	draw_rect(rect, Color("#0d1418ed"), true)
@@ -777,9 +780,18 @@ func _draw_hud() -> void:
 	var top_h := SettlementUILayout.TOP_H
 	draw_rect(Rect2(0, 0, vp.x, top_h), Color("#080d12f3"))
 	draw_line(Vector2(0,top_h-1), Vector2(vp.x,top_h-1), ACCENT, 1.5)
-	var title_size := 17 if vp.x >= 1000.0 else 13
-	draw_string(ThemeDB.fallback_font, Vector2(14,24), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, 284, title_size, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(15,43), "RECOVERY NETWORK  /  %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, 280, 10, RUST)
+	# Human-readable identity: the corporate badge stays visible, but a player
+	# sees the actual game and settlement name, not internal network/site IDs.
+	var identity := SettlementUILayout.identity_rect(vp)
+	var is_hovered := identity.has_point(get_local_mouse_position())
+	var badge := Rect2(identity.position+Vector2(5,7),Vector2(32,32))
+	draw_rect(badge,Color("#662628") if is_hovered else Color("#3d2024"))
+	draw_rect(badge,ACCENT,false,1.0)
+	draw_string(ThemeDB.fallback_font,badge.position+Vector2(5,21),"DPN",HORIZONTAL_ALIGNMENT_LEFT,27,10,TEXT)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,21),"THE LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,16,TEXT)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % sim.settlement_name,HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
+	if is_hovered:
+		draw_line(Vector2(identity.position.x+44,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),GOOD,1.0)
 
 	var alive := sim.get_alive_citizens().size()
 	var morale := sim.get_average_morale()
@@ -807,9 +819,12 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font, rect.position + Vector2(7,35), str(item[1]), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x-12, 18, TEXT)
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,rect.size.x-14),2)),Color("#2d383b"))
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,(rect.size.x-14)*fraction),2)),severity)
-	var summary := "DAY %03d  %02d:%02d   |   MAT %.0f   BP %d   ROOMS %d   GRID %.0f/%.0f   BAT %.0f%%   SAN %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),sim.completed_rooms,float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"])),float(sim.utility_state["sanitation"])]
-	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-120,10,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(vp.x-100,69),_active_screen_label(),HORIZONTAL_ALIGNMENT_RIGHT,89,10,GOOD)
+	var battery_percent := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
+	var summary := "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
+	if vp.x >= 1120.0:
+		summary = "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Power: %.0f produced / %.0f needed  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),battery_percent]
+	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-170,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(vp.x-145,69),_active_screen_label(),HORIZONTAL_ALIGNMENT_RIGHT,131,10,GOOD)
 
 	if selected_citizen.is_empty() and selected_building.is_empty():
 		if incident_panel_visible:
@@ -843,6 +858,94 @@ func _draw_hud() -> void:
 		draw_rect(notice,PANEL_SOLID)
 		draw_rect(notice,GOOD,false,1.0)
 		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
+
+func _next_settlement_goal() -> String:
+	if not bool(sim.field_objectives.get("inspected",false)):
+		return "Inspect a survivor: click a person to see their needs."
+	if not bool(sim.field_objectives.get("blueprint",false)):
+		return "Start construction: open Build, then place a blueprint."
+	if not bool(sim.field_objectives.get("expedition",false)):
+		return "Explore the region: open Region and send a salvage team."
+	if not bool(sim.field_objectives.get("survived",false)):
+		return "Keep your settlement alive until Day 2."
+	return "Opening goals completed. Expand your settlement at your own pace."
+
+func _draw_overview() -> void:
+	var vp := get_viewport_rect().size
+	var area := SettlementUILayout.overview_rect(vp)
+	draw_rect(area,Color("#101a20f6"))
+	draw_rect(area,Color("#789aa3"),false,1.5)
+	draw_rect(Rect2(area.position,Vector2(area.size.x,3)),ACCENT)
+	var left := area.position.x+17.0
+	var full_width := area.size.x-34.0
+	var top := area.position.y
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+29),"YOUR SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,full_width,17,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % sim.settlement_name,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+68),"Day %d   |   %02d:%02d   |   %s" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),"Paused" if sim.paused else "Simulation running"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,MUTED)
+	draw_line(Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#41575e"),1.0)
+	var complete := 0
+	for value in sim.field_objectives.values():
+		if bool(value):
+			complete += 1
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+100),"YOUR NEXT STEP  •  %d/4 goals completed" % complete,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+120),_next_settlement_goal(),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,TEXT)
+	draw_line(Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#31484e"),1.0)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+154),"SUPPLIES & BUILDING",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+174),"Building materials: %.0f" % float(sim.resources["materials"]),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+193),"Projects being built: %d    |    Rooms finished: %d" % [sim.blueprints.size(),sim.completed_rooms],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
+	draw_line(Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#31484e"),1.0)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+228),"ESSENTIAL SYSTEMS",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
+	var power_available := float(sim.utility_state["power_generated"])
+	var power_needed := float(sim.utility_state["power_demand"])
+	var power_ok := power_available>=power_needed
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+248),"Electricity: %.0f available / %.0f needed" % [power_available,power_needed],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD if power_ok else WARN)
+	var charge := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+268),"Battery charge: %.0f%%    |    Sanitation: %.0f%%" % [charge,float(sim.utility_state["sanitation"])],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
+	if area.size.y>350.0:
+		draw_line(Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#31484e"),1.0)
+		draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"TIP: Click people or buildings to inspect them.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Use Space to pause or resume the settlement.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
+	var buttons := ["OPEN BUILD", "SHOW GOALS", "CLOSE"]
+	for index in range(buttons.size()):
+		var rect := SettlementUILayout.overview_button_rect(vp,index)
+		var over := rect.has_point(get_local_mouse_position())
+		draw_rect(rect,Color("#344f55") if over else Color("#1e333a"))
+		draw_rect(rect,GOOD if over else Color("#58747e"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,19),buttons[index],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-14,10,TEXT)
+
+func _handle_overview_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	if SettlementUILayout.identity_rect(vp).has_point(position):
+		overview_visible = not overview_visible
+		return true
+	if not overview_visible:
+		return false
+	for index in range(3):
+		if not SettlementUILayout.overview_button_rect(vp,index).has_point(position):
+			continue
+		overview_visible = false
+		if index == 0:
+			# Reuse toolbar semantics; never trigger Civilization's treasury B.
+			_handle_toolbar_click(SettlementUILayout.navbar_rect(vp,0).get_center())
+		elif index == 1:
+			build_mode = false
+			world_map_mode = false
+			governance_mode = false
+			economy_mode = false
+			faction_mode = false
+			civilization_mode = false
+			update_mode = false
+			help_mode = false
+			selected_citizen = {}
+			selected_building = {}
+			selected_blueprint = {}
+			field_directives_visible = true
+		return true
+	# Close safely on any click outside the briefing without selecting terrain.
+	# Clicks on the briefing body never leak through to gameplay.
+	if not SettlementUILayout.overview_rect(vp).has_point(position):
+		overview_visible = false
+	return true
 
 func _draw_directive_tab() -> void:
 	var done := 0
@@ -1509,7 +1612,9 @@ func _unhandled_input(event: InputEvent) -> void:
 					sim.demolish_building(selected_building)
 					selected_building = {}
 			KEY_ESCAPE:
-				if help_mode:
+				if overview_visible:
+					overview_visible = false
+				elif help_mode:
 					help_mode = false
 				elif update_mode:
 					update_mode = false
@@ -1532,6 +1637,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_toolbar_click(event.position):
+				overview_visible = false
+				return
+			if _handle_overview_click(event.position):
 				return
 			if help_mode or update_mode:
 				return
