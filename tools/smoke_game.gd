@@ -76,17 +76,17 @@ func _smoke() -> void:
 		quit(1)
 		return
 	# Player can follow the opening objective and choose a blueprint by mouse.
-	instance._handle_objective_click(Vector2(70, 210))
+	instance._handle_objective_click(SettlementUILayout.objective_panel().position + Vector2(50,72))
 	if not bool(sim.field_objectives["inspected"]) or instance.selected_citizen.is_empty():
 		push_error("SMOKE: Survivor inspection directive did not complete")
 		quit(1)
 		return
-	instance._handle_objective_click(Vector2(70, 242))
+	instance._handle_objective_click(SettlementUILayout.objective_panel().position + Vector2(50,98))
 	if not instance.build_mode:
 		push_error("SMOKE: Directive did not open construction")
 		quit(1)
 		return
-	instance._handle_build_palette_click(Vector2(75, 214 + 2 * 30 + 9))
+	instance._handle_build_palette_click(SettlementUILayout.build_palette(instance.get_viewport_rect().size, sim.get_build_catalog().size()).position + Vector2(45,70 + 2 * 28 + 10))
 	if instance.build_catalog_index != 2:
 		push_error("SMOKE: Construction catalog did not respond to mouse")
 		quit(1)
@@ -122,11 +122,40 @@ func _smoke() -> void:
 		push_error("SMOKE: Player cannot select a construction blueprint")
 		quit(1)
 		return
-	instance._handle_inspector_click(Vector2(instance.get_viewport_rect().size.x - 200, 307))
+	instance._handle_inspector_click(SettlementUILayout.side_panel(instance.get_viewport_rect().size,350.0).position + Vector2(190,167))
 	if not sim.blueprints.is_empty():
 		push_error("SMOKE: Clickable blueprint cancellation failed")
 		quit(1)
 		return
+	# All toolbars and resource chips must fit in the live viewport and share
+	# click geometry; previous hard-coded 118px/88px HUD obscured the 3D world.
+	var screen := instance.get_viewport_rect().size
+	var resource_rectangles := SettlementUILayout.resource_rects(screen)
+	if resource_rectangles.size() != 6:
+		push_error("SMOKE: Expected six compact resource indicators")
+		quit(1)
+		return
+	if SettlementUILayout.TOP_H > 85.0 or SettlementUILayout.BOTTOM_H > 62.0:
+		push_error("SMOKE: UI bars still consume too much of the 3D view")
+		quit(1)
+		return
+	for card in resource_rectangles:
+		if card.position.y < 0 or card.end.y > SettlementUILayout.TOP_H or card.end.x > screen.x:
+			push_error("SMOKE: Resource card clipped by screen edge")
+			quit(1)
+			return
+	for index in range(9):
+		var nav_rect := SettlementUILayout.navbar_rect(screen,index)
+		if nav_rect.position.y < screen.y-SettlementUILayout.BOTTOM_H or nav_rect.end.y > screen.y or nav_rect.end.x > screen.x:
+			push_error("SMOKE: Compact navigation tab outside bottom bar")
+			quit(1)
+			return
+	for width in [350.0,480.0,700.0]:
+		var side := SettlementUILayout.side_panel(screen,width)
+		if side.position.y < SettlementUILayout.TOP_H or side.end.y > screen.y-SettlementUILayout.BOTTOM_H:
+			push_error("SMOKE: Secondary command panel is clipped by HUD")
+			quit(1)
+			return
 	# Toolbar Build is not the same action as keyboard B in Civilization
 	# Command. It must never trigger emergency federal spending.
 	instance.civilization_mode = true
@@ -134,7 +163,7 @@ func _smoke() -> void:
 	instance.build_mode = false
 	sim.federal_governance_simulation.federal_treasury = 300.0
 	var treasury_before: float = sim.federal_governance_simulation.federal_treasury
-	var build_button := Vector2(50, instance.get_viewport_rect().size.y - 36.0)
+	var build_button := SettlementUILayout.navbar_rect(instance.get_viewport_rect().size,0).get_center()
 	instance._handle_toolbar_click(build_button)
 	if not instance.build_mode or instance.civilization_mode or instance.world_map_mode:
 		push_error("SMOKE: Build toolbar did not enter settlement construction")
@@ -356,6 +385,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: rounded packs, gabled shelter roof and terrain stones, rig, PBR, crops, gameplay and saves")
+	print("PLAYTEST SMOKE PASS: compact responsive HUD and controls, gabled 3D roofs, survivor rigs, PBR and saves")
 	instance.queue_free()
 	quit(0)
