@@ -64,6 +64,11 @@ static func terrain_mesh() -> ArrayMesh:
 	return tool.commit()
 
 static func detail_building(group: Node3D, kind: String, size: Vector2, height: float, condition: float, mats: Dictionary) -> void:
+	# Housing uses a genuine sloped roof. Applying the old common flat-roof
+	# parapets/HVAC over it flattened the silhouette in Windows gameplay.
+	if kind == "housing":
+		_housing(group, size, height, mats)
+		return
 	var x := size.x * 0.5
 	var z := size.y * 0.5
 	var y := height + 0.5
@@ -118,11 +123,8 @@ static func detail_building(group: Node3D, kind: String, size: Vector2, height: 
 static func _housing(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	var x := size.x*0.5
 	var z := size.y*0.5
-	for sign in [-1.0,1.0]:
-		var p: float = float(sign)*x*0.45
-		var panel := box(group,Vector3(p,height+1.25,0),Vector3(2.8,0.13,3.0),mats["blue"])
-		panel.rotation.z = sign*0.11
-		box(group,Vector3(p,height+1.4,0),Vector3(0.09,0.19,3.0),mats["steel"])
+	# No old boxed rooftop panels: pitched galvanized roof is in
+	# SettlementArchitecture3D. This lower awning preserves readable access.
 	box(group,Vector3(0,0.16,-z-1.2),Vector3(2.8,0.26,2.5),mats["concrete"])
 	# A battered shelter entrance, supported patched-steel porch and shutters.
 	var awning := box(group,Vector3(0,3.0,-z-1.38),Vector3(4.7,0.18,2.5),mats["rust"])
@@ -131,8 +133,9 @@ static func _housing(group: Node3D, size: Vector2, height: float, mats: Dictiona
 	for sign in [-1.0,1.0]:
 		box(group,Vector3(sign*2.05,1.52,-z-2.4),Vector3(0.14,3.05,0.14),mats["steel"])
 		box(group,Vector3(sign*x*0.78,2.0,-z-0.12),Vector3(0.85,1.3,0.15),mats["rooflight"])
-	for index in range(2):
-		box(group,Vector3(-x*0.45+float(index)*1.5,height+1.15,z*0.4),Vector3(1.0,0.9,1.1),mats["darkmetal"])
+	# Lightweight vertical service pipe at the side, not an oversized roof cube.
+	box(group, Vector3(x+0.22,1.65,z*0.37), Vector3(0.18,3.0,0.20),mats["steel"])
+	box(group, Vector3(x+0.23,3.18,z*0.37), Vector3(0.42,0.12,0.40),mats["darkmetal"])
 
 static func _workshop(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	var x := size.x*0.5
