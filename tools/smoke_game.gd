@@ -6,12 +6,12 @@ func _initialize() -> void:
 	call_deferred("_smoke")
 
 func _smoke() -> void:
-	var scene_resource := load("res://src/Main.tscn")
+	var scene_resource: PackedScene = load("res://src/Main.tscn")
 	if scene_resource == null:
 		push_error("SMOKE: Main scene missing")
 		quit(1)
 		return
-	var instance := scene_resource.instantiate()
+	var instance = scene_resource.instantiate()
 	root.add_child(instance)
 	if instance == null or instance.sim == null:
 		push_error("SMOKE: Simulation not initialized")
@@ -26,7 +26,7 @@ func _smoke() -> void:
 		push_error("SMOKE: Tutorial must not block the settlement by default")
 		quit(1)
 		return
-	if not instance.settlement_visuals is SettlementVisuals:
+	if not (instance.settlement_visuals is SettlementVisuals):
 		push_error("SMOKE: Scene visual renderer unavailable")
 		quit(1)
 		return
