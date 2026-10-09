@@ -619,7 +619,19 @@ func _make_survivor(c: Dictionary) -> Node3D:
 		var art_selection := Node3D.new()
 		art_selection.name = "Selection"
 		person.add_child(art_selection)
-		_cylinder(art_selection, Vector3(0, 0.05, 0), 0.95, 0.08, materials["warning"])
+		# A thin ground outline keeps the actual character visible; the old
+		# bright solid disc obscured shoes and surrounding terrain.
+		var outline_mesh := TorusMesh.new()
+		outline_mesh.inner_radius = 0.64
+		outline_mesh.outer_radius = 0.71
+		outline_mesh.rings = 6
+		outline_mesh.ring_segments = 24
+		var outline := MeshInstance3D.new()
+		outline.name = "SelectionOutline"
+		outline.mesh = outline_mesh
+		outline.material_override = materials["warning"]
+		outline.position = Vector3(0, 0.055, 0)
+		art_selection.add_child(outline)
 		art_selection.visible = false
 		return person
 	SettlementDetailArt3D.create_survivor(person, c, materials)
