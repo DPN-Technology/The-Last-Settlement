@@ -110,6 +110,28 @@ func _smoke() -> void:
 		push_error("SMOKE: Clickable blueprint cancellation failed")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: scene, rendering, movement pause, clickable directives, build catalog, save/load and blueprint cancellation")
+	# Toolbar Build is not the same action as keyboard B in Civilization
+	# Command. It must never trigger emergency federal spending.
+	instance.civilization_mode = true
+	instance.world_map_mode = true
+	instance.build_mode = false
+	sim.federal_governance_simulation.federal_treasury = 300.0
+	var treasury_before: float = sim.federal_governance_simulation.federal_treasury
+	var build_button := Vector2(50, instance.get_viewport_rect().size.y - 36.0)
+	instance._handle_toolbar_click(build_button)
+	if not instance.build_mode or instance.civilization_mode or instance.world_map_mode:
+		push_error("SMOKE: Build toolbar did not enter settlement construction")
+		quit(1)
+		return
+	if sim.federal_governance_simulation.federal_treasury != treasury_before:
+		push_error("SMOKE: Build toolbar unexpectedly spent federal funds")
+		quit(1)
+		return
+	instance._handle_toolbar_click(build_button)
+	if instance.build_mode:
+		push_error("SMOKE: Clicking active Build toolbar did not close construction")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: scene, rendering, pause, objectives, build catalog, saves, blueprint cancel and toolbar mode safety")
 	instance.queue_free()
 	quit(0)
