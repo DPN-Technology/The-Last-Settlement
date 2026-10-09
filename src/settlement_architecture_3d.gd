@@ -86,7 +86,7 @@ static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, m
 	var gable := SurfaceTool.new()
 	gable.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for side in [-1.0, 1.0]:
-		var z := side * size.y * 0.5
+		var z: float = float(side) * size.y * 0.5
 		var left := Vector3(-half,height+0.23,z)
 		var right := Vector3(half,height+0.23,z)
 		var apex := Vector3(0,height+ridge+0.23,z)
