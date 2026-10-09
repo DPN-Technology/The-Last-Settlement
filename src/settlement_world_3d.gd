@@ -391,7 +391,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 		_rebuild_structures(sim)
 	_update_people(sim, selected_citizen)
 	_update_daylight(sim.hour)
-	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)))
+	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)) and not sim.paused)
 	# Construction hologram updates without re-instantiating building meshes.
 	if building_preview != null:
 		building_preview.visible = build_mode
