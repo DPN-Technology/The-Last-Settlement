@@ -119,7 +119,7 @@ static func _housing(group: Node3D, size: Vector2, height: float, mats: Dictiona
 	var x := size.x*0.5
 	var z := size.y*0.5
 	for sign in [-1.0,1.0]:
-		var p := sign*x*0.45
+		var p: float = float(sign)*x*0.45
 		var panel := box(group,Vector3(p,height+1.25,0),Vector3(2.8,0.13,3.0),mats["blue"])
 		panel.rotation.z = sign*0.11
 		box(group,Vector3(p,height+1.4,0),Vector3(0.09,0.19,3.0),mats["steel"])
@@ -196,7 +196,7 @@ static func detail_ruins(terrain: Node3D, mats: Dictionary) -> void:
 	# Foreground salvage site: palette breaks the empty uniform dirt plane.
 	for base in [Vector3(-31,0,12),Vector3(33,0,-27),Vector3(-33,0,-30),Vector3(40,0,20)]:
 		for i in range(6):
-			var p := base + Vector3(float(i%3)*1.05,0,float(i/3)*1.1)
+			var p: Vector3 = Vector3(base) + Vector3(float(i%3)*1.05,0,float(i/3)*1.1)
 			box(terrain,p+Vector3(0,0.4,0),Vector3(0.8,0.8,0.85),mats["rust"] if i%2==0 else mats["concrete"])
 	# Broken fence segments with pilings and warning lights.
 	for edge in range(2):
