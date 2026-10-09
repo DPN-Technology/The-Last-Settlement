@@ -452,59 +452,58 @@ func _handle_region_click(position: Vector2) -> bool:
 	_world_map_select(position)
 	return true
 
+func _format_recipe_items(ingredients: Dictionary) -> String:
+	var chunks := PackedStringArray()
+	for resource in ingredients.keys():
+		chunks.append("%s %.0f" % [str(resource).capitalize(),float(ingredients[resource])])
+	return ", ".join(chunks)
+
 func _draw_economy_panel() -> void:
 	var vp := get_viewport_rect().size
-	var bounds := SettlementUILayout.side_panel(vp,480.0)
-	var x := bounds.position.x
-	var y := bounds.position.y
-	var w := bounds.size.x
-	var h := bounds.size.y
+	var area := SettlementUILayout.side_panel(vp,480.0)
+	var x := area.position.x
+	var y := area.position.y
+	var w := area.size.x
 	var eco := sim.economy_simulation
-	var trade_sources := eco.get_trade_sources()
-	if trade_sources.is_empty():
+	var sources := eco.get_trade_sources()
+	if sources.is_empty():
 		economy_source_index = 0
-	elif economy_source_index >= trade_sources.size():
-		economy_source_index = 0
-	var active_source := trade_sources[economy_source_index]
-	_draw_ui_panel(bounds,RUST)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"INDUSTRY + ECONOMY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,-1,15,RUST)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"CREDITS // %.1f" % eco.credits,HORIZONTAL_ALIGNMENT_LEFT,-1,18,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+220,y+62),"MARKET // %s" % active_source["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD if economy_source_index>0 else MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+88),"FUEL %.1f   PARTS %.1f   TOOLS %.1f   COMPONENTS %.1f" % [float(eco.industry_stock["fuel"]),float(eco.industry_stock["parts"]),float(eco.industry_stock["tools"]),float(eco.industry_stock["components"])],HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+108),"WAREHOUSE %.0f/%.0f   PRESSURE %.0f%%   PROD EFF %.0f%%" % [eco.warehouse_used,eco.warehouse_capacity,eco.warehouse_pressure*100.0,eco.production_efficiency*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
+	else:
+		economy_source_index = clampi(economy_source_index,0,sources.size()-1)
+	var market_name := "Local exchange" if sources.is_empty() else str(sources[economy_source_index]["name"])
+	_draw_ui_panel(area,ACCENT)
+	draw_rect(Rect2(x+14,y+13,4,22),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+30),"INDUSTRY   /   PRODUCTION & TRADE",HORIZONTAL_ALIGNMENT_LEFT,w-38,15,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+59),"Credits: %.1f      Market: %s" % [eco.credits,market_name],HORIZONTAL_ALIGNMENT_LEFT,w-30,11,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+80),"Fuel: %.0f   Parts: %.0f   Tools: %.0f   Components: %.0f" % [float(eco.industry_stock["fuel"]),float(eco.industry_stock["parts"]),float(eco.industry_stock["tools"]),float(eco.industry_stock["components"])],HORIZONTAL_ALIGNMENT_LEFT,w-35,11,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+101),"Warehouse: %.0f/%.0f   •   Efficiency: %.0f%%" % [eco.warehouse_used,eco.warehouse_capacity,eco.production_efficiency*100.0],HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
 	if eco.bottleneck_reason != "":
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+126),"BOTTLENECK // %s" % eco.bottleneck_reason,HORIZONTAL_ALIGNMENT_LEFT,-1,10,WARN)
-	var ry := y + 150.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"MARKET INDEX",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	ry += 26.0
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+122),"Needs attention: "+str(eco.bottleneck_reason),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+149),"TRADE ITEMS  /  CLICK TO SELECT",HORIZONTAL_ALIGNMENT_LEFT,w-38,11,ACCENT)
 	for i in range(ECONOMY_ITEMS.size()):
-		var item: String = str(ECONOMY_ITEMS[i])
-		var marker := ">" if i == economy_item_index else " "
-		var col := TEXT if i == economy_item_index else MUTED
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s %.1f cr" % [marker,item.to_upper(),eco.get_trade_price(item,economy_source_index)],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
-		ry += 22.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] ITEM  [H] MARKET  [ENTER] BUY 1  [BACKSPACE] SELL 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-	ry += 30.0
-	var selected_recipe: String = str(ECONOMY_RECIPES[economy_recipe_index])
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION ORDER // %s" % selected_recipe.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
-	ry += 20.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"[N] NEXT RECIPE   [C] QUEUE 1",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-	ry += 30.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"PRODUCTION QUEUE",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	ry += 24.0
-	for batch in eco.production_queue:
-		var recipe := str(batch["recipe"])
-		var status := str(batch["status"]).to_upper()
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"BATCH-%03d // %s // %s" % [int(batch["id"]),recipe,status],HORIZONTAL_ALIGNMENT_LEFT,-1,10,TEXT)
-		ry += 20.0
-		if ry > y+h-95:
+		var item := str(ECONOMY_ITEMS[i])
+		var row := Rect2(x+17.0,y+158.0+float(i)*22.0,w-34.0,21.0)
+		var selected := i == economy_item_index
+		draw_rect(row,Color("#512a32") if selected else (Color("#273942") if row.has_point(get_local_mouse_position()) else Color("#14242e")))
+		if selected:
+			draw_rect(Rect2(row.position,Vector2(3,row.size.y)),ACCENT)
+		draw_string(ThemeDB.fallback_font,row.position+Vector2(8,15),item.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,160,11,TEXT if selected else MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(row.end.x-130.0,row.position.y+15.0),"%.1f credits" % eco.get_trade_price(item,economy_source_index),HORIZONTAL_ALIGNMENT_RIGHT,124,11,GOOD if selected else MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+336),"CRAFTING  /  CHOOSE RECIPE, THEN QUEUE",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,ACCENT)
+	var recipe_name: String = str(ECONOMY_RECIPES[economy_recipe_index])
+	var recipe: Dictionary = eco.recipes.get(recipe_name,{})
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+356),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,w-36,13,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+376),"Requires: "+_format_recipe_items(recipe.get("input",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+394),"Produces: "+_format_recipe_items(recipe.get("output",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,GOOD)
+	draw_line(Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#49646b"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+424),"PRODUCTION QUEUE  /  %d BATCHES" % eco.production_queue.size(),HORIZONTAL_ALIGNMENT_LEFT,w-34,11,ACCENT)
+	var last_y := area.end.y - 94.0
+	var y_row := y+444.0
+	for item in eco.production_queue:
+		if y_row>last_y:
 			break
-	var vehicle: Dictionary = eco.vehicles[0] if not eco.vehicles.is_empty() else {}
-	if not vehicle.is_empty():
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-78),"VEHICLE // %s  COND %.0f%%  FUEL %.1f" % [vehicle["name"],float(vehicle["condition"]),float(vehicle["fuel"])],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+h-58),"REPAIR KITS %.0f   FUEL BURN %.2f/day   [Y] REPAIR VEHICLE" % [eco.repair_kits,eco.fuel_consumed_today],HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-
-
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y_row),str(item["recipe"])+"  /  "+str(item["status"]).capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,TEXT)
+		y_row += 17.0
 
 func _draw_civilization_panel() -> void:
 	var vp := get_viewport_rect().size
