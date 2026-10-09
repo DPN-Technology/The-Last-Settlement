@@ -71,10 +71,10 @@ var prior_lighting_hour := -10.0
 var structure_layer: Node3D
 var survivors_layer: Node3D
 var terrain_layer: Node3D
-var focus := Vector3.ZERO
-var camera_distance := 57.0
+var focus := Vector3(4.0, 0.0, 2.0)
+var camera_distance := 48.0
 var yaw := 0.0
-var pitch := deg_to_rad(53.0)
+var pitch := deg_to_rad(44.0)
 var cached_layout := ""
 var last_daylight := -1
 var people: Dictionary = {}
@@ -98,7 +98,7 @@ func _ready() -> void:
 	add_child(survivors_layer)
 	camera = Camera3D.new()
 	camera.name = "PlayablePerspectiveCamera"
-	camera.fov = 47.0
+	camera.fov = 50.0
 	camera.near = 0.08
 	camera.far = 500.0
 	add_child(camera)
@@ -265,11 +265,9 @@ func _sphere(parent: Node3D, pos: Vector3, radius: float, mat: Material) -> Mesh
 func _build_terrain() -> void:
 	var ground := MeshInstance3D.new()
 	ground.mesh = WastelandDetail.terrain_mesh()
-	var shader := Shader.new()
-	shader.code = GROUND_SHADER
-	var terrain_material := ShaderMaterial.new()
-	terrain_material.shader = shader
-	ground.material_override = terrain_material
+	# Baked soil/clay/gravel albedo works in Forward+ and GL Compatibility.
+	# It also remains testable from CPU image pixels in GitHub headless CI.
+	ground.material_override = GroundAppearance.new_ground_material()
 	terrain_layer.add_child(ground)
 
 	# Graveled settlement access. Physical 3D roads and lane marking strips.
@@ -299,6 +297,7 @@ func _build_terrain() -> void:
 		var p := Vector3(-48 + float(i % 5)*2.6, 0, 34 + float(i / 5)*3.0)
 		_box(terrain_layer, p + Vector3(0, 0.6, 0), Vector3(1.9, 1.2, 1.9), materials["rust"])
 	WastelandDetail.detail_ruins(terrain_layer, materials)
+	WastelandDetail.build_terrain_dressing(terrain_layer, materials)
 
 func _road(a: Vector3, b: Vector3, width: float) -> void:
 	var delta := b - a
