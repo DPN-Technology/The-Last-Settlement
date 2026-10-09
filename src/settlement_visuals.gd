@@ -68,16 +68,16 @@ func _draw_terrain(canvas: CanvasItem, offset: Vector2, zoom: float) -> void:
 				canvas.draw_colored_polygon(PackedVector2Array([
 					stone, stone + Vector2(12, 3) * zoom,
 					stone + Vector2(8, 10) * zoom, stone + Vector2(-2, 7) * zoom
-				]), Color("#65675b", 0.5))
+				]), Color(Color("#65675b"), 0.5))
 			if noise % 7 == 0:
 				var dry := pos + Vector2(16, 42) * zoom
-				canvas.draw_line(dry, dry + Vector2(18, -5) * zoom, Color("#6b6651", 0.36), maxf(1.0, zoom))
+				canvas.draw_line(dry, dry + Vector2(18, -5) * zoom, Color(Color("#6b6651"), 0.36), maxf(1.0, zoom))
 			if noise % 23 == 0:
 				var grass := pos + Vector2(31, 31) * zoom
 				_draw_shrub(canvas, grass, zoom * 0.8)
 	# Overgrown map limits and the former city highway.
 	var border := Rect2(_screen(Vector2(170, 130), offset, zoom), Vector2(1290, 720) * zoom)
-	canvas.draw_rect(border, Color("#776c51", 0.22), false, maxf(1.0, zoom * 1.4))
+	canvas.draw_rect(border, Color(Color("#776c51"), 0.22), false, maxf(1.0, zoom * 1.4))
 
 func _draw_roads(canvas: CanvasItem, buildings: Array[Dictionary], offset: Vector2, zoom: float) -> void:
 	var center := _screen(Vector2(705, 380), offset, zoom)
@@ -88,9 +88,9 @@ func _draw_roads(canvas: CanvasItem, buildings: Array[Dictionary], offset: Vecto
 		var target := _screen(Vector2(building["position"]), offset, zoom)
 		var elbow := Vector2(target.x, center.y)
 		var points := PackedVector2Array([center, elbow, target])
-		canvas.draw_polyline(points, Color("#171817", 0.88), 36.0 * zoom)
+		canvas.draw_polyline(points, Color(Color("#171817"), 0.88), 36.0 * zoom)
 		canvas.draw_polyline(points, TRACK, 28.0 * zoom)
-		canvas.draw_polyline(points, Color("#817866", 0.28), 2.0 * zoom)
+		canvas.draw_polyline(points, Color(Color("#817866"), 0.28), 2.0 * zoom)
 	# Broken highway approaching the camp from the west.
 	var a := _screen(Vector2(-180, 425), offset, zoom)
 	var b := _screen(Vector2(400, 425), offset, zoom)
@@ -99,13 +99,13 @@ func _draw_roads(canvas: CanvasItem, buildings: Array[Dictionary], offset: Vecto
 	for i in range(-3, 11):
 		var x := float(i) * 54.0
 		var s := _screen(Vector2(x, 425), offset, zoom)
-		canvas.draw_line(s, s + Vector2(22, 0) * zoom, Color("#c3ab77", 0.42), maxf(1.0, 2.0 * zoom))
+		canvas.draw_line(s, s + Vector2(22, 0) * zoom, Color(Color("#c3ab77"), 0.42), maxf(1.0, 2.0 * zoom))
 
 func _draw_props(canvas: CanvasItem, offset: Vector2, zoom: float) -> void:
 	# Abandoned objects sell the post-collapse scale and world identity.
 	for site in [Vector2(295, 275), Vector2(1490, 415), Vector2(280, 690), Vector2(1340, 845)]:
 		var p := _screen(site, offset, zoom)
-		canvas.draw_rect(Rect2(p + Vector2(6, 6) * zoom, Vector2(38, 20) * zoom), Color("#070c0e", 0.55))
+		canvas.draw_rect(Rect2(p + Vector2(6, 6) * zoom, Vector2(38, 20) * zoom), Color(Color("#070c0e"), 0.55))
 		canvas.draw_rect(Rect2(p, Vector2(42, 21) * zoom), Color("#635c4d"))
 		canvas.draw_rect(Rect2(p + Vector2(5, 3) * zoom, Vector2(15, 12) * zoom), Color("#283639"))
 		canvas.draw_rect(Rect2(p + Vector2(27, 3) * zoom, Vector2(10, 12) * zoom), Color("#283639"))
@@ -122,7 +122,7 @@ func _draw_props(canvas: CanvasItem, offset: Vector2, zoom: float) -> void:
 		_draw_shrub(canvas, _screen(site, offset, zoom), zoom * 1.6)
 
 func _draw_shrub(canvas: CanvasItem, p: Vector2, zoom: float) -> void:
-	canvas.draw_circle(p + Vector2(3, 4) * zoom, 9.0 * zoom, Color("#111b16", 0.48))
+	canvas.draw_circle(p + Vector2(3, 4) * zoom, 9.0 * zoom, Color(Color("#111b16"), 0.48))
 	for q in [Vector2(-5, 0), Vector2(3, -5), Vector2(8, 1)]:
 		canvas.draw_circle(p + q * zoom, 5.2 * zoom, Color("#46553c"))
 	canvas.draw_circle(p + Vector2(-3, -2) * zoom, 3.0 * zoom, Color("#68734a"))
@@ -154,7 +154,7 @@ func _draw_structure(canvas: CanvasItem, building: Dictionary, offset: Vector2, 
 	else:
 		var shadow := r
 		shadow.position += Vector2(9, 12) * zoom
-		canvas.draw_rect(shadow, Color("#050809", 0.58))
+		canvas.draw_rect(shadow, Color(Color("#050809"), 0.58))
 		var outer := r.grow(4.0 * zoom)
 		canvas.draw_rect(outer, Color("#252b2b"))
 		canvas.draw_rect(r, roof)
@@ -166,11 +166,11 @@ func _draw_structure(canvas: CanvasItem, building: Dictionary, offset: Vector2, 
 			r.position + Vector2(0, r.size.y + 9.0 * zoom)
 		]), side)
 		canvas.draw_line(r.position + Vector2(4, 5) * zoom, r.position + Vector2(r.size.x - 5 * zoom, 5 * zoom), roof.lightened(0.24), maxf(1.0, zoom * 3.0))
-		canvas.draw_rect(r.grow(-7.0 * zoom), Color("#091319", 0.30), false, maxf(1.0, zoom * 1.6))
+		canvas.draw_rect(r.grow(-7.0 * zoom), Color(Color("#091319"), 0.30), false, maxf(1.0, zoom * 1.6))
 		# Roof seams / vents / metal plates and outside light.
 		for i in range(1, 4):
 			var seam_x := r.position.x + r.size.x * float(i) / 4.0
-			canvas.draw_line(Vector2(seam_x, r.position.y + 10.0 * zoom), Vector2(seam_x, r.end.y - 9.0 * zoom), Color("#151f20", 0.24), maxf(1.0, zoom))
+			canvas.draw_line(Vector2(seam_x, r.position.y + 10.0 * zoom), Vector2(seam_x, r.end.y - 9.0 * zoom), Color(Color("#151f20"), 0.24), maxf(1.0, zoom))
 		for i in range(3):
 			var wx := r.position.x + (19.0 + float(i) * 24.0) * zoom
 			if wx + 14.0 * zoom < r.end.x:
@@ -208,7 +208,7 @@ func _draw_small_piece(canvas: CanvasItem, r: Rect2, kind: String, zoom: float) 
 func _draw_farm(canvas: CanvasItem, r: Rect2, zoom: float) -> void:
 	var shadow := r
 	shadow.position += Vector2(6, 8) * zoom
-	canvas.draw_rect(shadow, Color("#09120b", 0.50))
+	canvas.draw_rect(shadow, Color(Color("#09120b"), 0.50))
 	canvas.draw_rect(r.grow(3.0 * zoom), Color("#777154"))
 	canvas.draw_rect(r, Color("#4b3b2b"))
 	for i in range(1, 8):
@@ -278,17 +278,17 @@ func _draw_structure_label(canvas: CanvasItem, building: Dictionary, r: Rect2, z
 	var label_width := maxf(66.0 * zoom, width + 17.0)
 	var x := r.get_center().x - label_width * 0.5
 	var y := r.end.y + 10.0 * zoom
-	canvas.draw_rect(Rect2(x, y, label_width, 20.0), Color("#0c191b", 0.91))
+	canvas.draw_rect(Rect2(x, y, label_width, 20.0), Color(Color("#0c191b"), 0.91))
 	canvas.draw_line(Vector2(x, y), Vector2(x + label_width, y), Color("#daa65f"), maxf(1.0, zoom))
 	canvas.draw_string(font, Vector2(x + 8, y + 14), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, TEXT)
 
 func _draw_blueprint(canvas: CanvasItem, bp: Dictionary, offset: Vector2, zoom: float) -> void:
 	var rect := _box(Vector2(bp["position"]), Vector2(bp["size"]), offset, zoom)
-	canvas.draw_rect(rect, Color("#7a9a9c", 0.23))
+	canvas.draw_rect(rect, Color(Color("#7a9a9c"), 0.23))
 	canvas.draw_rect(rect, GLASS, false, maxf(1.0, 2.0 * zoom))
 	for i in range(4):
 		var x := rect.position.x + rect.size.x * float(i) / 4.0
-		canvas.draw_line(Vector2(x, rect.position.y), Vector2(x + rect.size.y * 0.22, rect.end.y), Color("#b7e3d6", 0.42), maxf(1.0, zoom))
+		canvas.draw_line(Vector2(x, rect.position.y), Vector2(x + rect.size.y * 0.22, rect.end.y), Color(Color("#b7e3d6"), 0.42), maxf(1.0, zoom))
 	var progress := clampf(float(bp["progress"]) / maxf(1.0, float(bp["work_required"])), 0.0, 1.0)
 	canvas.draw_rect(Rect2(rect.position.x, rect.end.y + 3, rect.size.x * progress, 4), SUCCESS)
 	canvas.draw_string(ThemeDB.fallback_font, rect.position + Vector2(0, -7), "%s %d%%" % [str(bp["name"]), int(progress * 100.0)], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT)
@@ -319,9 +319,9 @@ func _draw_survivor(canvas: CanvasItem, citizen: Dictionary, offset: Vector2, zo
 		"Hauler": color = Color("#8d94a0")
 	if not bool(citizen["alive"]):
 		color = Color("#595b57")
-	canvas.draw_circle(p + Vector2(3, 8) * zoom, 8.0 * zoom, Color("#080b0c", 0.55))
+	canvas.draw_circle(p + Vector2(3, 8) * zoom, 8.0 * zoom, Color(Color("#080b0c"), 0.55))
 	if selected:
-		canvas.draw_circle(p, 14.0 * zoom, Color("#e5b15d", 0.18))
+		canvas.draw_circle(p, 14.0 * zoom, Color(Color("#e5b15d"), 0.18))
 		canvas.draw_arc(p, 15.0 * zoom, 0, TAU, 28, SELECT, maxf(1.0, 2.0 * zoom))
 	# Top-down survivor: helmet, shoulders, pack and boots instead of 5px dot.
 	canvas.draw_line(p + Vector2(-3, 3) * zoom, p + Vector2(-3, 10) * zoom, Color("#252b2b"), maxf(2.0, 3.0 * zoom))
@@ -340,6 +340,6 @@ func _draw_atmosphere(canvas: CanvasItem, hour: float, zoom: float) -> void:
 	# Time-of-day grading. Night remains readable so construction is always usable.
 	var vp := canvas.get_viewport_rect().size
 	if hour < 6.0 or hour > 20.0:
-		canvas.draw_rect(Rect2(Vector2.ZERO, vp), Color("#07121f", 0.25))
+		canvas.draw_rect(Rect2(Vector2.ZERO, vp), Color(Color("#07121f"), 0.25))
 	elif hour < 8.0 or hour > 18.0:
-		canvas.draw_rect(Rect2(Vector2.ZERO, vp), Color("#55331d", 0.08))
+		canvas.draw_rect(Rect2(Vector2.ZERO, vp), Color(Color("#55331d"), 0.08))
