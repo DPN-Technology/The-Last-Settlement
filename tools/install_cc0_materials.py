@@ -8,6 +8,7 @@ an unpinned texture is prohibited once the fingerprint is recorded.
 from __future__ import annotations
 
 import hashlib
+import struct
 from pathlib import Path
 import time
 import urllib.request
@@ -17,7 +18,7 @@ SUFFIXES = ("diff", "nor_gl")
 PATH = Path("assets/3d/pbr")
 # Filled only after actual public-CDN checksums have been observed and reviewed.
 MATERIALS_SHA256: dict[str, str] = {}
-MAX_BYTES = 5_000_000
+MAX_BYTES = 20_000_000
 
 
 def install() -> None:
@@ -50,6 +51,9 @@ def install() -> None:
                 raise ValueError(f"Invalid PNG texture: {name}")
             if len(payload) < 10_000 or len(payload) > MAX_BYTES:
                 raise ValueError(f"Unexpected PBR texture length: {name} bytes={len(payload)} url={url}")
+            width, height = struct.unpack(">II", payload[16:24])
+            if width not in (1024, 2048) or height not in (1024, 2048):
+                raise ValueError(f"Unexpected PBR resolution for {name}: {width}x{height}")
             actual = hashlib.sha256(payload).hexdigest()
             expected = MATERIALS_SHA256.get(name)
             if expected and expected != actual:
