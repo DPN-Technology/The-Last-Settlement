@@ -78,6 +78,7 @@ var pitch := deg_to_rad(53.0)
 var cached_layout := ""
 var last_daylight := -1
 var people: Dictionary = {}
+var animated_vent_fans: Array[Node3D] = []
 var materials: Dictionary = {}
 var selected_key := ""
 var visual_time := 0.0
@@ -390,6 +391,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 		_rebuild_structures(sim)
 	_update_people(sim, selected_citizen)
 	_update_daylight(sim.hour)
+	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)))
 	# Construction hologram updates without re-instantiating building meshes.
 	if building_preview != null:
 		building_preview.visible = build_mode
@@ -405,6 +407,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 var building_preview: MeshInstance3D
 
 func _rebuild_structures(sim: SettlementSimulation) -> void:
+	animated_vent_fans.clear()
 	for node in structure_layer.get_children():
 		node.queue_free()
 	for building in sim.buildings:
@@ -495,7 +498,14 @@ func _build_structure(b: Dictionary) -> void:
 	elif type in ["power","generator","battery"]:
 		for i in [-1.0,1.0]:
 			var fan := _cylinder(group,Vector3(i*size.x*0.21,body_height+0.72,0),1.3,0.52,materials["darkmetal"])
-			_box(group,Vector3(i*size.x*0.21,body_height+1.0,0),Vector3(1.1,0.16,0.22),materials["rooflight"])
+			var blades := Node3D.new()
+			blades.name = "VentFanRotor"
+			blades.position = Vector3(i*size.x*0.21,body_height+1.05,0)
+			group.add_child(blades)
+			_box(blades,Vector3.ZERO,Vector3(2.0,0.14,0.23),materials["steel"])
+			_box(blades,Vector3.ZERO,Vector3(0.23,0.14,2.0),materials["steel"])
+			_cylinder(blades,Vector3(0,0.14,0),0.28,0.20,materials["rooflight"])
+			animated_vent_fans.append(blades)
 	elif type in ["water","water_pump","purifier","water_tank","sewage"]:
 		for i in [-1.0,1.0]:
 			_cylinder(group,Vector3(i*size.x*0.20,body_height+1.15,0),1.8,1.65,materials["blue"])
@@ -529,9 +539,12 @@ func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> 
 			people[id] = _make_survivor(citizen)
 		var person: Node3D = people[id]
 		var previous := person.position
-		person.position = world_position(Vector2(citizen["position"]))
-		if previous.distance_to(person.position) > 0.02:
+		var target := world_position(Vector2(citizen["position"]))
+		var traveling := previous.distance_to(target) > 0.02 and not sim.paused
+		person.position = target
+		if traveling:
 			person.rotation.y = atan2(person.position.x-previous.x,person.position.z-previous.z)
+		_animate_survivor(person, traveling, int(citizen["id"]))
 		var ring: Node3D = person.get_node("Selection")
 		ring.visible = selected_citizen == citizen
 	for id in people.keys():
@@ -561,14 +574,45 @@ func _make_survivor(c: Dictionary) -> Node3D:
 		"Farmer": uniform=materials["olive"]
 	_cylinder(person,Vector3(0,1.20,0),0.37,1.1,uniform,0.25)
 	_sphere(person,Vector3(0,1.95,0),0.31,materials["skin"])
-	_box(person,Vector3(-0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
-	_box(person,Vector3(0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
+	var left_leg := _box(person,Vector3(-0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
+	left_leg.name = "LegLeft"
+	var right_leg := _box(person,Vector3(0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
+	right_leg.name = "LegRight"
 	for dir in [-1.0,1.0]:
-		_cylinder(person,Vector3(dir*0.48,1.27,0),0.14,0.9,uniform)
+		var limb := _cylinder(person,Vector3(dir*0.48,1.27,0),0.14,0.9,uniform)
+		limb.name = "ArmLeft" if dir < 0.0 else "ArmRight"
 	_box(person,Vector3(0,1.5,0.39),Vector3(0.55,0.55,0.28),materials["roof"])
+	# Pockets, vest webbing, headlamp and tool roll make jobs legible at zoom.
+	_box(person,Vector3(-0.25,1.31,-0.35),Vector3(0.2,0.25,0.08),materials["rust"])
+	_box(person,Vector3(0.25,1.31,-0.35),Vector3(0.2,0.25,0.08),materials["rust"])
+	_box(person,Vector3(0,2.18,-0.15),Vector3(0.46,0.11,0.45),materials["darkmetal"])
+	_box(person,Vector3(0,2.17,-0.4),Vector3(0.13,0.12,0.09),materials["glow"])
 	var select := Node3D.new()
 	select.name = "Selection"
 	person.add_child(select)
 	_cylinder(select,Vector3(0,0.05,0),0.95,0.08,materials["warning"])
 	select.visible = false
 	return person
+
+func _animate_survivor(person: Node3D, traveling: bool, id: int) -> void:
+	if not person.has_node("ArmLeft"):
+		return # An imported rig is driven by its own AnimationTree.
+	var stride := 0.0
+	if traveling:
+		stride = sin(visual_time * 7.5 + float(id) * 0.68) * 0.44
+	var left_arm := person.get_node("ArmLeft") as Node3D
+	var right_arm := person.get_node("ArmRight") as Node3D
+	var left_leg := person.get_node("LegLeft") as Node3D
+	var right_leg := person.get_node("LegRight") as Node3D
+	left_arm.rotation.x = stride
+	right_arm.rotation.x = -stride
+	left_leg.rotation.x = -stride * 0.60
+	right_leg.rotation.x = stride * 0.60
+	person.position.y = absf(stride) * 0.12 if traveling else 0.0
+
+func _animate_machinery(delta: float, active: bool) -> void:
+	if not active:
+		return
+	for rotor in animated_vent_fans:
+		if is_instance_valid(rotor):
+			rotor.rotation.y += delta * 2.8
