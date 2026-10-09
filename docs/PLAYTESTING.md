@@ -1,3 +1,13 @@
+## Compact HUD & responsive command panels (current development playtest)
+
+- The old 118px top bar is now **82px** high; the old 88px bottom command bar is **58px**. All six top resources are compact, include a quick health strip, and show a plain-English explanation when you hover.
+- The nine bottom buttons still support mouse clicks and their original key shortcuts, now using the same central layout coordinates as the click hitboxes. Hover a button for what the screen does.
+- The construction picker displays a compact, visible section of the catalog and automatically follows the selected blueprint. Hover the construction list and **scroll the mouse wheel** to browse without zooming the camera; Q/E also cycles items.
+- World map pin rendering and click selection now share the same origin; the dispatch button moves with its right-hand command panel.
+- Governance, industry, factions, civilization, updates, survivor and building sidebars use aligned responsive placement rather than older fixed 138px offsets. The F1 field guide is shorter and explains the live controls.
+- A selected survivor has a thin ground-level ring, rather than an opaque glowing yellow disc.
+- **Visual QA:** open each of the nine bottom screens at your normal resolution and fullscreen. Check that the resource row and the inspector controls are visible and clickable; use **F8** to capture unmodified game screenshots. The CI smoke test validates basic geometry/input, but it cannot establish monitor-specific legibility.
+
 # The Last Settlement — Windows Playtest Loop
 
 This guide separates **stable releases** from **work-in-progress test builds**. Install Godot only if you want to work with source code; Windows ZIPs run without Godot.
