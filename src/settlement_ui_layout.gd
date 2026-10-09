@@ -49,15 +49,28 @@ static func directive_tab() -> Rect2:
 static func objective_panel() -> Rect2:
 	return Rect2(14.0, TOP_H + 9.0, 300.0, 188.0)
 
-static func build_palette(size: Vector2, count: int) -> Rect2:
-	var available_rows := mini(8, count)
-	var height := 77.0 + float(available_rows) * 28.0
-	var max_height := maxf(110.0, size.y - TOP_H - BOTTOM_H - 25.0)
-	return Rect2(14.0, TOP_H + 9.0, minf(316.0, size.x - 28.0), minf(max_height, height))
+static func build_palette(size: Vector2, _count: int) -> Rect2:
+	var max_height := maxf(250.0,size.y-TOP_H-BOTTOM_H-23.0)
+	return Rect2(12.0,TOP_H+8.0,minf(350.0,size.x-24.0),minf(443.0,max_height))
 
 static func palette_rows(size: Vector2, count: int) -> int:
-	var panel := build_palette(size, count)
-	return maxi(1, mini(count, int(floor((panel.size.y - 77.0) / 28.0))))
+	var panel := build_palette(size,count)
+	return maxi(1,mini(count,int(floor((panel.size.y-247.0)/27.0))))
 
 static func palette_first(selection: int, count: int, rows: int) -> int:
-	return clampi(selection - int(rows / 2), 0, maxi(0, count - rows))
+	return clampi(selection-int(rows/2),0,maxi(0,count-rows))
+
+static func build_category_rect(size: Vector2, index: int) -> Rect2:
+	var panel := build_palette(size,0)
+	var gap := 5.0
+	var width := (panel.size.x-24.0-gap*2.0)/3.0
+	return Rect2(panel.position+Vector2(12.0+float(index%3)*(width+gap),64.0+float(index/3)*30.0),Vector2(width,25.0))
+
+static func build_row_rect(size: Vector2, row: int) -> Rect2:
+	var panel := build_palette(size,0)
+	return Rect2(panel.position+Vector2(9.0,134.0+float(row)*27.0),Vector2(panel.size.x-18.0,26.0))
+
+static func build_action_rect(size: Vector2, index: int) -> Rect2:
+	var panel := build_palette(size,0)
+	var half := (panel.size.x-31.0)*0.5
+	return Rect2(panel.position+Vector2(12.0+float(index)*(half+7.0),panel.size.y-35.0),Vector2(half,25.0))
