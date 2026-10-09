@@ -1523,6 +1523,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					sim.cycle_selected_priority(selected_citizen)
 			KEY_F10:
 				update_mode = not update_mode
+				world_map_mode = false
 				governance_mode = false
 				economy_mode = false
 				faction_mode = false
@@ -1548,9 +1549,18 @@ func _unhandled_input(event: InputEvent) -> void:
 						var settlement: Dictionary = settlements[civilization_settlement_index]
 						sim.federal_governance_simulation.spend_reserve_for_emergency(sim,str(settlement["id"]))
 				else:
-					build_mode = not build_mode
+					var was_building := build_mode
+					build_mode = not was_building
+					world_map_mode = false
+					governance_mode = false
+					economy_mode = false
+					faction_mode = false
+					civilization_mode = false
+					help_mode = false
+					update_mode = false
 					selected_citizen = {}
 					selected_building = {}
+					selected_blueprint = {}
 			KEY_Q:
 				if build_mode:
 					_cycle_build_selection(-1)
@@ -1584,6 +1594,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				economy_mode = false
 				faction_mode = false
 				civilization_mode = false
+				world_map_mode = false
 				build_mode = false
 				selected_citizen = {}
 				selected_building = {}
