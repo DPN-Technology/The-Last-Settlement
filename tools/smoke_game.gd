@@ -208,6 +208,64 @@ func _smoke() -> void:
 		push_error("SMOKE: Civic CLOSE action did not dismiss panel")
 		quit(1)
 		return
+	# The branding area must explain the home settlement, open a real briefing,
+	# and close without sending clicks into the 3D construction world.
+	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
+		var identity: Rect2 = SettlementUILayout.identity_rect(target_size)
+		var overview: Rect2 = SettlementUILayout.overview_rect(target_size)
+		if identity.end.x > SettlementUILayout.resource_rects(target_size)[0].position.x:
+			push_error("SMOKE: Home-base identity collides with the population indicator")
+			quit(1)
+			return
+		if overview.end.x > target_size.x or overview.end.y > target_size.y-SettlementUILayout.BOTTOM_H:
+			push_error("SMOKE: Clickable settlement overview escapes the usable screen")
+			quit(1)
+			return
+		for button in range(3):
+			if not overview.has_point(SettlementUILayout.overview_button_rect(target_size,button).get_center()):
+				push_error("SMOKE: Overview action outside its modal panel")
+				quit(1)
+				return
+	var home_identity: Rect2 = SettlementUILayout.identity_rect(screen)
+	if not instance._handle_overview_click(home_identity.get_center()) or not instance.overview_visible:
+		push_error("SMOKE: Home-base header cannot open readable overview")
+		quit(1)
+		return
+	if not instance._next_settlement_goal().contains("Inspect") and not instance._next_settlement_goal().contains("construction") and not instance._next_settlement_goal().contains("Explore") and not instance._next_settlement_goal().contains("Day 2") and not instance._next_settlement_goal().contains("completed"):
+		push_error("SMOKE: Settlement overview has no actionable next-step guidance")
+		quit(1)
+		return
+	var safe_click: Vector2 = Vector2(screen.x*0.5,screen.y*0.5)
+	if not instance._handle_overview_click(safe_click) or instance.overview_visible:
+		push_error("SMOKE: Clicking outside the briefing did not consume/close it")
+		quit(1)
+		return
+	instance._handle_overview_click(home_identity.get_center())
+	var close_key := InputEventKey.new()
+	close_key.pressed = true
+	close_key.keycode = KEY_ESCAPE
+	instance._unhandled_input(close_key)
+	if instance.overview_visible:
+		push_error("SMOKE: ESC does not close settlement briefing")
+		quit(1)
+		return
+	instance._handle_overview_click(home_identity.get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_button_rect(screen,1).get_center())
+	if instance.overview_visible or not instance.field_directives_visible:
+		push_error("SMOKE: Overview SHOW GOALS cannot reveal field directives")
+		quit(1)
+		return
+	instance._handle_overview_click(home_identity.get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_button_rect(screen,0).get_center())
+	if instance.overview_visible or not instance.build_mode:
+		push_error("SMOKE: Overview OPEN BUILD does not activate construction")
+		quit(1)
+		return
+	if sim.federal_governance_simulation.federal_treasury != treasury_before:
+		push_error("SMOKE: Opening Build from briefing unexpectedly spent treasury")
+		quit(1)
+		return
+	instance._handle_toolbar_click(build_button)
 	# Renderer-specific regression tests: lighting must have a real
 	# night/day difference and the new terrain must be an actual 3D mesh.
 	var world: SettlementWorld3D = instance.settlement_world
@@ -415,6 +473,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: compact responsive HUD and controls, gabled 3D roofs, survivor rigs, PBR and saves")
+	print("PLAYTEST SMOKE PASS: readable settlement identity and briefing, compact HUD and controls, 3D rigs, PBR and saves")
 	instance.queue_free()
 	quit(0)
