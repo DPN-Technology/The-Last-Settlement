@@ -330,6 +330,25 @@ func _rebuild_structures(sim: SettlementSimulation) -> void:
 	structure_layer.add_child(building_preview)
 	building_preview.visible = false
 
+func _try_authored_model(parent: Node3D, model_path: String, footprint: Vector2 = Vector2.ONE) -> bool:
+	# This is a production-art extension point. An authored .glb scene supersedes
+	# primitive geometry on the next export, with no change to game saves.
+	if not ResourceLoader.exists(model_path):
+		return false
+	var scene := load(model_path) as PackedScene
+	if scene == null:
+		push_warning("Invalid production model: " + model_path)
+		return false
+	var model := scene.instantiate() as Node3D
+	if model == null:
+		push_warning("Model root must be Node3D: " + model_path)
+		return false
+	parent.add_child(model)
+	# Authored source models use meters, ground origin, forward -Z, and footprints
+	# consistent with game building plans. Scale is authored in Blender/glTF.
+	model.name = "ProductionArt"
+	return true
+
 func _build_structure(b: Dictionary) -> void:
 	var type := str(b["type"])
 	var p := world_position(Vector2(b["position"]))
@@ -338,6 +357,9 @@ func _build_structure(b: Dictionary) -> void:
 	group.position = p
 	group.name = str(b["name"])
 	structure_layer.add_child(group)
+	var authored_scene := "res://assets/3d/structures/%s.glb" % type
+	if _try_authored_model(group, authored_scene, size):
+		return
 	# Walls, flooring, pipes and utility poles remain independent modular pieces.
 	if type in ["wall","floor","door","pipe","power_pole"]:
 		var material: Material = materials["pipe"] if type in ["pipe","power_pole"] else materials["concrete"]
@@ -427,6 +449,14 @@ func _make_survivor(c: Dictionary) -> Node3D:
 	var person := Node3D.new()
 	person.name = "Survivor_%s" % str(c["id"])
 	survivors_layer.add_child(person)
+	if _try_authored_model(person, "res://assets/3d/characters/survivor.glb"):
+		# Selection node remains part of the gameplay layer, not the art asset.
+		var art_selection := Node3D.new()
+		art_selection.name = "Selection"
+		person.add_child(art_selection)
+		_cylinder(art_selection, Vector3(0, 0.05, 0), 0.95, 0.08, materials["warning"])
+		art_selection.visible = false
+		return person
 	var uniform: Material = materials["uniform"]
 	match str(c["job"]):
 		"Guard": uniform=materials["rust"]
