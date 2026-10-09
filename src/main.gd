@@ -70,7 +70,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	sim.update(delta)
 	sim.check_field_objectives()
-	_update_citizens(delta)
+	if not sim.paused:
+		_update_citizens(delta)
 	if playtest_notice_seconds > 0.0:
 		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
 	queue_redraw()
@@ -249,7 +250,11 @@ func _draw_world_map() -> void:
 	else:
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,205),"Select a discovered location.",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
 
-	var ey := 365.0
+	var can_dispatch := not location.is_empty() and int(location.get("id", 0)) > 1 and bool(location.get("discovered", false)) and not bool(location.get("depleted", false)) and str(location.get("type","")) not in ["trade_hub", "faction_settlement", "player_settlement"]
+	draw_rect(Rect2(x + 20, 329, 326, 34), Color("#365f50") if can_dispatch else Color("#283438"))
+	draw_rect(Rect2(x + 20, 329, 326, 34), GOOD if can_dispatch else MUTED, false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 30, 350), "DISPATCH SALVAGE TEAM  [G]" if can_dispatch else "SELECT A VALID SALVAGE SITE", HORIZONTAL_ALIGNMENT_LEFT, 310, 12, TEXT if can_dispatch else MUTED)
+	var ey := 380.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,ey),"ACTIVE EXPEDITIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
 	ey += 26.0
 	for expedition in sim.world_simulation.get_active_expeditions():
@@ -689,7 +694,7 @@ func _draw_hud() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
-	var command_hint := "MIDDLE/RIGHT DRAG: PAN     SCROLL: ZOOM     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
+	var command_hint := "RIGHT DRAG: PAN     SCROLL: ZOOM     HOME: CENTER     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
 	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color(Color("#0e1517"), 0.95))
 	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, WARN if sim.paused else GOOD)
@@ -1020,6 +1025,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				help_mode = not help_mode
 			KEY_F2:
 				incident_panel_visible = not incident_panel_visible
+			KEY_HOME:
+				_focus_world_position(Vector2(700, 380))
+			KEY_W:
+				if not selected_citizen.is_empty():
+					sim.toggle_selected_work(selected_citizen)
+			KEY_DELETE:
+				if not selected_blueprint.is_empty():
+					sim.cancel_blueprint(int(selected_blueprint["id"]))
+					selected_blueprint = {}
 			KEY_F9:
 				var report_path := PlaytestReporter.capture(sim)
 				if report_path.is_empty():
@@ -1038,11 +1052,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3:
 				sim.speed = 12.0
 			KEY_S:
-				sim.save_game()
+				playtest_notice = "SETTLEMENT SAVED" if sim.save_game() else "SAVE FAILED"
+				playtest_notice_seconds = 4.5
 			KEY_L:
-				sim.load_game()
+				var success := sim.load_game()
+				playtest_notice = "SETTLEMENT RESTORED" if success else "NO VALID SAVE FOUND"
+				playtest_notice_seconds = 4.5
 				selected_citizen = {}
 				selected_building = {}
+				selected_blueprint = {}
 			KEY_T:
 				if civilization_mode:
 					sim.federal_governance_simulation.cycle_charter(sim,"representation")
@@ -1307,22 +1325,56 @@ func _unhandled_input(event: InputEvent) -> void:
 					help_mode = false
 				elif update_mode:
 					update_mode = false
+				elif build_mode:
+					build_mode = false
+				elif world_map_mode:
+					world_map_mode = false
+				elif governance_mode:
+					governance_mode = false
+				elif economy_mode:
+					economy_mode = false
+				elif faction_mode:
+					faction_mode = false
+				elif civilization_mode:
+					civilization_mode = false
 				else:
 					selected_citizen = {}
 					selected_building = {}
+					selected_blueprint = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_toolbar_click(event.position):
 				return
+			if help_mode or update_mode:
+				return
 			if event.position.y < 116.0:
 				return
-			if update_mode or governance_mode or economy_mode or faction_mode or civilization_mode:
-				pass
-			elif world_map_mode:
-				_world_map_select(event.position)
-			elif build_mode:
+			if build_mode and _handle_build_palette_click(event.position):
+				return
+			if not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and selected_citizen.is_empty() and selected_building.is_empty() and selected_blueprint.is_empty():
+				if _handle_objective_click(event.position):
+					return
+			if _handle_inspector_click(event.position):
+				return
+			if world_map_mode:
+				var vp := get_viewport_rect().size
+				if Rect2(vp.x - 370, 329, 326, 34).has_point(event.position):
+					if selected_world_location_id > 1:
+						sim.world_simulation.create_expedition(sim, selected_world_location_id)
+				elif event.position.x < vp.x - 390.0:
+					_world_map_select(event.position)
+				return
+			if governance_mode or economy_mode or faction_mode or civilization_mode:
+				return
+			if build_mode:
+				if event.position.y >= get_viewport_rect().size.y - 88.0:
+					return
 				var definition := sim.get_build_catalog()[build_catalog_index]
-				sim.place_blueprint(definition["type"], _screen_to_world(event.position), build_rotated)
+				if sim.place_blueprint(definition["type"], _screen_to_world(event.position), build_rotated):
+					playtest_notice = str(definition["name"]).to_upper() + " QUEUED FOR CONSTRUCTION"
+				else:
+					playtest_notice = "CANNOT PLACE STRUCTURE // CHECK SPACE OR MATERIALS"
+				playtest_notice_seconds = 3.0
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
