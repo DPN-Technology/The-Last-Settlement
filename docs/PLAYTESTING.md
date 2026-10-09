@@ -43,6 +43,9 @@ Use a successful `main` Windows Build run. The `TheLastSettlement-Windows-Portab
 - **Right or middle mouse drag** — pan the real 3D camera; **Alt + right drag** — 3D orbit; **mouse wheel** — 3D perspective zoom; **Home** — center Last Haven
 - **Clickable bottom toolbar** — build, map, governance, economy, factions, civilization, save, load and guide
 - **F2** — expand/collapse the settlement incident feed
+- **F3** — open/collapse the mission board; it starts as a small tab to keep the world visible
+- **F4** — toggle immersive fullscreen
+- **F8** — capture a PNG screenshot of the actual game to the local playtest-screenshots folder
 - **B**, then **Q/E** and mouse click — place a structure
 - **M** — world map; **V / K / O / J** — governance, economy, factions and civilization screens
 - **S / L** — save/load
@@ -61,6 +64,12 @@ Create an [issue](https://github.com/DPN-Technology/The-Last-Settlement/issues/n
 - **Impact:** game cannot open, cannot continue, incorrect behavior, or visual issue
 - **Evidence:** screenshot, error message and (if safe) your **F9 report**. Review reports before sharing; they contain your in-game settlement state.
 - **Save compatibility:** mention if a prior saved settlement fails to load; preserve a backup
+
+### Focus of the new terrain/lighting acceptance pass
+
+Confirm against the previous washed-out screenshot that the **ground is dark clay/gravel**, the buildings occupy more of the initial frame, ruined service yards and scrap are visible, and the mission board is collapsed until you click it or press **F3**. The ground now uses a CPU-baked texture in a Godot `StandardMaterial3D`, so the default look does not rely on a custom fragment shader working on the player's GPU. Both Forward+ and Compatibility launchers should be checked.
+
+Try morning, afternoon and nighttime. Report obvious white surfaces, z-fighting, slow frames, missing shadows, or unexpectedly tiny camera framing. **Do not call this photorealism**: detailed licensed structures, scanned PBR assets and fully rigged animated humans remain future milestones.
 
 ### Suggested smoke test for every candidate
 
