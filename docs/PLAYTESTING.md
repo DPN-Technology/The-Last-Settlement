@@ -1,3 +1,15 @@
+## New players: understanding Last Haven
+
+**The Last Settlement** is the game's title. **Last Haven** is the name of the settlement you're controlling. The earlier words "Recovery Network" and "Site-01" were internal project labels, not useful gameplay instructions, so they are gone from the player-facing header.
+
+Click **Last Haven • Overview ›** in the top-left corner to open a concise, interactive briefing. The briefing explains what to do next, how many opening objectives are completed, available building materials, construction progress, current electricity generation and demand, battery charge, and sanitation. Everything comes from the current live simulation, not hard-coded fictional numbers.
+
+Use **Open Build** to start construction, **Show Goals** to open field directives, or **Close** / **Esc** to go back to the settlement. Clicking outside the briefing closes it without accidentally giving an order in the 3D world.
+
+Below the resource indicators, the compact status line now spells out **Day / Time / Materials / Building projects / Electricity / Battery** rather than unexplained codes like MAT, BP, GRID, BAT, or SAN. At smaller window sizes it shows a shorter version and the full overview remains clickable. A right-side status indicator warns about low food/water or insufficient power.
+
+**Acceptance checks** on the Windows game: (1) read the game name at normal zoom, (2) open the briefing by clicking the settlement's name, (3) close using Esc and outside-click, (4) follow Show Goals and Open Build, (5) confirm electricity is described as "produced / needed," (6) resize the Windows window and ensure header controls don't overlap resources.
+
 ## Compact HUD & responsive command panels (current development playtest)
 
 - The old 118px top bar is now **82px** high; the old 88px bottom command bar is **58px**. All six top resources are compact, include a quick health strip, and show a plain-English explanation when you hover.
