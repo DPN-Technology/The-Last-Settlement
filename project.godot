@@ -24,11 +24,11 @@ window/handheld/orientation=1
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
+renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="gl_compatibility"
-; The runtime 3D world supports PBR models and lit geometry.
-; Vulkan Forward+ can be selected with --rendering-method gl_compatibility
-; fallback depending on player GPU and future production-art gate.
+; Full 3D rendering (Vulkan Forward+) for lit environments and PBR assets.
+; Older hardware can launch the compatibility fallback with
+; --rendering-method gl_compatibility (see Windows playtest guide).
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [environment]
