@@ -143,11 +143,11 @@ func _use_photo_pbr(key: String, asset: String, tint: Color, roughness: float, m
 	material.albedo_color = tint
 	material.normal_enabled = true
 	material.normal_texture = normal
-	material.normal_scale = 0.82
+	material.normal_scale = 0.46
 	material.roughness = roughness
 	material.metallic = metallic
 	material.uv1_triplanar = true
-	material.uv1_scale = Vector3.ONE * tiling
+	material.uv1_scale = Vector3.ONE * maxf(0.09, tiling * 0.44)
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	materials[key] = material
 
@@ -226,10 +226,10 @@ func _create_environment() -> void:
 	world_environment.ambient_light_energy = 0.24
 	world_environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
 	world_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	world_environment.tonemap_exposure = 0.76
+	world_environment.tonemap_exposure = 0.69
 	world_environment.fog_enabled = true
 	world_environment.fog_light_color = Color("#5c615b")
-	world_environment.fog_density = 0.0018
+	world_environment.fog_density = 0.00095
 	var world_env := WorldEnvironment.new()
 	world_env.environment = world_environment
 	add_child(world_env)
@@ -257,10 +257,10 @@ func _update_daylight(hour: float) -> void:
 	var solar := sin((hour - 6.0) / 12.0 * PI)
 	var daylight := clampf(solar, 0.0, 1.0)
 	var twilight := clampf(1.0 - absf(hour - 18.0) / 3.5, 0.0, 1.0)
-	light.light_energy = lerpf(0.03, 0.94, daylight)
+	light.light_energy = lerpf(0.03, 0.83, daylight)
 	light.light_color = Color("#f5c293").lerp(Color("#e0e6ea"), daylight * 0.64)
 	light.rotation_degrees = Vector3(-18.0 - daylight * 53.0, 35.0 + hour * 4.0, -3.0)
-	world_environment.ambient_light_energy = lerpf(0.105, 0.32, daylight)
+	world_environment.ambient_light_energy = lerpf(0.095, 0.25, daylight)
 	world_environment.background_energy_multiplier = lerpf(0.09, 0.25, daylight)
 	world_environment.ambient_light_color = Color("#35465c").lerp(Color("#82939a"), daylight)
 	world_environment.fog_light_color = Color("#202d36").lerp(Color("#6c6d63"), daylight)
