@@ -772,55 +772,43 @@ func _draw_update_panel() -> void:
 
 func _draw_governance_panel() -> void:
 	var vp := get_viewport_rect().size
-	var bounds := SettlementUILayout.side_panel(vp,480.0)
-	var x := bounds.position.x
-	var y := bounds.position.y
-	var w := bounds.size.x
-	var h := bounds.size.y
-	_draw_ui_panel(bounds,ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"CIVIC COMMAND // GOVERNANCE",HORIZONTAL_ALIGNMENT_LEFT,-1,15,ACCENT)
-
+	var area := SettlementUILayout.side_panel(vp,480.0)
+	var x := area.position.x
+	var y := area.position.y
+	var w := area.size.x
 	var gov := sim.governance_simulation
-	var leader := sim.get_citizen_by_id(gov.leader_id)
-	var leader_name: String = "VACANT" if leader.is_empty() else str(leader["name"])
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+62),"GOVERNMENT // %s" % gov.government_type,HORIZONTAL_ALIGNMENT_LEFT,-1,12,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+86),"LEADER // %s" % leader_name,HORIZONTAL_ALIGNMENT_LEFT,-1,13,RUST)
-
-	_draw_meter(Vector2(x+22,y+118),w-44.0,"LEGITIMACY",float(gov.legitimacy))
-	_draw_meter(Vector2(x+22,y+154),w-44.0,"UNREST",100.0-float(gov.unrest))
-	_draw_meter(Vector2(x+22,y+190),w-44.0,"PUBLIC SAFETY",100.0-float(gov.crime_pressure))
-
-	var ry := y + 242.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"LAW REGISTER",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	ry += 28.0
+	var leader: Dictionary = sim.get_citizen_by_id(gov.leader_id)
+	var name := "Unassigned" if leader.is_empty() else str(leader["name"])
+	_draw_ui_panel(area,ACCENT)
+	draw_rect(Rect2(x+14,y+12,4,22),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+29),"GOVERN  /  SETTLEMENT COUNCIL",HORIZONTAL_ALIGNMENT_LEFT,w-36,15,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+55),"Council: "+str(gov.government_type),HORIZONTAL_ALIGNMENT_LEFT,w-38,11,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+75),"Leader: "+name,HORIZONTAL_ALIGNMENT_LEFT,w-38,13,TEXT)
+	_draw_meter(Vector2(x+20,y+106),w-40.0,"LEGITIMACY",float(gov.legitimacy))
+	_draw_meter(Vector2(x+20,y+142),w-40.0,"COMMUNITY STABILITY",100.0-float(gov.unrest))
+	_draw_meter(Vector2(x+20,y+178),w-40.0,"SAFETY",100.0-float(gov.crime_pressure))
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+248),"SETTLEMENT LAWS  /  SELECT A ROW",HORIZONTAL_ALIGNMENT_LEFT,w-38,12,ACCENT)
 	for i in range(GOVERNANCE_LAWS.size()):
-		var key: String = str(GOVERNANCE_LAWS[i])
-		var marker := ">" if i == governance_law_index else " "
-		var col := TEXT if i == governance_law_index else MUTED
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%s %-10s // %s" % [marker,key.to_upper(),str(gov.laws[key]).to_upper()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,col)
-		ry += 24.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry+4),"[↑/↓] SELECT LAW   [ENTER] CHANGE",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-
-	ry += 42.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"POLITICAL BLOCS",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	ry += 26.0
-	for faction_name in gov.factions.keys():
-		var support := int(float(gov.factions[faction_name]["support"]))
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"%-18s %02d supporters" % [faction_name,support],HORIZONTAL_ALIGNMENT_LEFT,-1,10,MUTED)
-		ry += 21.0
-
-	ry += 8.0
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"JUSTICE SYSTEM // OPEN %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	ry += 24.0
-	for case in gov.active_cases:
-		if case["status"] == "resolved":
-			continue
-		var suspect := sim.get_citizen_by_id(int(case["suspect_id"]))
-		var suspect_name: String = "UNKNOWN" if suspect.is_empty() else str(suspect["name"])
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"CASE-%03d %s // %s // %d%%" % [int(case["id"]),case["type"],suspect_name,int(case["progress"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,10,TEXT)
-		ry += 22.0
-		if ry > y+h-35:
-			break
+		var law := str(GOVERNANCE_LAWS[i])
+		var row := Rect2(x+18.0,y+263.0+float(i)*28.0,w-36.0,26.0)
+		var active := i == governance_law_index
+		draw_rect(row,Color("#512c33") if active else (Color("#2c3d44") if row.has_point(get_local_mouse_position()) else Color("#14242b")))
+		if active:
+			draw_rect(Rect2(row.position,Vector2(3,row.size.y)),ACCENT)
+		draw_string(ThemeDB.fallback_font,row.position+Vector2(10,18),law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,146,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(row.position.x+150,row.position.y+18),str(gov.laws[law]),HORIZONTAL_ALIGNMENT_RIGHT,row.size.x-164,11,GOOD if active else MUTED)
+	var selected_law := str(GOVERNANCE_LAWS[governance_law_index])
+	var help_text := {
+		"rationing":"Food policy affects survivors' daily lives.",
+		"security":"Sets how strictly the community is protected.",
+		"labor":"Changes expectations for work and service.",
+		"justice":"Sets the approach to resolving offenses.",
+		"speech":"Shapes residents' freedom to voice concerns."
+	}
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+423),"SELECTED  /  "+selected_law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-40,11,WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+443),str(help_text[selected_law]),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+462),"Change law applies real citizen opinion effects.",HORIZONTAL_ALIGNMENT_LEFT,w-40,10,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+485),"Unresolved justice cases: %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
 
 func _open_case_count() -> int:
 	var count := 0
