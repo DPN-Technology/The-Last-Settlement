@@ -31,8 +31,43 @@ void fragment(){
 }
 """
 
+const WEATHERED_MATERIAL_SHADER := """
+shader_type spatial;
+render_mode diffuse_burley, specular_schlick_ggx;
+uniform vec4 tint : source_color = vec4(0.43, 0.41, 0.36, 1.0);
+uniform float surface_roughness = 0.82;
+uniform float surface_metallic = 0.0;
+uniform float grime = 0.5;
+varying vec3 world_coords;
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+float noise21(vec2 p) {
+	vec2 i=floor(p); vec2 f=fract(p);
+	f=f*f*(3.0-2.0*f);
+	return mix(mix(hash21(i),hash21(i+vec2(1.,0.)),f.x),mix(hash21(i+vec2(0.,1.)),hash21(i+vec2(1.,1.)),f.x),f.y);
+}
+void vertex() { world_coords = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+void fragment() {
+	vec2 uv = world_coords.xz * 0.37 + world_coords.xy * 0.19 + world_coords.yz * 0.18;
+	float broad = noise21(uv * 0.68);
+	float mottled = noise21(uv * 5.2);
+	float fine = noise21(uv * 24.0);
+	float patches = smoothstep(0.53, 0.83, noise21(uv * 1.5));
+	float paint_wear = mix(0.66, 1.12, broad) - grime * patches * 0.28;
+	float corrosion = grime * smoothstep(0.69, 0.9, mottled);
+	vec3 rusty = vec3(0.22, 0.115, 0.067);
+	ALBEDO = mix(tint.rgb * paint_wear, rusty, corrosion * (0.28 + 0.4 * patches));
+	ALBEDO *= 0.94 + fine * 0.11;
+	ROUGHNESS = clamp(surface_roughness + mottled * 0.13 + grime * patches * 0.11, 0.25, 1.0);
+	METALLIC = surface_metallic * (1.0 - corrosion * 0.5);
+}
+"""
+
 var camera: Camera3D
 var light: DirectionalLight3D
+var world_environment: Environment
+var sky_material: ProceduralSkyMaterial
+var command_lamp: OmniLight3D
+var prior_lighting_hour := -10.0
 var structure_layer: Node3D
 var survivors_layer: Node3D
 var terrain_layer: Node3D
@@ -81,6 +116,17 @@ func _mat(key: String, color: Color, rough: float = 0.86, metal: float = 0.0, em
 	materials[key] = material
 	return material
 
+func _weathered(key: String, color: Color, rough: float, metal: float, grime: float) -> void:
+	var shader_material := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = WEATHERED_MATERIAL_SHADER
+	shader_material.shader = shader
+	shader_material.set_shader_parameter("tint", color)
+	shader_material.set_shader_parameter("surface_roughness", rough)
+	shader_material.set_shader_parameter("surface_metallic", metal)
+	shader_material.set_shader_parameter("grime", grime)
+	materials[key] = shader_material
+
 func _create_materials() -> void:
 	_mat("concrete", Color("#777268"))
 	_mat("foundation", Color("#484944"))
@@ -107,37 +153,78 @@ func _create_materials() -> void:
 	_mat("blue", Color("#3e6575"))
 	_mat("pipe", Color("#617b7d"), 0.52, 0.47)
 	_mat("stone", Color("#635e54"))
+	_weathered("concrete", Color("#65625a"), 0.96, 0.0, 0.45)
+	_weathered("wall", Color("#666359"), 0.92, 0.03, 0.62)
+	_weathered("roof", Color("#424b4c"), 0.82, 0.2, 0.67)
+	_weathered("rooflight", Color("#626c6b"), 0.75, 0.2, 0.5)
+	_weathered("rust", Color("#674633"), 0.90, 0.14, 0.81)
+	_weathered("steel", Color("#4d5655"), 0.67, 0.46, 0.56)
+	_weathered("foundation", Color("#383a36"), 0.95, 0.0, 0.45)
+	_weathered("asphalt", Color("#2d3130"), 0.97, 0.0, 0.24)
 	var ghost := _mat("ghost", Color("#4fd3aa55"))
 	ghost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ghost.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 
 func _create_environment() -> void:
 	var sky := Sky.new()
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color("#536d7a")
-	sky_mat.sky_horizon_color = Color("#c2aca0")
-	sky_mat.ground_bottom_color = Color("#3d403d")
-	sky_mat.ground_horizon_color = Color("#a18f7e")
-	sky.sky_material = sky_mat
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.fog_enabled = true
-	env.fog_light_color = Color("#aaa296")
-	env.fog_density = 0.003
+	sky_material = ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color("#243944")
+	sky_material.sky_horizon_color = Color("#797066")
+	sky_material.ground_bottom_color = Color("#181d1c")
+	sky_material.ground_horizon_color = Color("#383b37")
+	sky_material.use_debanding = true
+	sky.sky_material = sky_material
+	world_environment = Environment.new()
+	world_environment.background_mode = Environment.BG_SKY
+	world_environment.sky = sky
+	world_environment.background_energy_multiplier = 0.25
+	world_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	world_environment.ambient_light_color = Color("#7c8a91")
+	world_environment.ambient_light_energy = 0.24
+	world_environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
+	world_environment.reflected_light_energy = 0.15
+	world_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	world_environment.tonemap_exposure = 0.76
+	world_environment.fog_enabled = true
+	world_environment.fog_light_color = Color("#5c615b")
+	world_environment.fog_density = 0.0018
 	var world_env := WorldEnvironment.new()
-	world_env.environment = env
+	world_env.environment = world_environment
 	add_child(world_env)
 	light = DirectionalLight3D.new()
-	light.name = "LowAfternoonSun"
-	light.light_color = Color("#ffe0b2")
-	light.light_energy = 1.25
+	light.name = "DynamicDaylight"
+	light.light_color = Color("#ddba89")
+	light.light_energy = 0.72
 	light.shadow_enabled = true
-	light.rotation_degrees = Vector3(-52, 34, -5)
+	light.directional_shadow_max_distance = 100.0
+	light.rotation_degrees = Vector3(-43, 30, -5)
 	add_child(light)
+	command_lamp = OmniLight3D.new()
+	command_lamp.name = "CommandCampNightLighting"
+	command_lamp.position = Vector3(0, 7.2, -3)
+	command_lamp.light_color = Color("#e7b879")
+	command_lamp.light_energy = 0.0
+	command_lamp.omni_range = 26.0
+	command_lamp.shadow_enabled = false
+	add_child(command_lamp)
+
+func _update_daylight(hour: float) -> void:
+	if absf(hour - prior_lighting_hour) < 0.07:
+		return
+	prior_lighting_hour = hour
+	var solar := sin((hour - 6.0) / 12.0 * PI)
+	var daylight := clampf(solar, 0.0, 1.0)
+	var twilight := clampf(1.0 - absf(hour - 18.0) / 3.5, 0.0, 1.0)
+	light.light_energy = lerpf(0.03, 0.94, daylight)
+	light.light_color = Color("#f5c293").lerp(Color("#e0e6ea"), daylight * 0.64)
+	light.rotation_degrees = Vector3(-18.0 - daylight * 53.0, 35.0 + hour * 4.0, -3.0)
+	world_environment.ambient_light_energy = lerpf(0.105, 0.32, daylight)
+	world_environment.background_energy_multiplier = lerpf(0.09, 0.25, daylight)
+	world_environment.ambient_light_color = Color("#35465c").lerp(Color("#82939a"), daylight)
+	world_environment.fog_light_color = Color("#202d36").lerp(Color("#6c6d63"), daylight)
+	sky_material.sky_top_color = Color("#0d1b2a").lerp(Color("#3b5566"), daylight)
+	sky_material.sky_horizon_color = Color("#222c3a").lerp(Color("#9d9788"), daylight)
+	command_lamp.light_energy = lerpf(1.7, 0.0, daylight) + twilight * 0.14
 
 func _box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var obj := MeshInstance3D.new()
@@ -304,9 +391,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 		cached_layout = _layout_signature(sim)
 		_rebuild_structures(sim)
 	_update_people(sim, selected_citizen)
-	if sim.day != last_daylight:
-		last_daylight = sim.day
-		light.light_energy = 1.22
+	_update_daylight(sim.hour)
 	# Construction hologram updates without re-instantiating building meshes.
 	if building_preview != null:
 		building_preview.visible = build_mode
