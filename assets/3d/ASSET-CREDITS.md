@@ -17,3 +17,15 @@ before importing or exporting the project. The actual game does not fetch assets
   character art. It still needs wasteland clothing, appropriate motion, and polish.
 
 Never use unlicensed game rips, an unpinned asset URL, or paid art without permission.
+## Photo-based PBR surfaces — Poly Haven
+
+- CC0 surface sets: [Rough Concrete](https://polyhaven.com/a/rough_concrete), [Rusty Metal Sheet](https://polyhaven.com/a/rusty_metal_sheet), and [Gravel Ground 01](https://polyhaven.com/a/gravel_ground_01).
+- Origin: Poly Haven official CDN; 1K diffuse and OpenGL normal maps.
+- License: Poly Haven CC0 public-domain textures, suitable for commercial projects.
+- Build location: `assets/3d/pbr/`.
+- Source files are fetched only by the CI/export process and packaged for offline use.
+- License and source records retained here; texture checksums are recorded in the installer once its initial verified fetch finishes.
+
+These are photographic material scans, not authored 3D facility meshes. They
+improve material fidelity but cannot alone make the current modular boxes look
+like finished modern-game structures.
