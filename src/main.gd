@@ -54,6 +54,9 @@ const CIV_RECOVERY_PROJECTS := ["Regional Power Grid","Clean Water Network","Med
 var governance_law_index := 0
 const GOVERNANCE_LAWS := ["rationing","security","labor","justice","speech"]
 const UTILITY_OVERLAYS := ["OFF", "POWER", "WATER", "SEWAGE"]
+const TOOLBAR_NAMES := ["BUILD", "REGION", "GOVERN", "INDUSTRY", "FACTIONS", "NATION", "SAVE", "LOAD", "GUIDE"]
+const TOOLBAR_HINTS := ["B", "M", "V", "K", "O", "J", "S", "L", "F1"]
+const TOOLBAR_KEYS := [KEY_B, KEY_M, KEY_V, KEY_K, KEY_O, KEY_J, KEY_S, KEY_L, KEY_F1]
 
 func _ready() -> void:
 	add_child(update_manager)
@@ -661,8 +664,11 @@ func _draw_hud() -> void:
 	]
 	var sx := 390.0
 	for stat in stats:
-		draw_string(ThemeDB.fallback_font, Vector2(sx,35), stat[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
-		draw_string(ThemeDB.fallback_font, Vector2(sx,70), stat[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, TEXT)
+		var plate := Rect2(sx - 12.0, 15.0, 121.0, 79.0)
+		draw_rect(plate, Color("#182122"))
+		draw_line(Vector2(plate.position.x, plate.end.y), Vector2(plate.end.x, plate.end.y), Color("#5b5d51"), 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(sx, 40), stat[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
+		draw_string(ThemeDB.fallback_font, Vector2(sx, 72), stat[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 25, TEXT)
 		sx += 142.0
 
 	if selected_citizen.is_empty() and selected_building.is_empty():
@@ -675,37 +681,57 @@ func _draw_hud() -> void:
 	var build_text := ""
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
-		build_text = "  // BUILD: %s  COST %.0f  [Q/E] TYPE  [F] ROTATE" % [definition["name"], float(definition["cost"])]
-	var mode_text := "[M] SETTLEMENT MAP" if world_map_mode else "[M] WORLD MAP"
-	if update_mode:
-		mode_text = "[F10] CLOSE UPDATE COMMAND"
-	elif governance_mode:
-		mode_text = "[V] CLOSE CIVIC COMMAND"
-	elif economy_mode:
-		mode_text = "[K] CLOSE INDUSTRY COMMAND"
-	elif faction_mode:
-		mode_text = "[O] CLOSE FACTION COMMAND"
-	elif civilization_mode:
-		mode_text = "[J] CLOSE CIVILIZATION COMMAND"
-	else:
-		mode_text += "  [F1] GUIDE  [F2] EVENTS  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION"
-	var update_alert := ""
-	if update_manager.get_state_label() == "AVAILABLE":
-		update_alert = "  // UPDATE %s AVAILABLE" % update_manager.available_version
-	elif update_manager.get_state_label() == "VERIFIED":
-		update_alert = "  // UPDATE VERIFIED"
-	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text + update_alert, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOOD if not update_alert.is_empty() else MUTED)
-	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
+		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
+	var command_hint := "MIDDLE/RIGHT DRAG: PAN     SCROLL: ZOOM     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
+	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color("#0e1517", 0.95))
+	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, HIGHLIGHT if sim.paused else GOOD)
+	_draw_toolbar()
 	if playtest_notice_seconds > 0.0:
 		var width := minf(vp.x - 44.0, 680.0)
 		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
 		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
 
+func _draw_toolbar() -> void:
+	var vp := get_viewport_rect().size
+	var width := (vp.x - 24.0) / float(TOOLBAR_NAMES.size())
+	var y := vp.y - 65.0
+	draw_rect(Rect2(0, y - 2.0, vp.x, 69.0), Color("#0a1012"))
+	for index in range(TOOLBAR_NAMES.size()):
+		var x := 12.0 + float(index) * width
+		var active := false
+		match index:
+			0: active = build_mode
+			1: active = world_map_mode
+			2: active = governance_mode
+			3: active = economy_mode
+			4: active = faction_mode
+			5: active = civilization_mode
+			8: active = help_mode
+		var rect := Rect2(x + 2.0, y + 4.0, width - 7.0, 50.0)
+		draw_rect(rect, Color("#62452f") if active else Color("#1a2426"))
+		draw_rect(rect, HIGHLIGHT if active else Color("#465456"), false, 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 26.0), TOOLBAR_NAMES[index], HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 13, TEXT)
+		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 43.0), "[" + TOOLBAR_HINTS[index] + "]", HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 11, HIGHLIGHT if active else MUTED)
+
+func _handle_toolbar_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	if position.y < vp.y - 65.0:
+		return false
+	var button_width := (vp.x - 24.0) / float(TOOLBAR_NAMES.size())
+	var index := int(floor((position.x - 12.0) / button_width))
+	if index >= 0 and index < TOOLBAR_KEYS.size():
+		var action := InputEventKey.new()
+		action.keycode = TOOLBAR_KEYS[index]
+		action.pressed = true
+		_unhandled_input(action)
+	return true
+
 func _draw_event_toasts() -> void:
 	var vp := get_viewport_rect().size
 	var left := vp.x - 334.0
-	var y := vp.y - 171.0
+	var y := vp.y - 215.0
 	draw_rect(Rect2(left, y, 309, 106), Color("#111b1bd9"), true)
 	draw_line(Vector2(left, y), Vector2(left + 309, y), ACCENT, 2.0)
 	draw_string(ThemeDB.fallback_font, Vector2(left + 13, y + 20), "SETTLEMENT ACTIVITY    [F2] EXPAND", HORIZONTAL_ALIGNMENT_LEFT, 289, 11, TEXT)
@@ -1171,6 +1197,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					selected_building = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if _handle_toolbar_click(event.position):
+				return
+			if event.position.y < 116.0:
+				return
 			if update_mode or governance_mode or economy_mode or faction_mode or civilization_mode:
 				pass
 			elif world_map_mode:
