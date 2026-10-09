@@ -610,9 +610,41 @@ func _make_survivor(c: Dictionary) -> Node3D:
 	select.visible = false
 	return person
 
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
+func _animate_imported_survivor(person: Node3D, traveling: bool) -> void:
+	var imported := person.get_node_or_null("ProductionArt")
+	if imported == null:
+		return
+	var player := _find_animation_player(imported)
+	if player == null:
+		return
+	var preferred := "walk" if traveling else "idle"
+	var fallback := ""
+	var chosen := ""
+	for clip in player.get_animation_list():
+		var name := String(clip).to_lower()
+		if fallback.is_empty():
+			fallback = String(clip)
+		if preferred in name:
+			chosen = String(clip)
+			break
+	if chosen.is_empty():
+		chosen = fallback
+	if not chosen.is_empty() and player.current_animation != chosen:
+		player.play(chosen, 0.2)
+
 func _animate_survivor(person: Node3D, traveling: bool, id: int) -> void:
 	if not person.has_node("ArmLeft"):
-		return # An imported rig is driven by its own AnimationTree.
+		_animate_imported_survivor(person, traveling)
+		return
 	var stride := 0.0
 	if traveling:
 		stride = sin(visual_time * 7.5 + float(id) * 0.68) * 0.44
