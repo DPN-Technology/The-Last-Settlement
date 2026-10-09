@@ -166,6 +166,17 @@ jobs:
           )
           start "" "TheLastSettlement.exe"
           EOF
+          cat > dist/windows/Launch-TheLastSettlement-Compatibility.cmd <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "TheLastSettlement.exe" (
+            echo Game executable missing. Extract all files from the ZIP.
+            pause
+            exit /b 1
+          )
+          start "" "TheLastSettlement.exe" --rendering-method gl_compatibility
+          EOF
           {
             printf 'THE LAST SETTLEMENT // PLAYTEST BUILD\n'
             printf 'Commit: %s\n' "$GITHUB_SHA"
@@ -180,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           cd dist/windows
-          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             PLAYTEST-INFO.txt             Launch-TheLastSettlement.cmd             SHA256SUMS.txt
+          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             PLAYTEST-INFO.txt             Launch-TheLastSettlement.cmd             Launch-TheLastSettlement-Compatibility.cmd             SHA256SUMS.txt
           cd ../..
           test -s dist/TheLastSettlement-Windows-x86_64.zip
 
