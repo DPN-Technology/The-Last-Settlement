@@ -148,7 +148,7 @@ static func create_survivor(person: Node3D, citizen: Dictionary, mats: Dictionar
 	_box(person, "CapBill", Vector3(0, 2.31, -0.31), Vector3(0.51, 0.07, 0.31), mats["boots"])
 
 	for sign in [-1.0,1.0]:
-		var left := sign < 0.0
+		var left: bool = float(sign) < 0.0
 		var leg := Node3D.new()
 		leg.name = "LegLeft" if left else "LegRight"
 		leg.position = Vector3(sign * 0.21, 0.94, 0.0)
