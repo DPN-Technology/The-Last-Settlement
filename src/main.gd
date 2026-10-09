@@ -172,7 +172,7 @@ func _panel_action_items() -> Array:
 	if governance_mode:
 		return [["PREV LAW",KEY_UP],["NEXT LAW",KEY_DOWN],["CHANGE",KEY_ENTER],["CLOSE",KEY_ESCAPE]]
 	if economy_mode:
-		return [["PREV ITEM",KEY_UP],["NEXT ITEM",KEY_DOWN],["BUY 1",KEY_ENTER],["SELL 1",KEY_BACKSPACE],["CLOSE",KEY_ESCAPE]]
+		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["MARKET",KEY_H],["RECIPE",KEY_N],["BUY 1",KEY_ENTER],["SELL 1",KEY_BACKSPACE],["QUEUE",KEY_C],["CLOSE",KEY_ESCAPE]]
 	if faction_mode:
 		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["SEND AID",KEY_A],["TRADE",KEY_D],["TRUCE",KEY_Z],["CLOSE",KEY_ESCAPE]]
 	if civilization_mode:
@@ -195,6 +195,11 @@ func _action_panel_area() -> Rect2:
 func _panel_action_rect(index: int, count: int) -> Rect2:
 	var area := _action_panel_area()
 	var gap := 5.0
+	if count > 5:
+		var columns := 4
+		var width := (area.size.x-26.0-gap*float(columns-1))/float(columns)
+		var row := int(index / columns)
+		return Rect2(area.position.x+13.0+float(index%columns)*(width+gap),area.end.y-73.0+float(row)*33.0,width,28.0)
 	var width := (area.size.x-26.0-gap*float(count-1))/maxf(1.0,float(count))
 	return Rect2(area.position.x+13.0+float(index)*(width+gap),area.end.y-40.0,width,29.0)
 
@@ -203,14 +208,16 @@ func _draw_panel_actions() -> void:
 	if actions.is_empty():
 		return
 	var area := _action_panel_area()
-	draw_rect(Rect2(area.position.x+5,area.end.y-47,area.size.x-10,44),Color("#111f25f3"))
+	var tall := actions.size()>5
+	draw_rect(Rect2(area.position.x+5,area.end.y-(80.0 if tall else 47.0),area.size.x-10,77.0 if tall else 44.0),Color("#0b161def"))
+	draw_line(Vector2(area.position.x+12,area.end.y-(80.0 if tall else 47.0)),Vector2(area.end.x-12,area.end.y-(80.0 if tall else 47.0)),ACCENT,1.0)
 	for i in range(actions.size()):
 		var row: Array = actions[i]
 		var rect := _panel_action_rect(i,actions.size())
 		var hover := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#35494e") if hover else Color("#24363c"))
-		draw_rect(rect,GOOD if hover else Color("#526b73"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(7,19),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-12,10,TEXT)
+		draw_rect(rect,Color("#603037") if hover else Color("#213039"))
+		draw_rect(rect,ACCENT if hover else Color("#48636b"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(6,18),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-10,10,TEXT)
 
 func _handle_panel_action_click(position: Vector2) -> bool:
 	var actions := _panel_action_items()
@@ -218,11 +225,47 @@ func _handle_panel_action_click(position: Vector2) -> bool:
 		var rect := _panel_action_rect(i,actions.size())
 		if not rect.has_point(position):
 			continue
+		var action: Array = actions[i]
+		var previous_credits := sim.economy_simulation.credits
+		var previous_queue := sim.economy_simulation.production_queue.size()
+		var previous_law: String = str(sim.governance_simulation.laws[GOVERNANCE_LAWS[governance_law_index]])
+		var mode_industry := economy_mode
+		var mode_governance := governance_mode
 		var event := InputEventKey.new()
-		event.keycode = int(actions[i][1])
+		event.keycode = int(action[1])
 		event.pressed = true
 		_unhandled_input(event)
+		if mode_industry and str(action[0]) in ["BUY 1","SELL 1"]:
+			playtest_notice = "TRADE COMPLETED" if absf(sim.economy_simulation.credits-previous_credits)>0.001 else "TRADE NOT AVAILABLE  /  CHECK STOCK & CREDITS"
+			playtest_notice_seconds = 5.0
+		elif mode_industry and str(action[0])=="QUEUE":
+			playtest_notice = "PRODUCTION ORDER ADDED" if sim.economy_simulation.production_queue.size()>previous_queue else "PRODUCTION ORDER UNAVAILABLE"
+			playtest_notice_seconds = 4.0
+		elif mode_governance and str(action[0])=="CHANGE":
+			var current := str(sim.governance_simulation.laws[GOVERNANCE_LAWS[governance_law_index]])
+			playtest_notice = "LAW UPDATED  /  "+current if current!=previous_law else "NO POLICY CHANGE"
+			playtest_notice_seconds = 4.0
 		return true
+	return false
+
+func _handle_command_content_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	if governance_mode:
+		var area := SettlementUILayout.side_panel(vp,480.0)
+		for i in range(GOVERNANCE_LAWS.size()):
+			var row := Rect2(area.position+Vector2(18,263.0+float(i)*28.0),Vector2(area.size.x-36.0,26.0))
+			if row.has_point(position):
+				governance_law_index = i
+				return true
+		return area.has_point(position)
+	if economy_mode:
+		var area := SettlementUILayout.side_panel(vp,480.0)
+		for i in range(ECONOMY_ITEMS.size()):
+			var row := Rect2(area.position+Vector2(17.0,158.0+float(i)*22.0),Vector2(area.size.x-34.0,21.0))
+			if row.has_point(position):
+				economy_item_index = i
+				return true
+		return area.has_point(position)
 	return false
 
 func _world_point(p: Vector2) -> Vector2:
@@ -278,7 +321,7 @@ func _dispatch_region() -> bool:
 	var ok := sim.world_simulation.create_expedition(sim,selected_world_location_id)
 	var event_text := ""
 	if not sim.events.is_empty():
-		event_text = str(sim.events[-1].get("body",""))
+		event_text = str(sim.events[0].get("body",""))
 	playtest_notice = ("EXPEDITION DISPATCHED  /  " + str(place["name"])) if ok else ("EXPEDITION BLOCKED  /  " + event_text)
 	playtest_notice_seconds = 5.0
 	return ok
@@ -1765,6 +1808,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if field_directives_visible and _handle_objective_click(event.position):
 					return
 			if _handle_panel_action_click(event.position):
+				return
+			if _handle_command_content_click(event.position):
 				return
 			if _handle_inspector_click(event.position):
 				return
