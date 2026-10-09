@@ -540,13 +540,9 @@ func _build_structure(b: Dictionary) -> void:
 		body_mat = materials["rooflight"]
 	elif type == "command":
 		body_mat = materials["concrete"]
-	_box(group, Vector3(0,body_height*0.5+0.2,0), Vector3(size.x,body_height,size.y),body_mat)
-	# Flat weathered roofs become distinctive mechanical surfaces, not labels.
-	_box(group, Vector3(0,body_height+0.38,0), Vector3(size.x+0.8,0.35,size.y+0.8), materials["roof"])
-	for xdir in [-1.0,1.0]:
-		_box(group, Vector3(xdir*(size.x/2.0-0.7),body_height*0.6+0.2,-size.y/2.0-0.05), Vector3(1.2,0.85,0.15), materials["glass"])
-	_box(group, Vector3(0,1.4,-size.y/2.0-0.15), Vector3(1.7,2.6,0.18), materials["darkmetal"])
-	_box(group, Vector3(0,3.3,-size.y/2.0-0.22), Vector3(1.8,0.16,0.2), materials["glow"])
+	# No solid monolithic cube: a four-sided shell with a front doorway,
+	# recessed access door, pitched/industrial roof and separate cladding.
+	SettlementArchitecture3D.facade(group, type, size, body_height, body_mat, materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
