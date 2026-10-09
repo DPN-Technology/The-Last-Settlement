@@ -67,18 +67,44 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		_flat_service_roof(group,size,height,kind,mats)
 
 static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
-	var half := size.x*0.5
-	var ridge := 1.55
-	var pitch := atan2(ridge,half)
-	var sloped_span := sqrt(half*half+ridge*ridge)+0.55
-	for sign in [-1.0,1.0]:
-		var panel := box(group,"PitchedHousingRoof",Vector3(sign*half*0.5,height+0.24+ridge*0.5,0),Vector3(sloped_span,0.22,size.y+0.95),mats["roof"])
-		panel.rotation.z = -sign*pitch
+	# Real gabled shelter silhouette: significantly steeper than the initial
+	# prototype and without box-shaped machinery obscuring the roof pitch.
+	var half := size.x * 0.5
+	var ridge := 2.65
+	var pitch := atan2(ridge, half)
+	var sloped_span := sqrt(half * half + ridge * ridge) + 0.45
+	for side in [-1.0, 1.0]:
+		var panel := box(group, "PitchedHousingRoof", Vector3(side*half*0.5,height+0.32+ridge*0.5,0),Vector3(sloped_span,0.17,size.y+0.95),mats["roof"])
+		panel.rotation.z = -side*pitch
+		# Long corrosion-resistant ridge-to-eave seam near each side of roof.
+		var seam := box(group, "RoofStandingSeam", Vector3(side*half*0.47,height+0.39+ridge*0.53,0),Vector3(0.075,0.10,size.y+0.98),mats["steel"])
+		seam.rotation.z = -side*pitch
+		var gutter := box(group, "EaveRainGutter", Vector3(side*(half+0.23),height+0.19,0),Vector3(0.27,0.22,size.y+1.12),mats["rust"])
+		gutter.rotation.z = 0.0
+	# Fill the triangular exposed gables with physically lit, weathered walls.
+	# A roof only made from two floating planes did not look like an actual hut.
+	var gable := SurfaceTool.new()
+	gable.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for side in [-1.0, 1.0]:
+		var z := side * size.y * 0.5
+		var left := Vector3(-half,height+0.23,z)
+		var right := Vector3(half,height+0.23,z)
+		var apex := Vector3(0,height+ridge+0.23,z)
+		var triangle: Array[Vector3] = [left,apex,right] if side < 0.0 else [left,right,apex]
+		for vertex in triangle:
+			gable.set_uv(Vector2((vertex.x+half)/maxf(1.0,size.x),(vertex.y-height)/maxf(1.0,ridge)))
+			gable.add_vertex(vertex)
+	gable.generate_normals()
+	var gable_visual := MeshInstance3D.new()
+	gable_visual.name = "ShelterGableEndWalls"
+	gable_visual.mesh = gable.commit()
+	gable_visual.material_override = mats["wall"]
+	group.add_child(gable_visual)
+	box(group,"CappedRidge",Vector3(0,height+ridge+0.29,0),Vector3(0.24,0.20,size.y+1.10),mats["rooflight"])
+	# Damaged sheet-metal patch panels sit flush to slope, not floating cubes.
 	for side in [-1.0,1.0]:
-		box(group,"RidgeRoofEndTrim",Vector3(0,height+ridge+0.23,side*(size.y*0.5+0.43)),Vector3(0.24,0.18,0.12),mats["steel"])
-	box(group,"CappedRidge",Vector3(0,height+ridge+0.25,0),Vector3(0.3,0.18,size.y+1.1),mats["rooflight"])
-	for sign in [-1.0,1.0]:
-		box(group,"WeatheredShutter",Vector3(sign*(half*0.5),height+0.43, -size.y*0.20),Vector3(1.15,0.12,1.55),mats["rust"])
+		var patch := box(group,"WeatheredRoofPatch",Vector3(side*half*0.53,height+0.42+ridge*0.47,-size.y*0.17),Vector3(1.8,0.045,1.45),mats["rust"])
+		patch.rotation.z = -side*pitch
 
 static func _clinic_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	box(group,"ClinicRoof",Vector3(0,height+0.25,0),Vector3(size.x+0.5,0.33,size.y+0.5),mats["rooflight"])
