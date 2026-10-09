@@ -17,7 +17,14 @@ ASSETS = ("rough_concrete", "rusty_metal_sheet", "gravel_ground_01")
 SUFFIXES = ("diff", "nor_gl")
 PATH = Path("assets/3d/pbr")
 # Filled only after actual public-CDN checksums have been observed and reviewed.
-MATERIALS_SHA256: dict[str, str] = {}
+MATERIALS_SHA256: dict[str, str] = {
+    "rough_concrete_diff_1k.png": "5d1fc425ae5fffdd8c4b8245394301c1fedbf19b26567c43619d2ba5a40d9aff",
+    "rough_concrete_nor_gl_1k.png": "36f547dc69d3cf9ea076b68e59fe6fe5af2b6281196ec913a54fcd9822fef3cf",
+    "rusty_metal_sheet_diff_1k.png": "b8e47f1d84acbe20119a351217d7a9d1139a21ea99a9fe0dd653880c9ee897ba",
+    "rusty_metal_sheet_nor_gl_1k.png": "ad8284e25754f109a46ab418f08a26f7ab8030f9c6cdf60d5b939f441a30b789",
+    "gravel_ground_01_diff_1k.png": "98de56b46955d2a196a74b5bff9fa6e72e01b8e8f047f0217b82c3361e2c9db5",
+    "gravel_ground_01_nor_gl_1k.png": "4e20f2dd84237fb46b3ae7005b8134ec2f8f08c6dc57c69df7c24d28df7d83b0"
+}
 MAX_BYTES = 20_000_000
 
 
@@ -56,7 +63,7 @@ def install() -> None:
                 raise ValueError(f"Unexpected PBR resolution for {name}: {width}x{height}")
             actual = hashlib.sha256(payload).hexdigest()
             expected = MATERIALS_SHA256.get(name)
-            if expected and expected != actual:
+            if expected is None or expected != actual:
                 raise ValueError(f"Unexpected Poly Haven texture hash for {name}")
             if not target.exists():
                 target.write_bytes(payload)
