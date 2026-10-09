@@ -95,6 +95,15 @@ jobs:
           chmod +x ".godot-ci/Godot_v4.3-stable_linux.x86_64"
           ".godot-ci/Godot_v4.3-stable_linux.x86_64" --version
 
+      - name: Install and import pinned CC0 3D survivor for smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/install_cc0_assets.py
+          GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --import
+          test -s assets/3d/characters/survivor.glb
+
       - name: Godot project parse gate
         shell: bash
         run: |
