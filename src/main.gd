@@ -14,13 +14,15 @@ const ACCENT := Color("#c64242")
 const RUST := Color("#a46d45")
 
 var sim := SettlementSimulation.new()
+var settlement_visuals := SettlementVisuals.new()
 var update_manager := UpdateManager.new()
 var update_mode := false
-var help_mode := true
+var help_mode := false
+var incident_panel_visible := false
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
-var camera_offset := Vector2.ZERO
-var zoom := 1.0
+var camera_offset := Vector2(72, -8)
+var zoom := 0.86
 var dragging := false
 var drag_origin := Vector2.ZERO
 var selected_citizen: Dictionary = {}
@@ -130,70 +132,7 @@ func _screen_to_world(p: Vector2) -> Vector2:
 	return p / zoom - camera_offset
 
 func _draw_world() -> void:
-	for x in range(260, 1450, 40):
-		draw_line(_world_point(Vector2(x, 150)), _world_point(Vector2(x, 790)), GRID, 1.0)
-	for y in range(150, 820, 40):
-		draw_line(_world_point(Vector2(260, y)), _world_point(Vector2(1450, y)), GRID, 1.0)
-
-	for b in sim.buildings:
-		var pos: Vector2 = _world_point(b["position"])
-		var sz: Vector2 = b["size"] * zoom
-		var rect := Rect2(pos - sz / 2.0, sz)
-		var color := Color("#24282b")
-		match b["type"]:
-			"medical": color = Color("#20322f")
-			"power": color = Color("#362c20")
-			"farm": color = Color("#243024")
-			"industry": color = Color("#30282a")
-			"command": color = Color("#352322")
-			"generator": color = Color("#3a2f1e")
-			"battery": color = Color("#2d3022")
-			"power_pole": color = Color("#272727")
-			"water_pump": color = Color("#1d3038")
-			"purifier": color = Color("#1e3837")
-			"water_tank": color = Color("#22313a")
-			"pipe": color = Color("#26343b")
-			"sewage": color = Color("#303522")
-		draw_rect(rect, color, true)
-		var edge := ACCENT if selected_building == b else PANEL_EDGE
-		draw_rect(rect, edge, false, 2.0 if selected_building != b else 4.0)
-		draw_string(ThemeDB.fallback_font, pos + Vector2(-sz.x * 0.43, -sz.y * 0.12), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
-		draw_string(ThemeDB.fallback_font, pos + Vector2(-sz.x * 0.43, sz.y * 0.17), "COND %d%%" % int(b["condition"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
-
-	for bp in sim.blueprints:
-		var bp_pos: Vector2 = _world_point(bp["position"])
-		var bp_size: Vector2 = bp["size"] * zoom
-		var bp_rect := Rect2(bp_pos - bp_size / 2.0, bp_size)
-		draw_rect(bp_rect, Color(0.55, 0.18, 0.15, 0.18), true)
-		draw_rect(bp_rect, ACCENT, false, 2.0)
-		var pct := 100.0 * float(bp["progress"]) / maxf(1.0, float(bp["work_required"]))
-		draw_string(ThemeDB.fallback_font, bp_pos + Vector2(-bp_size.x*0.42, 0), "%s %d%%" % [bp["name"], int(pct)], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, TEXT)
-
-	if build_mode:
-		var definition := sim.get_build_catalog()[build_catalog_index]
-		var ghost_pos := _world_point(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0))
-		var ghost_world_size: Vector2 = definition["size"]
-		if build_rotated and (definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe"):
-			ghost_world_size = Vector2(ghost_world_size.y, ghost_world_size.x)
-		var ghost_size: Vector2 = ghost_world_size * zoom
-		var ghost_rect := Rect2(ghost_pos - ghost_size/2.0, ghost_size)
-		var valid := sim.can_place_blueprint(Vector2(round(mouse_world.x / 20.0) * 20.0, round(mouse_world.y / 20.0) * 20.0), ghost_world_size)
-		draw_rect(ghost_rect, Color(0.25,0.65,0.35,0.18) if valid else Color(0.8,0.15,0.15,0.18), true)
-		draw_rect(ghost_rect, GOOD if valid else BAD, false, 2.0)
-
-	for c in sim.citizens:
-		if str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
-			continue
-		var p: Vector2 = _world_point(c["position"])
-		var col := GOOD if c["health"] > 55.0 else BAD
-		if not c["alive"]:
-			col = Color("#555b63")
-		if selected_citizen == c:
-			draw_circle(p, 10.0 * zoom, Color(0.8, 0.2, 0.2, 0.18))
-			draw_arc(p, 9.0 * zoom, 0.0, TAU, 24, ACCENT, 2.0)
-		draw_circle(p, 5.0 * zoom, col)
-		if zoom > 0.82 and c["alive"]:
-			draw_string(ThemeDB.fallback_font, p + Vector2(8, -8), c["name"].split(" ")[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, MUTED)
+	settlement_visuals.render(self, sim, camera_offset, zoom, selected_building, selected_citizen, build_mode, mouse_world, build_rotated, sim.get_build_catalog()[build_catalog_index])
 
 func _draw_utility_overlay() -> void:
 	if utility_overlay == 0:
@@ -573,7 +512,7 @@ func _draw_help_panel() -> void:
 		["3 // CONTROL TIME","SPACE pauses. 1 / 2 / 3 sets normal, fast and emergency simulation speed."],
 		["4 // EXPAND BEYOND LAST HAVEN","Press M for the regional map. Select discovered sites, G dispatches expeditions, I founds eligible settlements."],
 		["5 // RUN THE RECOVERY","V opens government, K industry, O factions and J civilization command. These systems become critical as the network grows."],
-		["6 // PROTECT YOUR RUN","S saves, L loads. F9 saves playtest diagnostics; F10 checks stable updates."]
+		["6 // PROTECT YOUR RUN","S saves, L loads. F9 writes diagnostics; F2 opens incidents. Right-drag pans."]
 	]
 	var ry := y + 112.0
 	for row in lines:
@@ -727,7 +666,10 @@ func _draw_hud() -> void:
 		sx += 142.0
 
 	if selected_citizen.is_empty() and selected_building.is_empty():
-		_draw_event_panel()
+		if incident_panel_visible:
+			_draw_event_panel()
+		else:
+			_draw_event_toasts()
 
 	var status := "PAUSED" if sim.paused else ("x%.0f" % sim.speed)
 	var build_text := ""
@@ -746,7 +688,7 @@ func _draw_hud() -> void:
 	elif civilization_mode:
 		mode_text = "[J] CLOSE CIVILIZATION COMMAND"
 	else:
-		mode_text += "  [F1] GUIDE  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION  [F10] UPDATE"
+		mode_text += "  [F1] GUIDE  [F2] EVENTS  [V] CIVIC  [K] INDUSTRY  [O] FACTIONS  [J] CIVILIZATION"
 	var update_alert := ""
 	if update_manager.get_state_label() == "AVAILABLE":
 		update_alert = "  // UPDATE %s AVAILABLE" % update_manager.available_version
@@ -759,6 +701,23 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
 		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
+
+func _draw_event_toasts() -> void:
+	var vp := get_viewport_rect().size
+	var left := vp.x - 334.0
+	var y := vp.y - 171.0
+	draw_rect(Rect2(left, y, 309, 106), Color("#111b1bd9"), true)
+	draw_line(Vector2(left, y), Vector2(left + 309, y), ACCENT, 2.0)
+	draw_string(ThemeDB.fallback_font, Vector2(left + 13, y + 20), "SETTLEMENT ACTIVITY    [F2] EXPAND", HORIZONTAL_ALIGNMENT_LEFT, 289, 11, TEXT)
+	for i in range(mini(2, sim.events.size())):
+		var incident: Dictionary = sim.events[i]
+		var color := GOOD if str(incident.get("severity", "")) == "good" else WARN
+		if str(incident.get("severity", "")) == "critical":
+			color = BAD
+		var row_y := y + 39.0 + float(i) * 30.0
+		draw_circle(Vector2(left + 16, row_y), 3.0, color)
+		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 3), str(incident.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 11, TEXT)
+		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 17), str(incident.get("body", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 9, MUTED)
 
 func _draw_event_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -918,6 +877,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_F1:
 				help_mode = not help_mode
+			KEY_F2:
+				incident_panel_visible = not incident_panel_visible
 			KEY_F9:
 				var report_path := PlaytestReporter.capture(sim)
 				if report_path.is_empty():
@@ -1220,10 +1181,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			zoom = minf(1.6, zoom + 0.08)
+			var world_anchor := _screen_to_world(event.position)
+			zoom = minf(1.75, zoom + 0.08)
+			camera_offset = event.position / zoom - world_anchor
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			zoom = maxf(0.65, zoom - 0.08)
-		elif event.button_index == MOUSE_BUTTON_MIDDLE:
+			var world_anchor := _screen_to_world(event.position)
+			zoom = maxf(0.6, zoom - 0.08)
+			camera_offset = event.position / zoom - world_anchor
+		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
 			dragging = event.pressed
 			drag_origin = event.position
 	elif event is InputEventMouseMotion:
