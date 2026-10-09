@@ -205,6 +205,46 @@ jobs:
           cd ../..
           test -s dist/TheLastSettlement-Windows-x86_64.zip
 
+      - name: Publish independently visible playtest hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            echo '### The Last Settlement // Windows Playtest Integrity'
+            echo ''
+            echo 'These checksums were calculated by the build runner **before** artifact upload.'
+            echo 'They establish download integrity relative to this GitHub Actions run; they are not a code-signing certificate or malware clearance.'
+            echo ''
+            echo 'Commit: `'"$GITHUB_SHA"'`'
+            echo ''
+            echo '```text'
+            cat dist/windows/SHA256SUMS.txt
+            echo '```'
+            echo ''
+            echo 'Development builds are **unsigned**. Keep browser and Windows security protections enabled.'
+          ) >> "$GITHUB_STEP_SUMMARY"
+
+      # GitHub Actions creates its own ZIP around uploaded artifacts.
+      # Publish the raw files as a SECOND artifact so playtesters can extract
+      # them directly rather than unpacking a ZIP inside another ZIP.
+      # Retain the original ZIP artifact for downstream Windows packaging.
+      - name: Upload direct Windows playtest files (single extraction)
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-Playtest-Direct
+          path: |
+            dist/windows/TheLastSettlement.exe
+            dist/windows/TheLastSettlement.pck
+            dist/windows/README-WINDOWS.txt
+            dist/windows/PLAYTEST-INFO.txt
+            dist/windows/Launch-TheLastSettlement.cmd
+            dist/windows/Launch-TheLastSettlement-Compatibility.cmd
+            dist/windows/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
       - name: Upload Windows portable build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
