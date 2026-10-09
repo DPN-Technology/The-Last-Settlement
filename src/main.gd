@@ -837,10 +837,14 @@ func _active_screen_label() -> String:
 	return "WORLD VIEW"
 
 func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
-	draw_rect(rect, Color("#0d1418ed"), true)
-	draw_rect(rect, Color("#62727a6e"), false, 1.0)
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x, 3.0)), edge)
-	draw_rect(Rect2(rect.position + Vector2(0,3), Vector2(3, rect.size.y-3)), Color(edge, 0.7))
+	# Unified DPN war-room styling: graphite glass, electric-red identity rail,
+	# crisp technical corners and restrained illuminated command highlights.
+	draw_rect(rect,Color("#09151deF"))
+	draw_rect(rect,Color("#49616e"),false,1)
+	draw_rect(Rect2(rect.position,Vector2(rect.size.x,3)),edge)
+	draw_rect(Rect2(rect.position+Vector2(0,3),Vector2(3,rect.size.y-3)),Color(edge,0.75))
+	draw_line(rect.position+Vector2(8,10),rect.position+Vector2(22,10),Color("#da5756",0.76),2)
+	draw_rect(Rect2(rect.end-Vector2(10,10),Vector2(5,5)),Color(edge,0.85))
 
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
@@ -863,7 +867,7 @@ func _draw_hud() -> void:
 	var alive := sim.get_alive_citizens().size()
 	var morale := sim.get_average_morale()
 	var resources := [
-		["POP", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
+		["PEOPLE", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
 		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food reserves for the settlement"],
 		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available to survivors"],
 		["POWER", "%.0f%%" % float(sim.resources["power"]), float(sim.resources["power"])/100.0, "Settlement electrical power"],
@@ -880,10 +884,13 @@ func _draw_hud() -> void:
 		var hovered_now := rect.has_point(get_local_mouse_position())
 		if hovered_now:
 			hovered = i
-		draw_rect(rect, Color("#243238") if hovered_now else Color("#162229"))
-		draw_rect(rect, Color(severity,0.80) if hovered_now else Color("#3b5159"), false, 1.0)
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(7,14), str(item[0]), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x-12, 9, MUTED)
-		draw_string(ThemeDB.fallback_font, rect.position + Vector2(7,35), str(item[1]), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x-12, 18, TEXT)
+		draw_rect(rect,Color("#29353e") if hovered_now else Color("#14232d"))
+		draw_rect(rect,Color("#82939e") if hovered_now else Color("#476272"),false,1)
+		draw_rect(Rect2(rect.position+Vector2(0,0),Vector2(3,rect.size.y)),severity)
+		draw_line(rect.position+Vector2(6,3),rect.position+Vector2(rect.size.x-5,3),Color("#ae4448",0.53),1)
+		draw_circle(rect.position+Vector2(rect.size.x-10,10),2.0,severity)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,16),str(item[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-18,10,MUTED)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,36),str(item[1]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-18,17,TEXT)
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,rect.size.x-14),2)),Color("#2d383b"))
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,(rect.size.x-14)*fraction),2)),severity)
 	var battery_percent := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
@@ -1176,8 +1183,8 @@ func _handle_build_palette_click(position: Vector2) -> bool:
 
 func _draw_toolbar() -> void:
 	var vp := get_viewport_rect().size
-	var descriptions := ["Construction tools","Regional operations","Civic and legal policy","Production and trade","External faction relations","Civilization recovery","Save the settlement","Restore a save","Controls and objectives"]
-	var selected := -1
+	var descriptions := ["Construct and manage new buildings","Scout sites and dispatch salvage teams","Choose laws that affect survivors","Trade supplies and queue real production","Manage neighboring groups","Expand regional recovery","Save this settlement","Load your saved settlement","Learn the controls"]
+	var current := -1
 	for i in range(TOOLBAR_NAMES.size()):
 		var rect := SettlementUILayout.navbar_rect(vp,i)
 		var active := false
@@ -1189,20 +1196,27 @@ func _draw_toolbar() -> void:
 			4: active = faction_mode
 			5: active = civilization_mode
 			8: active = help_mode
-		if rect.has_point(get_local_mouse_position()):
-			selected = i
-		var highlight := active or selected==i
-		draw_rect(rect,Color("#3a3130") if active else (Color("#28383d") if selected==i else Color("#162329")))
-		draw_rect(rect,WARN if active else (Color("#789ca8") if selected==i else Color("#40565e")),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,20),TOOLBAR_NAMES[i],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-39,11,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-9,rect.position.y+20),TOOLBAR_HINTS[i],HORIZONTAL_ALIGNMENT_RIGHT,21,9,WARN if highlight else MUTED)
-	if selected >= 0:
-		var hovered_rect := SettlementUILayout.navbar_rect(vp,selected)
-		var left := clampf(hovered_rect.position.x,8.0,maxf(8.0,vp.x-240))
-		var tip := Rect2(left,vp.y-87,236,25)
-		draw_rect(tip,Color("#101e23e9"))
-		draw_rect(tip,Color("#566a72"),false,1.0)
-		draw_string(ThemeDB.fallback_font,tip.position+Vector2(9,17),descriptions[selected],HORIZONTAL_ALIGNMENT_LEFT,tip.size.x-16,10,TEXT)
+		var hovered := rect.has_point(get_local_mouse_position())
+		if hovered:
+			current = i
+		draw_rect(rect,Color("#583138") if active else (Color("#2d444c") if hovered else Color("#142631")))
+		draw_rect(rect,ACCENT if active else (Color("#71929c") if hovered else Color("#3d626d")),false,1)
+		draw_rect(Rect2(rect.position,Vector2(3,rect.size.y)),ACCENT if active else Color("#334956"))
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,12),"%02d" % (i+1),HORIZONTAL_ALIGNMENT_LEFT,20,9,ACCENT if active else MUTED)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,24),TOOLBAR_NAMES[i],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-27,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-7,rect.position.y+12),TOOLBAR_HINTS[i],HORIZONTAL_ALIGNMENT_RIGHT,24,9,GOOD if active else MUTED)
+		if active:
+			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-3),Vector2(rect.size.x-6,3)),ACCENT)
+		elif hovered:
+			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-2),Vector2(rect.size.x-6,2)),GOOD)
+	if current>=0:
+		var hovered_rect := SettlementUILayout.navbar_rect(vp,current)
+		var left := clampf(hovered_rect.position.x,8.0,maxf(8.0,vp.x-308))
+		var tip := Rect2(left,vp.y-90.0,304.0,28.0)
+		draw_rect(tip,Color("#0d1e27fa"))
+		draw_rect(tip,Color("#71929c"),false,1)
+		draw_rect(Rect2(tip.position,Vector2(3,tip.size.y)),ACCENT)
+		draw_string(ThemeDB.fallback_font,tip.position+Vector2(11,18),descriptions[current],HORIZONTAL_ALIGNMENT_LEFT,tip.size.x-21,11,TEXT)
 
 func _handle_toolbar_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
