@@ -62,6 +62,30 @@ var faction_simulation := FactionSimulation.new()
 var civilization_simulation := CivilizationSimulation.new()
 var federal_governance_simulation := FederalGovernanceSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
+# Optional v14 save field: older saves load with every directive unfinished.
+var field_objectives := {
+	"inspected": false,
+	"blueprint": false,
+	"expedition": false,
+	"survived": false
+}
+
+func complete_field_objective(objective: String) -> void:
+	if not field_objectives.has(objective) or bool(field_objectives[objective]):
+		return
+	field_objectives[objective] = true
+	var titles := {
+		"inspected": "Know Your People",
+		"blueprint": "Rebuild the Camp",
+		"expedition": "Beyond the Walls",
+		"survived": "First Night"
+	}
+	add_event("DIRECTIVE COMPLETE", str(titles.get(objective, "Field Command")) + " completed.", "good")
+
+func check_field_objectives() -> void:
+	if day >= 2:
+		complete_field_objective("survived")
+
 
 func _init() -> void:
 	rng.randomize()
@@ -163,6 +187,7 @@ func place_blueprint(build_type: String, world_position: Vector2, rotated: bool 
 		"assigned_builder": 0
 	})
 	next_blueprint_id += 1
+	complete_field_objective("blueprint")
 	add_event("BLUEPRINT PLACED", "%s queued for construction." % definition["name"], "intel")
 	return true
 
@@ -838,6 +863,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"hour": hour,
 		"total_hours": total_hours,
 		"settlement_name": settlement_name,
+		"field_objectives": field_objectives,
 		"resources": resources,
 		"stockpiles": stockpiles,
 		"work_orders": work_orders,
@@ -948,6 +974,9 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	hour = float(data.get("hour", 7.0))
 	total_hours = float(data.get("total_hours", 0.0))
 	settlement_name = str(data.get("settlement_name", settlement_name))
+	var loaded_objectives: Dictionary = data.get("field_objectives", {})
+	for objective in field_objectives.keys():
+		field_objectives[objective] = bool(loaded_objectives.get(objective, false))
 	resources = data.get("resources", resources)
 	stockpiles = data.get("stockpiles", stockpiles)
 	work_orders = data.get("work_orders", work_orders)
