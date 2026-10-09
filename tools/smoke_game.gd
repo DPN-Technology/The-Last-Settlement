@@ -221,6 +221,15 @@ func _smoke() -> void:
 		push_error("SMOKE: Failsafe floor is too bright")
 		quit(1)
 		return
+	var sampled_rubble := world.terrain_layer.get_node_or_null("DarkSoilGravelAndRubble") as MultiMeshInstance3D
+	if sampled_rubble == null or sampled_rubble.multimesh == null:
+		push_error("SMOKE: Terrain rubble was not created")
+		quit(1)
+		return
+	if not (sampled_rubble.multimesh.mesh is SphereMesh):
+		push_error("SMOKE: Terrain still contains square white confetti instead of stones")
+		quit(1)
+		return
 	var sample_image := GroundAppearance.bake_image()
 	var sample_brightness := GroundAppearance.sample_luminance(sample_image)
 	if sample_brightness < 0.07 or sample_brightness > 0.44:
@@ -294,8 +303,9 @@ func _smoke() -> void:
 			push_error("SMOKE: White source mannequin was not recolored")
 			quit(1)
 			return
-		if person.get_node_or_null("SurvivorEquipment/Backpack") == null:
-			push_error("SMOKE: Survival equipment is missing from rigged character")
+		var hiking_pack := person.get_node_or_null("SurvivorEquipment/Backpack") as MeshInstance3D
+		if hiking_pack == null or not (hiking_pack.mesh is CapsuleMesh):
+			push_error("SMOKE: Survivor still wearing oversized square block backpack")
 			quit(1)
 			return
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
@@ -329,6 +339,10 @@ func _smoke() -> void:
 	for structure in world.structure_layer.get_children():
 		if structure.get_node_or_null("PitchedHousingRoof") != null:
 			house_found = true
+			if structure.get_node_or_null("ShelterGableEndWalls") == null:
+				push_error("SMOKE: Pitched roof is missing realistic filled end gables")
+				quit(1)
+				return
 		if structure.get_node_or_null("ClinicRoof") != null:
 			clinic_found = true
 		if structure.get_node_or_null("RaisedMachineRoom") != null:
@@ -342,6 +356,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: clothed/scaled rig, architectural doors and roofs, PBR normals, crops, world and saves")
+	print("PLAYTEST SMOKE PASS: rounded packs, gabled shelter roof and terrain stones, rig, PBR, crops, gameplay and saves")
 	instance.queue_free()
 	quit(0)
