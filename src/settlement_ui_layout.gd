@@ -49,6 +49,21 @@ static func directive_tab() -> Rect2:
 static func objective_panel() -> Rect2:
 	return Rect2(14.0, TOP_H + 9.0, 300.0, 188.0)
 
+static func region_map_rect(size: Vector2) -> Rect2:
+	var right := side_panel(size,372.0)
+	return Rect2(245.0,TOP_H+62.0,maxf(180.0,right.position.x-257.0),maxf(220.0,size.y-TOP_H-BOTTOM_H-83.0))
+
+static func region_point(size: Vector2, world_pos: Vector2) -> Vector2:
+	var map := region_map_rect(size)
+	return map.position+Vector2(world_pos.x/1200.0*map.size.x,world_pos.y/820.0*map.size.y)
+
+static func region_site_row(size: Vector2, row: int) -> Rect2:
+	return Rect2(16.0,TOP_H+85.0+float(row)*29.0,211.0,28.0)
+
+static func region_dispatch_rect(size: Vector2) -> Rect2:
+	var panel := side_panel(size,372.0)
+	return Rect2(panel.position+Vector2(16.0,194.0),Vector2(panel.size.x-32.0,33.0))
+
 static func build_palette(size: Vector2, _count: int) -> Rect2:
 	var max_height := maxf(250.0,size.y-TOP_H-BOTTOM_H-23.0)
 	return Rect2(12.0,TOP_H+8.0,minf(350.0,size.x-24.0),minf(443.0,max_height))
