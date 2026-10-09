@@ -713,7 +713,7 @@ func _draw_hud() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
-	var command_hint := "RIGHT DRAG: PAN     SCROLL: ZOOM     HOME: CENTER     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
+	var command_hint := "RIGHT DRAG: PAN    ALT+RIGHT: ORBIT    WHEEL: ZOOM    HOME: CENTER     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
 	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color(Color("#0e1517"), 0.95))
 	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, WARN if sim.paused else GOOD)
@@ -1422,5 +1422,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		mouse_world = _screen_to_world(event.position)
 		if dragging:
 			var drag_delta: Vector2 = event.position - drag_origin
-			settlement_world.pan_screen(drag_delta)
+			if event.alt_pressed:
+				settlement_world.orbit_camera(drag_delta)
+			else:
+				settlement_world.pan_screen(drag_delta)
 			drag_origin = event.position
