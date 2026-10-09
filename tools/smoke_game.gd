@@ -157,10 +157,16 @@ func _smoke() -> void:
 		push_error("SMOKE: Height-mapped 3D terrain is unavailable")
 		quit(1)
 		return
-	if not (world.materials["roof"] is ShaderMaterial):
-		push_error("SMOKE: Weathered physical roof material is unavailable")
-		quit(1)
-		return
+	for key in ["roof", "wall", "concrete", "rust", "asphalt"]:
+		var photo := world.materials[key] as StandardMaterial3D
+		if photo == null or photo.albedo_texture == null:
+			push_error("SMOKE: Photographic PBR diffuse material missing for " + key)
+			quit(1)
+			return
+		if not photo.normal_enabled or photo.normal_texture == null:
+			push_error("SMOKE: Photographic PBR normal map missing for " + key)
+			quit(1)
+			return
 	world._update_daylight(12.0)
 	var sunlight_noon := world.light.light_energy
 	world._update_daylight(23.0)
@@ -289,6 +295,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: CC0 skeleton and animation, crop foliage, 3D world, lighting, saves and controls")
+	print("PLAYTEST SMOKE PASS: CC0 animated skeleton, scanned PBR diffuse and normals, crops, world, saves and controls")
 	instance.queue_free()
 	quit(0)
