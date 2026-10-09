@@ -129,7 +129,7 @@ func _smoke() -> void:
 		return
 	# All toolbars and resource chips must fit in the live viewport and share
 	# click geometry; previous hard-coded 118px/88px HUD obscured the 3D world.
-	var screen := instance.get_viewport_rect().size
+	var screen: Vector2 = instance.get_viewport_rect().size
 	var resource_rectangles := SettlementUILayout.resource_rects(screen)
 	if resource_rectangles.size() != 6:
 		push_error("SMOKE: Expected six compact resource indicators")
