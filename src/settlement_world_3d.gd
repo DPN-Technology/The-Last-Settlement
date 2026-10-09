@@ -128,6 +128,29 @@ func _weathered(key: String, color: Color, rough: float, metal: float, grime: fl
 	shader_material.set_shader_parameter("grime", grime)
 	materials[key] = shader_material
 
+func _use_photo_pbr(key: String, asset: String, tint: Color, roughness: float, metallic: float, tiling: float) -> void:
+	var texture_root := "res://assets/3d/pbr/"
+	var diffuse_path := texture_root + asset + "_diff_1k.png"
+	var normal_path := texture_root + asset + "_nor_gl_1k.png"
+	if not ResourceLoader.exists(diffuse_path) or not ResourceLoader.exists(normal_path):
+		return # Source checkout without build-provisioned CC0 assets stays playable.
+	var diffuse := load(diffuse_path) as Texture2D
+	var normal := load(normal_path) as Texture2D
+	if diffuse == null or normal == null:
+		return
+	var material := StandardMaterial3D.new()
+	material.albedo_texture = diffuse
+	material.albedo_color = tint
+	material.normal_enabled = true
+	material.normal_texture = normal
+	material.normal_scale = 0.82
+	material.roughness = roughness
+	material.metallic = metallic
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3.ONE * tiling
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	materials[key] = material
+
 func _create_materials() -> void:
 	_mat("concrete", Color("#777268"))
 	_mat("foundation", Color("#484944"))
@@ -171,6 +194,16 @@ func _create_materials() -> void:
 	_weathered("steel", Color("#4d5655"), 0.67, 0.46, 0.56)
 	_weathered("foundation", Color("#383a36"), 0.95, 0.0, 0.45)
 	_weathered("asphalt", Color("#2d3130"), 0.97, 0.0, 0.24)
+	# Runtime photographic PBR replaces the older material shader when the
+	# license-checked 1K maps are included in the exported Windows package.
+	_use_photo_pbr("concrete", "rough_concrete", Color("#b3aca1"), 0.97, 0.03, 0.45)
+	_use_photo_pbr("wall", "rough_concrete", Color("#a49e92"), 0.93, 0.02, 0.54)
+	_use_photo_pbr("foundation", "rough_concrete", Color("#77746c"), 0.98, 0.01, 0.47)
+	_use_photo_pbr("roof", "rusty_metal_sheet", Color("#a9a8a1"), 0.75, 0.23, 0.65)
+	_use_photo_pbr("rust", "rusty_metal_sheet", Color("#bd9583"), 0.85, 0.24, 0.58)
+	_use_photo_pbr("steel", "rusty_metal_sheet", Color("#888f90"), 0.72, 0.45, 0.68)
+	_use_photo_pbr("soil", "gravel_ground_01", Color("#b3a38c"), 0.98, 0.0, 0.38)
+	_use_photo_pbr("asphalt", "gravel_ground_01", Color("#69665c"), 0.98, 0.01, 0.32)
 	var ghost := _mat("ghost", Color("#4fd3aa55"))
 	ghost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ghost.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
