@@ -683,9 +683,9 @@ func _draw_hud() -> void:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
 	var command_hint := "MIDDLE/RIGHT DRAG: PAN     SCROLL: ZOOM     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
-	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color("#0e1517", 0.95))
+	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color(Color("#0e1517"), 0.95))
 	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
-	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, HIGHLIGHT if sim.paused else GOOD)
+	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, WARN if sim.paused else GOOD)
 	_draw_toolbar()
 	if playtest_notice_seconds > 0.0:
 		var width := minf(vp.x - 44.0, 680.0)
@@ -711,9 +711,9 @@ func _draw_toolbar() -> void:
 			8: active = help_mode
 		var rect := Rect2(x + 2.0, y + 4.0, width - 7.0, 50.0)
 		draw_rect(rect, Color("#62452f") if active else Color("#1a2426"))
-		draw_rect(rect, HIGHLIGHT if active else Color("#465456"), false, 1.0)
+		draw_rect(rect, WARN if active else Color("#465456"), false, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 26.0), TOOLBAR_NAMES[index], HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 13, TEXT)
-		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 43.0), "[" + TOOLBAR_HINTS[index] + "]", HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 11, HIGHLIGHT if active else MUTED)
+		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 43.0), "[" + TOOLBAR_HINTS[index] + "]", HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 11, WARN if active else MUTED)
 
 func _handle_toolbar_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
