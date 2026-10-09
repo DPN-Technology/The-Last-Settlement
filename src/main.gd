@@ -1052,6 +1052,27 @@ func _select_at(screen_pos: Vector2) -> void:
 	selected_citizen = {}
 	selected_building = {}
 
+func _capture_game_screenshot() -> void:
+	var target_folder := "user://playtest-screenshots"
+	var absolute_dir := ProjectSettings.globalize_path(target_folder)
+	if DirAccess.make_dir_recursive_absolute(absolute_dir) != OK:
+		playtest_notice = "SCREENSHOT FAILED // CANNOT CREATE CAPTURE FOLDER"
+		playtest_notice_seconds = 5.0
+		return
+	var screenshot := get_viewport().get_texture().get_image()
+	if screenshot == null or screenshot.is_empty():
+		playtest_notice = "SCREENSHOT FAILED // FRAME UNAVAILABLE"
+		playtest_notice_seconds = 5.0
+		return
+	var capture_path := target_folder.path_join("last-settlement-%d.png" % int(Time.get_unix_time_from_system()))
+	if screenshot.save_png(capture_path) == OK:
+		playtest_notice = "GAME SCREENSHOT SAVED // " + capture_path.get_file()
+		if OS.get_name() == "Windows":
+			OS.shell_open(absolute_dir)
+	else:
+		playtest_notice = "SCREENSHOT FAILED // DISK WRITE ERROR"
+	playtest_notice_seconds = 7.0
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
@@ -1059,6 +1080,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				help_mode = not help_mode
 			KEY_F2:
 				incident_panel_visible = not incident_panel_visible
+			KEY_F4:
+				var mode := DisplayServer.window_get_mode()
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if mode == DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)
+			KEY_F8:
+				_capture_game_screenshot()
 			KEY_HOME:
 				_focus_world_position(Vector2(700, 380))
 			KEY_W:
