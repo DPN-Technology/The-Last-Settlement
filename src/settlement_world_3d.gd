@@ -37,7 +37,9 @@ var structure_layer: Node3D
 var survivors_layer: Node3D
 var terrain_layer: Node3D
 var focus := Vector3.ZERO
-var camera_distance := 78.0
+var camera_distance := 57.0
+var yaw := 0.0
+var pitch := deg_to_rad(53.0)
 var cached_layout := ""
 var last_daylight := -1
 var people: Dictionary = {}
@@ -248,13 +250,21 @@ func game_position(point: Vector3) -> Vector2:
 func _position_camera() -> void:
 	if camera == null:
 		return
-	camera.position = focus + Vector3(0, camera_distance * 0.89, camera_distance * 0.79)
+	var horizontal := camera_distance * cos(pitch)
+	camera.position = focus + Vector3(sin(yaw) * horizontal, camera_distance * sin(pitch), cos(yaw) * horizontal)
 	camera.look_at(focus, Vector3.UP)
 
 func pan_screen(delta: Vector2) -> void:
 	var sensitivity := camera_distance * 0.00145
-	focus.x -= delta.x * sensitivity
-	focus.z -= delta.y * sensitivity
+	var right := Vector3(camera.global_transform.basis.x.x, 0, camera.global_transform.basis.x.z).normalized()
+	var depth := Vector3(camera.global_transform.basis.z.x, 0, camera.global_transform.basis.z.z).normalized()
+	focus -= right * delta.x * sensitivity
+	focus -= depth * delta.y * sensitivity
+	_position_camera()
+
+func orbit_camera(delta: Vector2) -> void:
+	yaw -= delta.x * 0.009
+	pitch = clampf(pitch + delta.y * 0.005, deg_to_rad(29.0), deg_to_rad(78.0))
 	_position_camera()
 
 func zoom_camera(direction: float) -> void:
