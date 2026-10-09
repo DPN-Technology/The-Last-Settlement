@@ -7,7 +7,7 @@ extends RefCounted
 const TEXTURE_SIZE := 384
 const SEED := 738119
 
-static func bake() -> ImageTexture:
+static func bake_image() -> Image:
 	var image := Image.create(TEXTURE_SIZE, TEXTURE_SIZE, false, Image.FORMAT_RGB8)
 	var broad := FastNoiseLite.new()
 	broad.seed = SEED
@@ -36,7 +36,10 @@ static func bake() -> ImageTexture:
 			base = base.lightened(pebble)
 			image.set_pixel(x, y, base)
 	image.generate_mipmaps()
-	return ImageTexture.create_from_image(image)
+	return image
+
+static func bake() -> ImageTexture:
+	return ImageTexture.create_from_image(bake_image())
 
 static func new_ground_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
@@ -49,10 +52,7 @@ static func new_ground_material() -> StandardMaterial3D:
 	mat.cull_mode = BaseMaterial3D.CULL_BACK
 	return mat
 
-static func sample_luminance(texture: Texture2D) -> float:
-	if texture == null:
-		return -1.0
-	var img := texture.get_image()
+static func sample_luminance(img: Image) -> float:
 	if img == null:
 		return -1.0
 	var sum := 0.0
