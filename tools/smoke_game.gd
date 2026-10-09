@@ -266,6 +266,9 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance._handle_toolbar_click(build_button)
+	# The overview smoke flow intentionally expanded objectives; reset to the
+	# initial collapsed state before checking the F3 open/close regressions.
+	instance.field_directives_visible = false
 	# Renderer-specific regression tests: lighting must have a real
 	# night/day difference and the new terrain must be an actual 3D mesh.
 	var world: SettlementWorld3D = instance.settlement_world
