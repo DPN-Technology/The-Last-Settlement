@@ -264,16 +264,31 @@ func _smoke() -> void:
 		quit(1)
 		return
 	var npc: Node3D = world.people.values()[0]
-	for part in ["Head", "Torso", "ArmLeft", "ArmRight", "LegLeft", "LegRight", "Backpack"]:
-		if not npc.has_node(part):
-			push_error("SMOKE: Survivor model missing articulated body part: " + part)
-			quit(1)
-			return
+	var model := npc.get_node_or_null("ProductionArt") as Node3D
+	if model == null:
+		push_error("SMOKE: Real CC0 glTF survivor did not replace the capsule placeholder")
+		quit(1)
+		return
+	var skeletons := model.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		push_error("SMOKE: Imported survivor lacks rigged human skeleton")
+		quit(1)
+		return
+	var animator := world._find_animation_player(model)
+	if animator == null or animator.get_animation_list().is_empty():
+		push_error("SMOKE: CC0 survivor has no walking/idle animation clips")
+		quit(1)
+		return
+	world._animate_imported_survivor(npc, true)
+	if not animator.is_playing():
+		push_error("SMOKE: Animated glTF survivor cannot play movement clip")
+		quit(1)
+		return
 	var workwear := world.materials["workwear"] as StandardMaterial3D
 	if workwear == null or workwear.emission_enabled:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: crop foliage, articulated survivors, playable 3D terrain, lighting, saves and controls")
+	print("PLAYTEST SMOKE PASS: CC0 skeleton and animation, crop foliage, 3D world, lighting, saves and controls")
 	instance.queue_free()
 	quit(0)
