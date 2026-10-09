@@ -17,6 +17,8 @@ var sim := SettlementSimulation.new()
 var update_manager := UpdateManager.new()
 var update_mode := false
 var help_mode := true
+var playtest_notice := ""
+var playtest_notice_seconds := 0.0
 var camera_offset := Vector2.ZERO
 var zoom := 1.0
 var dragging := false
@@ -62,6 +64,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	sim.update(delta)
 	_update_citizens(delta)
+	if playtest_notice_seconds > 0.0:
+		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
 	queue_redraw()
 
 func _update_citizens(delta: float) -> void:
@@ -569,7 +573,7 @@ func _draw_help_panel() -> void:
 		["3 // CONTROL TIME","SPACE pauses. 1 / 2 / 3 sets normal, fast and emergency simulation speed."],
 		["4 // EXPAND BEYOND LAST HAVEN","Press M for the regional map. Select discovered sites, G dispatches expeditions, I founds eligible settlements."],
 		["5 // RUN THE RECOVERY","V opens government, K industry, O factions and J civilization command. These systems become critical as the network grows."],
-		["6 // PROTECT YOUR RUN","S saves, L loads. F10 opens the verified Windows update command."]
+		["6 // PROTECT YOUR RUN","S saves, L loads. F9 saves playtest diagnostics; F10 checks stable updates."]
 	]
 	var ry := y + 112.0
 	for row in lines:
@@ -750,6 +754,11 @@ func _draw_hud() -> void:
 		update_alert = "  // UPDATE VERIFIED"
 	draw_string(ThemeDB.fallback_font, Vector2(24, vp.y - 24), mode_text + "  [B] BUILD  [U] UTIL:" + UTILITY_OVERLAYS[utility_overlay] + "  [R] REPAIR  [X] DEMOLISH  [S/L] SAVE/LOAD" + build_text + update_alert, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOOD if not update_alert.is_empty() else MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 115, vp.y - 24), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, ACCENT)
+	if playtest_notice_seconds > 0.0:
+		var width := minf(vp.x - 44.0, 680.0)
+		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
+		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
 
 func _draw_event_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -909,6 +918,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_F1:
 				help_mode = not help_mode
+			KEY_F9:
+				var report_path := PlaytestReporter.capture(sim)
+				if report_path.is_empty():
+					playtest_notice = "PLAYTEST REPORT FAILED // CHECK USER DATA FOLDER"
+				else:
+					playtest_notice = "PLAYTEST REPORT SAVED // " + report_path.get_file()
+					if OS.get_name() == "Windows":
+						OS.shell_open(report_path.get_base_dir())
+				playtest_notice_seconds = 9.0
 			KEY_SPACE:
 				sim.paused = not sim.paused
 			KEY_1:
