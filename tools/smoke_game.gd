@@ -185,6 +185,38 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: 3D world, realistic terrain, weathered materials, day-night, powered machines, gameplay and save/load")
+	# The ground texture must be visibly dark, not a shader fallback that
+	# renders as a nearly white surface on the player's Windows GPU.
+	var ground_material := ground.material_override as StandardMaterial3D
+	if ground_material == null or ground_material.albedo_texture == null:
+		push_error("SMOKE: Baked earth/gravel albedo texture is not bound to terrain")
+		quit(1)
+		return
+	var sample_image := GroundAppearance.bake_image()
+	var sample_brightness := GroundAppearance.sample_luminance(sample_image)
+	if sample_brightness < 0.07 or sample_brightness > 0.44:
+		push_error("SMOKE: Terrain contrast outside target luminance range")
+		quit(1)
+		return
+	if world.camera_distance > 51.0:
+		push_error("SMOKE: Default 3D camera is still zoomed too far away")
+		quit(1)
+		return
+	if instance.field_directives_visible:
+		push_error("SMOKE: Full-height mission panel should begin collapsed")
+		quit(1)
+		return
+	event.keycode = KEY_F3
+	instance._unhandled_input(event)
+	if not instance.field_directives_visible:
+		push_error("SMOKE: F3 did not expand settlement directives")
+		quit(1)
+		return
+	instance._unhandled_input(event)
+	if instance.field_directives_visible:
+		push_error("SMOKE: F3 did not collapse settlement directives")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: readable soil, camera framing, objective HUD, terrain, day-night, fans, saves and 3D gameplay")
 	instance.queue_free()
 	quit(0)
