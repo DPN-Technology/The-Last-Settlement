@@ -284,7 +284,43 @@ func _smoke() -> void:
 		push_error("SMOKE: Regional site list click did not select location")
 		quit(1)
 		return
+	# Seed an eligible adult to avoid random citizen job assignments creating
+	# nondeterministic smoke failures. Dispatch must use the real game API.
+	var scout: Dictionary = sim.get_alive_citizens()[0]
+	scout["age"] = maxi(23,int(scout["age"]))
+	scout["job"] = "Scavenger"
+	scout["on_expedition"] = false
+	sim.stockpiles["command"]["meals"] = maxf(24.0,float(sim.stockpiles["command"].get("meals",0.0)))
+	sim.stockpiles["command"]["water"] = maxf(30.0,float(sim.stockpiles["command"].get("water",0.0)))
+	var prior_trips := sim.world_simulation.expeditions.size()
+	if not instance._dispatch_region() or sim.world_simulation.expeditions.size() != prior_trips+1:
+		push_error("SMOKE: Discovered salvage site cannot dispatch a real survivor team")
+		quit(1)
+		return
+	if not bool(sim.field_objectives.get("expedition",false)):
+		push_error("SMOKE: Salvage expedition did not advance campaign objectives")
+		quit(1)
+		return
 	instance.world_map_mode = false
+	# No mutually exclusive screens may remain layered after keyboard tabs.
+	instance.world_map_mode = true
+	instance.governance_mode = false
+	var toggle := InputEventKey.new()
+	toggle.pressed = true
+	toggle.keycode = KEY_V
+	instance._unhandled_input(toggle)
+	if instance.world_map_mode or not instance.governance_mode:
+		push_error("SMOKE: Govern left the broken regional map open behind it")
+		quit(1)
+		return
+	toggle.keycode = KEY_B
+	instance._unhandled_input(toggle)
+	if not instance.build_mode or instance.governance_mode:
+		push_error("SMOKE: Keyboard Build overlaps an existing command screen")
+		quit(1)
+		return
+	toggle.keycode = KEY_ESCAPE
+	instance._unhandled_input(toggle)
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
 	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
