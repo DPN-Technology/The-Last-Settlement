@@ -22,6 +22,7 @@ var update_manager := UpdateManager.new()
 var update_mode := false
 var help_mode := false
 var incident_panel_visible := false
+var field_directives_visible := false
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var camera_offset := Vector2(-75, -34)
@@ -137,7 +138,10 @@ func _draw() -> void:
 		if build_mode:
 			_draw_build_palette()
 		elif not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode:
-			_draw_field_objectives()
+			if field_directives_visible:
+				_draw_field_objectives()
+			else:
+				_draw_directive_tab()
 	if help_mode:
 		_draw_help_panel()
 	elif update_mode:
@@ -713,7 +717,7 @@ func _draw_hud() -> void:
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
-	var command_hint := "RIGHT DRAG: PAN    ALT+RIGHT: ORBIT    WHEEL: ZOOM    HOME: CENTER     SPACE: PAUSE     1/2/3: SPEED     F2: INCIDENTS" + build_text
+	var command_hint := "RIGHT DRAG: PAN   ALT+RIGHT: ORBIT   WHEEL: ZOOM   HOME: CENTER   SPACE: PAUSE   F3: DIRECTIVES   F8: CAPTURE" + build_text
 	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color(Color("#0e1517"), 0.95))
 	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, WARN if sim.paused else GOOD)
@@ -723,6 +727,16 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
 		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
+
+func _draw_directive_tab() -> void:
+	var count := 0
+	for key in sim.field_objectives.keys():
+		if bool(sim.field_objectives[key]):
+			count += 1
+	var rect := Rect2(18, 139, 308, 43)
+	draw_rect(rect, Color("#111a1ce2"))
+	draw_rect(rect, Color("#bc9257"), false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(30, 166), "FIELD DIRECTIVES   %d/4   [F3] OPEN" % count, HORIZONTAL_ALIGNMENT_LEFT, 292, 12, TEXT)
 
 func _draw_field_objectives() -> void:
 	var x := 18.0
@@ -1080,6 +1094,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				help_mode = not help_mode
 			KEY_F2:
 				incident_panel_visible = not incident_panel_visible
+			KEY_F3:
+				field_directives_visible = not field_directives_visible
 			KEY_F4:
 				var mode := DisplayServer.window_get_mode()
 				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if mode == DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)
@@ -1412,7 +1428,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if build_mode and _handle_build_palette_click(event.position):
 				return
 			if not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and selected_citizen.is_empty() and selected_building.is_empty() and selected_blueprint.is_empty():
-				if _handle_objective_click(event.position):
+				if not field_directives_visible and Rect2(18, 139, 308, 43).has_point(event.position):
+					field_directives_visible = true
+					return
+				if field_directives_visible and _handle_objective_click(event.position):
 					return
 			if _handle_inspector_click(event.position):
 				return
