@@ -100,6 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/install_cc0_assets.py
+          python3 tools/install_cc0_materials.py
           GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
           "$GODOT" --headless --path . --import
           test -s assets/3d/characters/survivor.glb
