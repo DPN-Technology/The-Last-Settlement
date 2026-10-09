@@ -979,7 +979,7 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		field_objectives[objective] = bool(loaded_objectives.get(objective, false))
 	resources = data.get("resources", resources)
 	stockpiles = data.get("stockpiles", stockpiles)
-	work_orders = data.get("work_orders", work_orders)
+	work_orders = _restore_dict_array(data.get("work_orders", work_orders))
 	blueprints = _restore_vector_dicts(data.get("blueprints", []))
 	buildings = _restore_vector_dicts(data.get("buildings", []))
 	citizens = _restore_vector_dicts(data.get("citizens", []))
@@ -990,20 +990,20 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	utility_state = data.get("utility_state", utility_state)
 	utility_failures = data.get("utility_failures", utility_failures)
 	world_simulation.locations = _restore_vector_dicts(data.get("world_locations", world_simulation.locations))
-	world_simulation.expeditions = data.get("expeditions", world_simulation.expeditions)
-	world_simulation.discovered_location_ids = data.get("discovered_location_ids", world_simulation.discovered_location_ids)
+	world_simulation.expeditions = _restore_dict_array(data.get("expeditions", world_simulation.expeditions))
+	world_simulation.discovered_location_ids = _restore_int_array(data.get("discovered_location_ids", world_simulation.discovered_location_ids))
 	world_simulation.next_expedition_id = int(data.get("next_expedition_id", world_simulation.next_expedition_id))
 	var governance: Dictionary = data.get("governance", {})
 	if not governance.is_empty():
 		governance_simulation.government_type = str(governance.get("government_type", governance_simulation.government_type))
 		governance_simulation.laws = governance.get("laws", governance_simulation.laws)
 		governance_simulation.leader_id = int(governance.get("leader_id", governance_simulation.leader_id))
-		governance_simulation.council_ids = governance.get("council_ids", governance_simulation.council_ids)
+		governance_simulation.council_ids = _restore_int_array(governance.get("council_ids", governance_simulation.council_ids))
 		governance_simulation.factions = governance.get("factions", governance_simulation.factions)
 		governance_simulation.unrest = float(governance.get("unrest", governance_simulation.unrest))
 		governance_simulation.legitimacy = float(governance.get("legitimacy", governance_simulation.legitimacy))
 		governance_simulation.crime_pressure = float(governance.get("crime_pressure", governance_simulation.crime_pressure))
-		governance_simulation.active_cases = governance.get("active_cases", governance_simulation.active_cases)
+		governance_simulation.active_cases = _restore_dict_array(governance.get("active_cases", governance_simulation.active_cases))
 		governance_simulation.next_case_id = int(governance.get("next_case_id", governance_simulation.next_case_id))
 		governance_simulation.next_election_hour = float(governance.get("next_election_hour", governance_simulation.next_election_hour))
 		governance_simulation.last_protest_hour = float(governance.get("last_protest_hour", governance_simulation.last_protest_hour))
@@ -1013,10 +1013,10 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.credits = float(economy.get("credits", economy_simulation.credits))
 		economy_simulation.market_index = economy.get("market_index", economy_simulation.market_index)
 		economy_simulation.industry_stock = economy.get("industry_stock", economy_simulation.industry_stock)
-		economy_simulation.production_queue = economy.get("production_queue", economy_simulation.production_queue)
+		economy_simulation.production_queue = _restore_dict_array(economy.get("production_queue", economy_simulation.production_queue))
 		economy_simulation.next_batch_id = int(economy.get("next_batch_id", economy_simulation.next_batch_id))
 		economy_simulation.price_update_hour = float(economy.get("price_update_hour", economy_simulation.price_update_hour))
-		economy_simulation.trade_log = economy.get("trade_log", economy_simulation.trade_log)
+		economy_simulation.trade_log = _restore_dict_array(economy.get("trade_log", economy_simulation.trade_log))
 		economy_simulation.vehicles = economy.get("vehicles", economy_simulation.vehicles)
 		economy_simulation.trade_pressure = economy.get("trade_pressure", economy_simulation.trade_pressure)
 		economy_simulation.warehouse_capacity = float(economy.get("warehouse_capacity", economy_simulation.warehouse_capacity))
@@ -1028,20 +1028,20 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.next_warehouse_check_hour = float(economy.get("next_warehouse_check_hour", economy_simulation.next_warehouse_check_hour))
 		economy_simulation.repair_kits = float(economy.get("repair_kits", economy_simulation.repair_kits))
 		economy_simulation.regional_markets = economy.get("regional_markets", economy_simulation.regional_markets)
-		economy_simulation.trade_caravans = economy.get("trade_caravans", economy_simulation.trade_caravans)
+		economy_simulation.trade_caravans = _restore_dict_array(economy.get("trade_caravans", economy_simulation.trade_caravans))
 		economy_simulation.next_caravan_id = int(economy.get("next_caravan_id", economy_simulation.next_caravan_id))
 	var faction_state: Dictionary = data.get("factions", {})
 	if not faction_state.is_empty():
 		faction_simulation.factions = faction_state.get("factions", faction_simulation.factions)
 		faction_simulation.next_strategic_hour = float(faction_state.get("next_strategic_hour", faction_simulation.next_strategic_hour))
 		faction_simulation.active_raid = faction_state.get("active_raid", faction_simulation.active_raid)
-		faction_simulation.raid_log = faction_state.get("raid_log", faction_simulation.raid_log)
+		faction_simulation.raid_log = _restore_dict_array(faction_state.get("raid_log", faction_simulation.raid_log))
 		faction_simulation.last_espionage_hour = float(faction_state.get("last_espionage_hour", faction_simulation.last_espionage_hour))
 	var civilization_state: Dictionary = data.get("civilization", {})
 	if not civilization_state.is_empty():
 		civilization_simulation.settlements = civilization_state.get("settlements", civilization_simulation.settlements)
-		civilization_simulation.logistics_routes = civilization_state.get("logistics_routes", civilization_simulation.logistics_routes)
-		civilization_simulation.history_archive = civilization_state.get("history_archive", civilization_simulation.history_archive)
+		civilization_simulation.logistics_routes = _restore_dict_array(civilization_state.get("logistics_routes", civilization_simulation.logistics_routes))
+		civilization_simulation.history_archive = _restore_dict_array(civilization_state.get("history_archive", civilization_simulation.history_archive))
 		civilization_simulation.recovery_score = float(civilization_state.get("recovery_score", civilization_simulation.recovery_score))
 		civilization_simulation.civilization_stability = float(civilization_state.get("civilization_stability", civilization_simulation.civilization_stability))
 		civilization_simulation.next_settlement_id = int(civilization_state.get("next_settlement_id", civilization_simulation.next_settlement_id))
@@ -1049,8 +1049,8 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		civilization_simulation.next_logistics_hour = float(civilization_state.get("next_logistics_hour", civilization_simulation.next_logistics_hour))
 		civilization_simulation.next_colony_event_hour = float(civilization_state.get("next_colony_event_hour", civilization_simulation.next_colony_event_hour))
 		civilization_simulation.civilization_policies = civilization_state.get("civilization_policies", civilization_simulation.civilization_policies)
-		civilization_simulation.emergency_log = civilization_state.get("emergency_log", civilization_simulation.emergency_log)
-		civilization_simulation.colony_projects = civilization_state.get("colony_projects", civilization_simulation.colony_projects)
+		civilization_simulation.emergency_log = _restore_dict_array(civilization_state.get("emergency_log", civilization_simulation.emergency_log))
+		civilization_simulation.colony_projects = _restore_dict_array(civilization_state.get("colony_projects", civilization_simulation.colony_projects))
 		civilization_simulation.next_colony_project_id = int(civilization_state.get("next_colony_project_id", civilization_simulation.next_colony_project_id))
 		civilization_simulation.recovery_projects = civilization_state.get("recovery_projects", civilization_simulation.recovery_projects)
 		civilization_simulation.founding_roster = civilization_state.get("founding_roster", civilization_simulation.founding_roster)
@@ -1065,10 +1065,29 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		federal_governance_simulation.network_cohesion = float(federal_state.get("network_cohesion", federal_governance_simulation.network_cohesion))
 		federal_governance_simulation.federal_treasury = float(federal_state.get("federal_treasury", federal_governance_simulation.federal_treasury))
 		federal_governance_simulation.next_council_hour = float(federal_state.get("next_council_hour", federal_governance_simulation.next_council_hour))
-		federal_governance_simulation.council_history = federal_state.get("council_history", federal_governance_simulation.council_history)
+		federal_governance_simulation.council_history = _restore_dict_array(federal_state.get("council_history", federal_governance_simulation.council_history))
 		federal_governance_simulation.last_dispute_hour = float(federal_state.get("last_dispute_hour", federal_governance_simulation.last_dispute_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
+
+# JSON.parse_string returns untyped Arrays; Godot refuses assigning these to
+# typed Array[Dictionary] / Array[int] properties without copying each element.
+# Preserve save schema 14: this is a loader fix, not a file format change.
+func _restore_dict_array(items: Variant) -> Array[Dictionary]:
+	var restored: Array[Dictionary] = []
+	if items is Array:
+		for item in items:
+			if item is Dictionary:
+				restored.append(item)
+	return restored
+
+func _restore_int_array(items: Variant) -> Array[int]:
+	var restored: Array[int] = []
+	if items is Array:
+		for item in items:
+			if item is int or item is float:
+				restored.append(int(item))
+	return restored
 
 func _serialize_vector_dicts(items: Array) -> Array:
 	var output: Array = []
