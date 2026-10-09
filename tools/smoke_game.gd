@@ -152,7 +152,7 @@ func _smoke() -> void:
 	# Renderer-specific regression tests: lighting must have a real
 	# night/day difference and the new terrain must be an actual 3D mesh.
 	var world: SettlementWorld3D = instance.settlement_world
-	var ground := world.terrain_layer.get_child(0) as MeshInstance3D
+	var ground := world.terrain_layer.get_node_or_null("PlayableHeightfieldTerrain") as MeshInstance3D
 	if ground == null or not (ground.mesh is ArrayMesh):
 		push_error("SMOKE: Height-mapped 3D terrain is unavailable")
 		quit(1)
@@ -192,6 +192,29 @@ func _smoke() -> void:
 		push_error("SMOKE: Baked earth/gravel albedo texture is not bound to terrain")
 		quit(1)
 		return
+	if ground_material.cull_mode != BaseMaterial3D.CULL_DISABLED:
+		push_error("SMOKE: Generated ground triangles can still be backface-culled")
+		quit(1)
+		return
+	var fallback_core := world.terrain_layer.get_node_or_null("GroundFailsafeSettlementCore") as MeshInstance3D
+	var fallback_outer := world.terrain_layer.get_node_or_null("GroundFailsafeOuter") as MeshInstance3D
+	if fallback_core == null or fallback_outer == null:
+		push_error("SMOKE: Opaque sky-blocking ground layers missing")
+		quit(1)
+		return
+	if fallback_core.position.y > -0.15 or fallback_core.position.y < -0.6:
+		push_error("SMOKE: Opaque settlement core is not directly below gameplay ground")
+		quit(1)
+		return
+	var failsafe_material := fallback_core.material_override as StandardMaterial3D
+	if failsafe_material == null or failsafe_material.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
+		push_error("SMOKE: Sky-blocking floor has invalid material")
+		quit(1)
+		return
+	if failsafe_material.albedo_color.r > 0.3:
+		push_error("SMOKE: Failsafe floor is too bright")
+		quit(1)
+		return
 	var sample_image := GroundAppearance.bake_image()
 	var sample_brightness := GroundAppearance.sample_luminance(sample_image)
 	if sample_brightness < 0.07 or sample_brightness > 0.44:
@@ -217,6 +240,6 @@ func _smoke() -> void:
 		push_error("SMOKE: F3 did not collapse settlement directives")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: readable soil, camera framing, objective HUD, terrain, day-night, fans, saves and 3D gameplay")
+	print("PLAYTEST SMOKE PASS: double-sided soil and opaque underlay, camera, objectives, terrain, day-night, machinery and saves")
 	instance.queue_free()
 	quit(0)
