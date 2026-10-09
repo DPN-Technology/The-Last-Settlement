@@ -98,6 +98,20 @@ static func _box(parent: Node3D, name: String, pos: Vector3, size: Vector3, mat:
 	visual.material_override = mat
 	parent.add_child(visual)
 
+static func _rounded_pack(parent: Node3D, material: Material) -> void:
+	# Small curved hiking rucksack replaces the conspicuous floating cube.
+	var pack_mesh := CapsuleMesh.new()
+	pack_mesh.radius = 0.18
+	pack_mesh.height = 0.50
+	pack_mesh.radial_segments = 12
+	pack_mesh.rings = 5
+	var pack := MeshInstance3D.new()
+	pack.name = "Backpack"
+	pack.mesh = pack_mesh
+	pack.material_override = material
+	pack.position = Vector3(0, 1.25, 0.25)
+	parent.add_child(pack)
+
 static func _kit(root: Node3D, citizen: Dictionary, palette: Dictionary) -> void:
 	# High-contrast, non-emissive gear establishes a readable silhouette from
 	# the overhead gameplay camera without obscuring the imported rig/skeleton.
@@ -108,10 +122,13 @@ static func _kit(root: Node3D, citizen: Dictionary, palette: Dictionary) -> void
 	var pack: Material = palette["canvas"]
 	var metal: Material = palette["darkmetal"]
 	var band: Material = palette["webbing"]
-	_box(gear, "Backpack", Vector3(0, 1.19, 0.29), Vector3(0.38, 0.54, 0.25), pack)
-	_box(gear, "PackRoll", Vector3(0, 1.52, 0.33), Vector3(0.43, 0.17, 0.26), band)
-	_box(gear, "PackFastener", Vector3(0, 1.19, 0.44), Vector3(0.09, 0.20, 0.05), metal)
-	_box(gear, "WaistBelt", Vector3(0, 0.92, -0.05), Vector3(0.43, 0.10, 0.26), band)
+	_rounded_pack(gear, pack)
+	# Low-profile clips and webbing remain readable at settlement view,
+	# without hiding the actual human upper body like the old square backpack.
+	_box(gear, "PackFastener", Vector3(0, 1.21, 0.42), Vector3(0.07, 0.15, 0.035), metal)
+	_box(gear, "ShoulderStrapLeft", Vector3(-0.16, 1.30, -0.11), Vector3(0.06, 0.44, 0.045), band)
+	_box(gear, "ShoulderStrapRight", Vector3(0.16, 1.30, -0.11), Vector3(0.06, 0.44, 0.045), band)
+	_box(gear, "WaistBelt", Vector3(0, 0.94, -0.05), Vector3(0.38, 0.08, 0.20), band)
 	match job:
 		"Medic":
 			_box(gear, "MedicCase", Vector3(0.26, 0.82, 0), Vector3(0.28, 0.33, 0.30), palette["clinic"])
