@@ -156,6 +156,68 @@ func _draw() -> void:
 		_draw_civilization_panel()
 	else:
 		_draw_selection_panel()
+	# Action buttons are drawn after command content and use the same hitboxes
+	# as input handling. Keyboard-only workflows now have mouse equivalents.
+	_draw_panel_actions()
+
+func _panel_action_items() -> Array:
+	if governance_mode:
+		return [["PREV LAW",KEY_UP],["NEXT LAW",KEY_DOWN],["CHANGE",KEY_ENTER],["CLOSE",KEY_ESCAPE]]
+	if economy_mode:
+		return [["PREV ITEM",KEY_UP],["NEXT ITEM",KEY_DOWN],["BUY 1",KEY_ENTER],["SELL 1",KEY_BACKSPACE],["CLOSE",KEY_ESCAPE]]
+	if faction_mode:
+		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["SEND AID",KEY_A],["TRADE",KEY_D],["TRUCE",KEY_Z],["CLOSE",KEY_ESCAPE]]
+	if civilization_mode:
+		return [["PREV SITE",KEY_LEFT],["NEXT SITE",KEY_RIGHT],["PREV ROUTE",KEY_UP],["NEXT ROUTE",KEY_DOWN],["CLOSE",KEY_ESCAPE]]
+	if update_mode:
+		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
+	if world_map_mode:
+		return [["DISPATCH",KEY_G],["CLOSE",KEY_ESCAPE]]
+	return []
+
+func _action_panel_area() -> Rect2:
+	var vp := get_viewport_rect().size
+	if civilization_mode:
+		return SettlementUILayout.side_panel(vp,700.0)
+	if update_mode:
+		var r := SettlementUILayout.side_panel(vp,500.0)
+		return Rect2(r.position,Vector2(r.size.x,minf(520.0,r.size.y)))
+	if world_map_mode:
+		return SettlementUILayout.side_panel(vp,372.0)
+	return SettlementUILayout.side_panel(vp,480.0)
+
+func _panel_action_rect(index: int, count: int) -> Rect2:
+	var area := _action_panel_area()
+	var gap := 5.0
+	var width := (area.size.x-26.0-gap*float(count-1))/maxf(1.0,float(count))
+	return Rect2(area.position.x+13.0+float(index)*(width+gap),area.end.y-40.0,width,29.0)
+
+func _draw_panel_actions() -> void:
+	var actions := _panel_action_items()
+	if actions.is_empty():
+		return
+	var area := _action_panel_area()
+	draw_rect(Rect2(area.position.x+5,area.end.y-47,area.size.x-10,44),Color("#111f25f3"))
+	for i in range(actions.size()):
+		var row: Array = actions[i]
+		var rect := _panel_action_rect(i,actions.size())
+		var hover := rect.has_point(get_local_mouse_position())
+		draw_rect(rect,Color("#35494e") if hover else Color("#24363c"))
+		draw_rect(rect,GOOD if hover else Color("#526b73"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(7,19),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-12,10,TEXT)
+
+func _handle_panel_action_click(position: Vector2) -> bool:
+	var actions := _panel_action_items()
+	for i in range(actions.size()):
+		var rect := _panel_action_rect(i,actions.size())
+		if not rect.has_point(position):
+			continue
+		var event := InputEventKey.new()
+		event.keycode = int(actions[i][1])
+		event.pressed = true
+		_unhandled_input(event)
+		return true
+	return false
 
 func _world_point(p: Vector2) -> Vector2:
 	return settlement_world.screen_at(p) if settlement_world != null else (p + camera_offset) * zoom
@@ -1481,6 +1543,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					return
 				if field_directives_visible and _handle_objective_click(event.position):
 					return
+			if _handle_panel_action_click(event.position):
+				return
 			if _handle_inspector_click(event.position):
 				return
 			if world_map_mode:
