@@ -144,7 +144,16 @@ func _create_materials() -> void:
 	_mat("farm", Color("#41382b"))
 	_mat("leaf", Color("#4d6246"))
 	_mat("olive", Color("#63714c"))
-	_mat("skin", Color("#a88e71"))
+	_mat("skin", Color("#b18c69"))
+	_mat("skin_deep", Color("#6e4636"))
+	_mat("skin_light", Color("#d6ad8c"))
+	_mat("trousers", Color("#383d39"))
+	_mat("boots", Color("#242927"))
+	_mat("webbing", Color("#625b48"))
+	_mat("canvas", Color("#60563e"))
+	_mat("medic_uniform", Color("#9faaa2"))
+	_mat("guard_uniform", Color("#4a5951"))
+	_mat("workwear", Color("#ad8650"))
 	_mat("uniform", Color("#6c7060"))
 	_mat("denim", Color("#4d5a62"))
 	_mat("asphalt", Color("#30332f"))
@@ -544,9 +553,7 @@ func _build_farm(group: Node3D, size: Vector2) -> void:
 	for row in range(6):
 		var x := -size.x*0.38 + float(row)*size.x*0.15
 		_box(group,Vector3(x,0.2,0),Vector3(0.95,0.27,size.y*0.82),materials["farm"])
-		for j in range(9):
-			var z := -size.y*0.4 + float(j)*size.y*0.1
-			_sphere(group,Vector3(x,0.5,z),0.25,materials["leaf"])
+	SettlementDetailArt3D.create_crops(group,size,materials)
 	WastelandDetail.detail_farm(group,size,materials)
 
 func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> void:
@@ -586,32 +593,20 @@ func _make_survivor(c: Dictionary) -> Node3D:
 		_cylinder(art_selection, Vector3(0, 0.05, 0), 0.95, 0.08, materials["warning"])
 		art_selection.visible = false
 		return person
-	var uniform: Material = materials["uniform"]
-	match str(c["job"]):
-		"Guard": uniform=materials["rust"]
-		"Medic": uniform=materials["clinic"]
-		"Engineer","Builder": uniform=materials["warning"]
-		"Scavenger": uniform=materials["denim"]
-		"Farmer": uniform=materials["olive"]
-	_cylinder(person,Vector3(0,1.20,0),0.37,1.1,uniform,0.25)
-	_sphere(person,Vector3(0,1.95,0),0.31,materials["skin"])
-	var left_leg := _box(person,Vector3(-0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
-	left_leg.name = "LegLeft"
-	var right_leg := _box(person,Vector3(0.25,0.4,0),Vector3(0.28,0.80,0.39),materials["darkmetal"])
-	right_leg.name = "LegRight"
-	for dir in [-1.0,1.0]:
-		var limb := _cylinder(person,Vector3(dir*0.48,1.27,0),0.14,0.9,uniform)
-		limb.name = "ArmLeft" if dir < 0.0 else "ArmRight"
-	_box(person,Vector3(0,1.5,0.39),Vector3(0.55,0.55,0.28),materials["roof"])
-	# Pockets, vest webbing, headlamp and tool roll make jobs legible at zoom.
-	_box(person,Vector3(-0.25,1.31,-0.35),Vector3(0.2,0.25,0.08),materials["rust"])
-	_box(person,Vector3(0.25,1.31,-0.35),Vector3(0.2,0.25,0.08),materials["rust"])
-	_box(person,Vector3(0,2.18,-0.15),Vector3(0.46,0.11,0.45),materials["darkmetal"])
-	_box(person,Vector3(0,2.17,-0.4),Vector3(0.13,0.12,0.09),materials["glow"])
+	SettlementDetailArt3D.create_survivor(person, c, materials)
 	var select := Node3D.new()
 	select.name = "Selection"
 	person.add_child(select)
-	_cylinder(select,Vector3(0,0.05,0),0.95,0.08,materials["warning"])
+	var selected_mesh := TorusMesh.new()
+	selected_mesh.inner_radius = 0.82
+	selected_mesh.outer_radius = 0.90
+	selected_mesh.rings = 8
+	selected_mesh.ring_segments = 24
+	var selected_ring := MeshInstance3D.new()
+	selected_ring.mesh = selected_mesh
+	selected_ring.material_override = materials["warning"]
+	selected_ring.position = Vector3(0, 0.07, 0)
+	select.add_child(selected_ring)
 	select.visible = false
 	return person
 
