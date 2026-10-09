@@ -11,6 +11,16 @@ This guide separates **stable releases** from **work-in-progress test builds**. 
 
 Stable updates use the game's **F10** Update Command. Development artifacts are **not** published through that update channel.
 
+## IMPORTANT: New 3D world candidate
+
+**The latest PR #6 preview is now a TRUE 3D renderer, not the old top-down canvas.** It needs a Windows computer with Vulkan support to use the default **Forward+** graphics profile; it has not yet been visually verified on the player's computer.
+
+- Run `Launch-TheLastSettlement.cmd` for the 3D build.
+- If the game shows a graphics API/driver error, try `Launch-TheLastSettlement-Compatibility.cmd` (OpenGL Compatibility). Update GPU drivers when possible.
+- **Right or middle drag** pans the 3D camera; the wheel zooms perspective; **Home** recenters the command site.
+- The new scene keeps mouse construction, survivors, expeditions and save/load. Controls and campaign UI have not yet received a complete 3D-era redesign.
+- The current environment geometry is authored procedurally as a **3D technical foundation**; realism requires imported high-quality meshes, photo-based PBR surfaces, animation, particle/weather systems and gameplay captures. Read [3D production art requirements](THREE_D_PRODUCTION.md).
+
 ## 2. Test a new change *before* it is merged
 
 1. Open [Actions → DPN Settlement Windows Build](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml).
@@ -30,7 +40,7 @@ Use a successful `main` Windows Build run. The `TheLastSettlement-Windows-Portab
 
 - **F1** — optional field guide (not forced at startup)
 - **Space** — pause/resume; **1/2/3** — simulation speed
-- **Right or middle mouse drag** — pan around the wasteland; **mouse wheel** — cursor-anchored zoom
+- **Right or middle mouse drag** — pan the real 3D camera; **mouse wheel** — 3D perspective zoom; **Home** — center Last Haven
 - **Clickable bottom toolbar** — build, map, governance, economy, factions, civilization, save, load and guide
 - **F2** — expand/collapse the settlement incident feed
 - **B**, then **Q/E** and mouse click — place a structure
@@ -54,10 +64,10 @@ Create an [issue](https://github.com/DPN-Technology/The-Last-Settlement/issues/n
 
 ### Suggested smoke test for every candidate
 
-1. Start the game and close **F1**.
+1. Start the game and verify it opens in a **3D perspective world** with lit buildings and physical survivor meshes, not the old 2D world.
 2. Advance the clock and pause/resume.
 3. Select a survivor and building.
-4. Place a construction blueprint.
+4. Use the clickable build palette to place a construction blueprint **in 3D world space**.
 5. Switch to the world map and back.
 6. Save, close the application, relaunch, and load.
 7. Press **F9**, verify a JSON report is written.
