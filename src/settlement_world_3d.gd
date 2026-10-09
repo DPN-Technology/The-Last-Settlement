@@ -263,10 +263,32 @@ func _sphere(parent: Node3D, pos: Vector3, radius: float, mat: Material) -> Mesh
 	return obj
 
 func _build_terrain() -> void:
+	# Render opaque ground before decorative roads. These underlays are a safety
+	# net if a GPU drops the procedural heightfield; never expose the sky below.
+	var fallback_outer := MeshInstance3D.new()
+	fallback_outer.name = "GroundFailsafeOuter"
+	var outer_mesh := PlaneMesh.new()
+	outer_mesh.size = Vector2(360.0, 360.0)
+	fallback_outer.mesh = outer_mesh
+	fallback_outer.material_override = GroundAppearance.new_ground_failsafe_material()
+	fallback_outer.position.y = -13.0
+	terrain_layer.add_child(fallback_outer)
+
+	var fallback_core := MeshInstance3D.new()
+	fallback_core.name = "GroundFailsafeSettlementCore"
+	var core_mesh := PlaneMesh.new()
+	core_mesh.size = Vector2(102.0, 102.0)
+	fallback_core.mesh = core_mesh
+	fallback_core.material_override = GroundAppearance.new_ground_failsafe_material()
+	fallback_core.position.y = -0.31
+	terrain_layer.add_child(fallback_core)
+
 	var ground := MeshInstance3D.new()
+	ground.name = "PlayableHeightfieldTerrain"
 	ground.mesh = WastelandDetail.terrain_mesh()
 	# Baked soil/clay/gravel albedo works in Forward+ and GL Compatibility.
-	# It also remains testable from CPU image pixels in GitHub headless CI.
+	# Render both sides: custom SurfaceTool winding must never disappear
+	# from above due to backface culling.
 	ground.material_override = GroundAppearance.new_ground_material()
 	terrain_layer.add_child(ground)
 
