@@ -239,12 +239,15 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 	# decorative only; the center of the base is left free for gameplay.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 991427
-	var gravel_mesh := BoxMesh.new()
-	gravel_mesh.size = Vector3(1.0, 0.045, 1.0)
+	var gravel_mesh := SphereMesh.new()
+	gravel_mesh.radius = 0.5
+	gravel_mesh.height = 1.0
+	gravel_mesh.radial_segments = 8
+	gravel_mesh.rings = 4
 	var gravel := MultiMesh.new()
 	gravel.transform_format = MultiMesh.TRANSFORM_3D
 	gravel.mesh = gravel_mesh
-	gravel.instance_count = 260
+	gravel.instance_count = 170
 	var gravel_layer := MultiMeshInstance3D.new()
 	gravel_layer.name = "DarkSoilGravelAndRubble"
 	gravel_layer.multimesh = gravel
@@ -256,9 +259,9 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 		# Stay off hard-surfaced service roads and future build plots.
 		if absf(x) < 28.0 and absf(z) < 26.0:
 			x += 33.0 if x > 0.0 else -33.0
-		var obj_transform := Transform3D(Basis.IDENTITY, Vector3(x, 0.075, z))
+		var obj_transform := Transform3D(Basis.IDENTITY, Vector3(x, 0.12, z))
 		obj_transform.basis = Basis(Vector3.UP, rng.randf_range(-PI, PI))
-		obj_transform.basis = obj_transform.basis.scaled(Vector3(rng.randf_range(0.35, 2.4), 1.0, rng.randf_range(0.45, 1.8)))
+		obj_transform.basis = obj_transform.basis.scaled(Vector3(rng.randf_range(0.30, 1.25), rng.randf_range(0.13, 0.29), rng.randf_range(0.34, 1.20)))
 		gravel.set_instance_transform(i, obj_transform)
 
 	var metal_mesh := BoxMesh.new()
@@ -266,7 +269,7 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 	var metal := MultiMesh.new()
 	metal.transform_format = MultiMesh.TRANSFORM_3D
 	metal.mesh = metal_mesh
-	metal.instance_count = 110
+	metal.instance_count = 65
 	var scrap := MultiMeshInstance3D.new()
 	scrap.name = "ScatteredCollapsedMetal"
 	scrap.multimesh = metal
