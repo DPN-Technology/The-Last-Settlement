@@ -240,6 +240,40 @@ func _smoke() -> void:
 		push_error("SMOKE: F3 did not collapse settlement directives")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: double-sided soil and opaque underlay, camera, objectives, terrain, day-night, machinery and saves")
+	# Artwork regression: a farm must contain actual leaf meshes rather than
+	# the old evenly spaced sphere stand-ins.
+	var canopy: MultiMeshInstance3D = null
+	for structure in world.structure_layer.get_children():
+		var found := structure.get_node_or_null("LeafyCropCanopy") as MultiMeshInstance3D
+		if found != null:
+			canopy = found
+			break
+	if canopy == null or canopy.multimesh == null or canopy.multimesh.instance_count < 270:
+		push_error("SMOKE: Mesh foliage did not replace spherical crop rows")
+		quit(1)
+		return
+	var crop_stems := canopy.get_parent().get_node_or_null("CropStems") as MultiMeshInstance3D
+	if crop_stems == null or crop_stems.multimesh.instance_count != 54:
+		push_error("SMOKE: Farm plant stalk layout invalid")
+		quit(1)
+		return
+	# Verify generic procedural human figures are no longer the old basic
+	# glowing construction cylinders; imported art remains an optional path.
+	if world.people.is_empty():
+		push_error("SMOKE: Visual survivor collection is empty")
+		quit(1)
+		return
+	var npc: Node3D = world.people.values()[0]
+	for part in ["Head", "Torso", "ArmLeft", "ArmRight", "LegLeft", "LegRight", "Backpack"]:
+		if not npc.has_node(part):
+			push_error("SMOKE: Survivor model missing articulated body part: " + part)
+			quit(1)
+			return
+	var workwear := world.materials["workwear"] as StandardMaterial3D
+	if workwear == null or workwear.emission_enabled:
+		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: crop foliage, articulated survivors, playable 3D terrain, lighting, saves and controls")
 	instance.queue_free()
 	quit(0)
