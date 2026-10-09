@@ -570,9 +570,6 @@ func _build_structure(b: Dictionary) -> void:
 			_cylinder(group,Vector3(i*size.x*0.20,body_height+1.15,0),1.8,1.65,materials["blue"])
 			_cylinder(group,Vector3(i*size.x*0.20,body_height+2.02,0),1.76,0.12,materials["glass"])
 		_box(group,Vector3(0,body_height+0.8,0),Vector3(1.2,0.4,size.y*0.65),materials["pipe"])
-	elif type == "housing":
-		for i in [-1.0,1.0]:
-			_box(group,Vector3(i*size.x*0.23,body_height+0.86,0),Vector3(2.5,1.1,2.4),materials["rooflight"])
 	WastelandDetail.detail_building(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	if float(b.get("condition",100.0)) < 60.0:
 		_box(group,Vector3(size.x*0.35,body_height+0.63,0),Vector3(2.0,0.17,1.1),materials["rust"])
