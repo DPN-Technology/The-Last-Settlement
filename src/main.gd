@@ -679,32 +679,69 @@ func _open_case_count() -> int:
 			count += 1
 	return count
 
+func _active_screen_label() -> String:
+	if build_mode:
+		return "CONSTRUCTION"
+	if world_map_mode:
+		return "REGIONAL MAP"
+	if governance_mode:
+		return "GOVERNANCE"
+	if economy_mode:
+		return "INDUSTRY"
+	if faction_mode:
+		return "FACTIONS"
+	if civilization_mode:
+		return "CIVILIZATION"
+	if update_mode:
+		return "UPDATES"
+	if help_mode:
+		return "FIELD GUIDE"
+	return "LAST HAVEN"
+
+func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
+	draw_rect(rect, Color("#0d1418ed"), true)
+	draw_rect(rect, Color("#62727a6e"), false, 1.0)
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, 3.0)), edge)
+	draw_rect(Rect2(rect.position + Vector2(0,3), Vector2(3, rect.size.y-3)), Color(edge, 0.7))
+
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
-	draw_rect(Rect2(0, 0, vp.x, 118), Color("#07090cee"))
-	draw_line(Vector2(0,118), Vector2(vp.x,118), ACCENT, 2.0)
-
-	draw_string(ThemeDB.fallback_font, Vector2(24,32), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, -1, 23, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(24,57), "CIVILIZATION RECOVERY COMMAND // %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
-	draw_string(ThemeDB.fallback_font, Vector2(24,105), "DAY %03d %02d:%02d   MAT %.0f   BLUEPRINTS %d   ROOMS %d   GRID %.0f/%.0f   BAT %.0f%%   SAN %.0f%%" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms, float(sim.utility_state["power_generated"]), float(sim.utility_state["power_demand"]), 100.0 * float(sim.utility_state["battery_charge"]) / maxf(1.0,float(sim.utility_state["battery_capacity"])), float(sim.utility_state["sanitation"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
+	var top_h := SettlementUILayout.TOP_H
+	draw_rect(Rect2(0, 0, vp.x, top_h), Color("#080d12f3"))
+	draw_line(Vector2(0,top_h-1), Vector2(vp.x,top_h-1), ACCENT, 1.5)
+	var title_size := 17 if vp.x >= 1000.0 else 13
+	draw_string(ThemeDB.fallback_font, Vector2(14,24), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, 284, title_size, TEXT)
+	draw_string(ThemeDB.fallback_font, Vector2(15,43), "RECOVERY NETWORK  /  %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, 280, 10, RUST)
 
 	var alive := sim.get_alive_citizens().size()
-	var stats := [
-		["POP", str(alive)],
-		["FOOD", "%.0f" % sim.resources["food"]],
-		["WATER", "%.0f" % sim.resources["water"]],
-		["POWER", "%.0f%%" % sim.resources["power"]],
-		["MEALS", "%.0f" % sim.resources["meals"]],
-		["MORALE", "%.0f%%" % sim.get_average_morale()]
+	var morale := sim.get_average_morale()
+	var resources := [
+		["POP", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
+		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food reserves for the settlement"],
+		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available to survivors"],
+		["POWER", "%.0f%%" % float(sim.resources["power"]), float(sim.resources["power"])/100.0, "Settlement electrical power"],
+		["MEALS", "%.0f" % float(sim.resources["meals"]), float(sim.resources["meals"])/maxf(1.0,float(alive)*2.0), "Prepared food ready for consumption"],
+		["MORALE", "%.0f%%" % morale, morale/100.0, "Average confidence and satisfaction"]
 	]
-	var sx := 390.0
-	for stat in stats:
-		var plate := Rect2(sx - 12.0, 15.0, 121.0, 79.0)
-		draw_rect(plate, Color("#182122"))
-		draw_line(Vector2(plate.position.x, plate.end.y), Vector2(plate.end.x, plate.end.y), Color("#5b5d51"), 1.0)
-		draw_string(ThemeDB.fallback_font, Vector2(sx, 40), stat[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
-		draw_string(ThemeDB.fallback_font, Vector2(sx, 72), stat[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 25, TEXT)
-		sx += 142.0
+	var resource_rects := SettlementUILayout.resource_rects(vp)
+	var hovered := -1
+	for i in range(resources.size()):
+		var rect: Rect2 = resource_rects[i]
+		var item: Array = resources[i]
+		var fraction := clampf(float(item[2]),0.0,1.0)
+		var severity := BAD if fraction < 0.20 else (WARN if fraction < 0.40 else GOOD)
+		var hovered_now := rect.has_point(get_local_mouse_position())
+		if hovered_now:
+			hovered = i
+		draw_rect(rect, Color("#243238") if hovered_now else Color("#162229"))
+		draw_rect(rect, Color(severity,0.80) if hovered_now else Color("#3b5159"), false, 1.0)
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(7,14), str(item[0]), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x-12, 9, MUTED)
+		draw_string(ThemeDB.fallback_font, rect.position + Vector2(7,35), str(item[1]), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x-12, 18, TEXT)
+		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,rect.size.x-14),2)),Color("#2d383b"))
+		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,(rect.size.x-14)*fraction),2)),severity)
+	var summary := "DAY %03d  %02d:%02d   |   MAT %.0f   BP %d   ROOMS %d   GRID %.0f/%.0f   BAT %.0f%%   SAN %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),sim.completed_rooms,float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"])),float(sim.utility_state["sanitation"])]
+	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-120,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(vp.x-100,69),_active_screen_label(),HORIZONTAL_ALIGNMENT_RIGHT,89,10,GOOD)
 
 	if selected_citizen.is_empty() and selected_building.is_empty():
 		if incident_panel_visible:
@@ -712,21 +749,32 @@ func _draw_hud() -> void:
 		else:
 			_draw_event_toasts()
 
-	var status := "PAUSED" if sim.paused else ("x%.0f" % sim.speed)
-	var build_text := ""
+	var status := "PAUSED" if sim.paused else ("RUNNING x%.0f" % sim.speed)
+	var hint := "DRAG PAN  •  ALT+DRAG ORBIT  •  SCROLL ZOOM  •  SPACE PAUSE  •  F8 SCREENSHOT"
 	if build_mode:
 		var definition := sim.get_build_catalog()[build_catalog_index]
-		build_text = "   CONSTRUCTING: %s   Q/E SWITCH   F ROTATE   LEFT-CLICK PLACE" % str(definition["name"]).to_upper()
-	var command_hint := "RIGHT DRAG: PAN   ALT+RIGHT: ORBIT   WHEEL: ZOOM   HOME: CENTER   SPACE: PAUSE   F3: DIRECTIVES   F8: CAPTURE" + build_text
-	draw_rect(Rect2(0, vp.y - 88, vp.x, 22), Color(Color("#0e1517"), 0.95))
-	draw_string(ThemeDB.fallback_font, Vector2(20, vp.y - 73), command_hint, HORIZONTAL_ALIGNMENT_LEFT, vp.x - 155, 11, MUTED)
-	draw_string(ThemeDB.fallback_font, Vector2(vp.x - 120, vp.y - 73), status, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, WARN if sim.paused else GOOD)
+		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
+	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#081015f0"))
+	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),Color("#54646b"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-46),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-126,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(vp.x-111,vp.y-46),status,HORIZONTAL_ALIGNMENT_RIGHT,97,10,WARN if sim.paused else GOOD)
 	_draw_toolbar()
+	if hovered >= 0:
+		var source: Array = resources[hovered]
+		var card: Rect2 = resource_rects[hovered]
+		var tooltip_width := 300.0
+		var tooltip_x := clampf(card.position.x,10.0,maxf(10.0,vp.x-tooltip_width-10))
+		var tooltip := Rect2(tooltip_x,top_h+8.0,tooltip_width,48.0)
+		draw_rect(tooltip,Color("#101b20f3"))
+		draw_rect(tooltip,Color("#7a9297"),false,1.0)
+		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,18),str(source[0])+"  //  "+str(source[1]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,12,TEXT)
+		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,35),str(source[3]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,10,MUTED)
 	if playtest_notice_seconds > 0.0:
-		var width := minf(vp.x - 44.0, 680.0)
-		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
-		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
-		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
+		var width := minf(vp.x - 44.0, 650.0)
+		var notice := Rect2(14,top_h+10.0,width,32)
+		draw_rect(notice,PANEL_SOLID)
+		draw_rect(notice,GOOD,false,1.0)
+		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
 
 func _draw_directive_tab() -> void:
 	var count := 0
