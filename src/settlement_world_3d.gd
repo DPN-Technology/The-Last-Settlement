@@ -8,7 +8,7 @@ extends Node3D
 
 const SCALE := 0.085
 const ORIGIN := Vector2(700.0, 450.0)
-const GROUND_SHADER := "
+const GROUND_SHADER := """
 shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 varying vec3 coord;
@@ -29,7 +29,7 @@ void fragment(){
 	ROUGHNESS = 0.95;
 	METALLIC = 0.0;
 }
-"
+"""
 
 var camera: Camera3D
 var light: DirectionalLight3D
@@ -281,7 +281,7 @@ func screen_at(game_point: Vector2) -> Vector2:
 	return camera.unproject_position(world_position(game_point))
 
 func _layout_signature(sim: SettlementSimulation) -> String:
-	var bits := ["b%d" % sim.buildings.size(), "p%d" % sim.blueprints.size()]
+	var bits := PackedStringArray(["b%d" % sim.buildings.size(), "p%d" % sim.blueprints.size()])
 	for building in sim.buildings:
 		bits.append("%s:%s:%s" % [str(building["type"]), str(building["position"]), str(int(float(building["condition"]) / 20.0))])
 	for blueprint in sim.blueprints:
