@@ -182,7 +182,6 @@ func _create_environment() -> void:
 	world_environment.ambient_light_color = Color("#7c8a91")
 	world_environment.ambient_light_energy = 0.24
 	world_environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
-	world_environment.reflected_light_energy = 0.15
 	world_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	world_environment.tonemap_exposure = 0.76
 	world_environment.fog_enabled = true
