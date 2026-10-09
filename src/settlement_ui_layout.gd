@@ -8,6 +8,24 @@ const BOTTOM_H := 58.0
 const GAP := 6.0
 const NAV_LABELS := ["BUILD","REGION","GOVERN","INDUSTRY","FACTIONS","NATION","SAVE","LOAD","GUIDE"]
 
+# Shared rectangles for the clickable identity and short settlement briefing.
+# No guessed pixel offsets in mouse handling; resize-safe at the preview size.
+static func identity_rect(size: Vector2) -> Rect2:
+	var resource_left := clampf(size.x * 0.235,184.0,302.0)
+	return Rect2(8.0,5.0,maxf(156.0,resource_left-16.0),49.0)
+
+static func overview_rect(size: Vector2) -> Rect2:
+	var width := minf(420.0,maxf(240.0,size.x-28.0))
+	var height := minf(397.0,maxf(224.0,size.y-TOP_H-BOTTOM_H-22.0))
+	return Rect2(14.0,TOP_H+9.0,width,height)
+
+static func overview_button_rect(size: Vector2, index: int) -> Rect2:
+	var panel := overview_rect(size)
+	var gap := 7.0
+	var inner := panel.size.x-24.0
+	var width := (inner-gap*2.0)/3.0
+	return Rect2(panel.position.x+12.0+float(index)*(width+gap),panel.end.y-40.0,width,29.0)
+
 static func resource_rects(size: Vector2) -> Array[Rect2]:
 	var left := clampf(size.x * 0.235, 184.0, 302.0)
 	var width := maxf(44.0, (size.x - left - 14.0 - GAP * 5.0) / 6.0)
