@@ -14,7 +14,10 @@ const ACCENT := Color("#c64242")
 const RUST := Color("#a46d45")
 
 var sim := SettlementSimulation.new()
-var settlement_visuals := SettlementVisuals.new()
+# 3D world renders to a dedicated viewport; the existing campaign HUD stays
+# CanvasItem-based until it is replaced with proper screen-space UI scenes.
+var settlement_viewport: SubViewport
+var settlement_world: SettlementWorld3D
 var update_manager := UpdateManager.new()
 var update_mode := false
 var help_mode := false
@@ -60,6 +63,16 @@ const TOOLBAR_HINTS := ["B", "M", "V", "K", "O", "J", "S", "L", "F1"]
 const TOOLBAR_KEYS := [KEY_B, KEY_M, KEY_V, KEY_K, KEY_O, KEY_J, KEY_S, KEY_L, KEY_F1]
 
 func _ready() -> void:
+	settlement_viewport = SubViewport.new()
+	settlement_viewport.name = "Live3DViewport"
+	settlement_viewport.size = Vector2i(get_viewport_rect().size)
+	settlement_viewport.own_world_3d = true
+	settlement_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	settlement_viewport.msaa_3d = Viewport.MSAA_4X
+	add_child(settlement_viewport)
+	settlement_world = SettlementWorld3D.new()
+	settlement_world.name = "LastHavenWorld"
+	settlement_viewport.add_child(settlement_world)
 	add_child(update_manager)
 	update_manager.configure(SettlementSimulation.SAVE_VERSION)
 	update_manager.state_changed.connect(queue_redraw)
@@ -68,12 +81,16 @@ func _ready() -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	var screen_size := Vector2i(get_viewport_rect().size)
+	if settlement_viewport.size != screen_size and screen_size.x > 0 and screen_size.y > 0:
+		settlement_viewport.size = screen_size
 	sim.update(delta)
 	sim.check_field_objectives()
 	if not sim.paused:
 		_update_citizens(delta)
 	if playtest_notice_seconds > 0.0:
 		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
+	settlement_world.sync(sim, selected_building, selected_citizen, build_mode, mouse_world, sim.get_build_catalog()[build_catalog_index], build_rotated, delta)
 	queue_redraw()
 
 func _update_citizens(delta: float) -> void:
@@ -137,13 +154,15 @@ func _draw() -> void:
 		_draw_selection_panel()
 
 func _world_point(p: Vector2) -> Vector2:
-	return (p + camera_offset) * zoom
+	return settlement_world.screen_at(p) if settlement_world != null else (p + camera_offset) * zoom
 
 func _screen_to_world(p: Vector2) -> Vector2:
-	return p / zoom - camera_offset
+	return settlement_world.ground_at(p) if settlement_world != null else p / zoom - camera_offset
 
 func _draw_world() -> void:
-	settlement_visuals.render(self, sim, camera_offset, zoom, selected_building, selected_citizen, build_mode, mouse_world, build_rotated, sim.get_build_catalog()[build_catalog_index])
+	if settlement_viewport != null:
+		draw_texture_rect(settlement_viewport.get_texture(), Rect2(Vector2.ZERO, get_viewport_rect().size), false)
+
 
 func _draw_utility_overlay() -> void:
 	if utility_overlay == 0:
@@ -754,8 +773,7 @@ func _handle_objective_click(position: Vector2) -> bool:
 	return true
 
 func _focus_world_position(world: Vector2) -> void:
-	var vp := get_viewport_rect().size
-	camera_offset = Vector2(vp.x * 0.50, vp.y * 0.48) / zoom - world
+	settlement_world.focus_game(world)
 
 func _draw_build_palette() -> void:
 	var catalog := sim.get_build_catalog()
@@ -1394,13 +1412,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			var world_anchor := _screen_to_world(event.position)
-			zoom = minf(1.75, zoom + 0.08)
-			camera_offset = event.position / zoom - world_anchor
+			settlement_world.zoom_camera(-1.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			var world_anchor := _screen_to_world(event.position)
-			zoom = maxf(0.6, zoom - 0.08)
-			camera_offset = event.position / zoom - world_anchor
+			settlement_world.zoom_camera(1.0)
 		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
 			dragging = event.pressed
 			drag_origin = event.position
@@ -1408,5 +1422,5 @@ func _unhandled_input(event: InputEvent) -> void:
 		mouse_world = _screen_to_world(event.position)
 		if dragging:
 			var drag_delta: Vector2 = event.position - drag_origin
-			camera_offset += drag_delta / zoom
+			settlement_world.pan_screen(drag_delta)
 			drag_origin = event.position
