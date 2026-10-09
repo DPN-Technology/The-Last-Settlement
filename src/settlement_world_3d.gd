@@ -264,9 +264,7 @@ func _sphere(parent: Node3D, pos: Vector3, radius: float, mat: Material) -> Mesh
 
 func _build_terrain() -> void:
 	var ground := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(320.0, 320.0)
-	ground.mesh = plane
+	ground.mesh = WastelandDetail.terrain_mesh()
 	var shader := Shader.new()
 	shader.code = GROUND_SHADER
 	var terrain_material := ShaderMaterial.new()
@@ -300,6 +298,7 @@ func _build_terrain() -> void:
 	for i in range(15):
 		var p := Vector3(-48 + float(i % 5)*2.6, 0, 34 + float(i / 5)*3.0)
 		_box(terrain_layer, p + Vector3(0, 0.6, 0), Vector3(1.9, 1.2, 1.9), materials["rust"])
+	WastelandDetail.detail_ruins(terrain_layer, materials)
 
 func _road(a: Vector3, b: Vector3, width: float) -> void:
 	var delta := b - a
@@ -506,6 +505,7 @@ func _build_structure(b: Dictionary) -> void:
 	elif type == "housing":
 		for i in [-1.0,1.0]:
 			_box(group,Vector3(i*size.x*0.23,body_height+0.86,0),Vector3(2.5,1.1,2.4),materials["rooflight"])
+	WastelandDetail.detail_building(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	if float(b.get("condition",100.0)) < 60.0:
 		_box(group,Vector3(size.x*0.35,body_height+0.63,0),Vector3(2.0,0.17,1.1),materials["rust"])
 
@@ -517,6 +517,7 @@ func _build_farm(group: Node3D, size: Vector2) -> void:
 		for j in range(9):
 			var z := -size.y*0.4 + float(j)*size.y*0.1
 			_sphere(group,Vector3(x,0.5,z),0.25,materials["leaf"])
+	WastelandDetail.detail_farm(group,size,materials)
 
 func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> void:
 	var alive_ids: Dictionary = {}
