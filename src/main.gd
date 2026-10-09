@@ -777,47 +777,36 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
 
 func _draw_directive_tab() -> void:
-	var count := 0
-	for key in sim.field_objectives.keys():
-		if bool(sim.field_objectives[key]):
-			count += 1
-	var rect := Rect2(18, 139, 308, 43)
-	draw_rect(rect, Color("#111a1ce2"))
-	draw_rect(rect, Color("#bc9257"), false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(30, 166), "FIELD DIRECTIVES   %d/4   [F3] OPEN" % count, HORIZONTAL_ALIGNMENT_LEFT, 292, 12, TEXT)
+	var done := 0
+	for value in sim.field_objectives.values():
+		if bool(value):
+			done += 1
+	var rect := SettlementUILayout.directive_tab()
+	_draw_ui_panel(rect,WARN)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,20),"OBJECTIVES  %d/4     [F3] SHOW" % done,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,11,TEXT)
 
 func _draw_field_objectives() -> void:
-	var x := 18.0
-	var y := 139.0
-	var w := 318.0
-	var h := 192.0
-	draw_rect(Rect2(x, y, w, h), Color("#111a1cdd"))
-	draw_rect(Rect2(x, y, w, h), Color("#5a6259"), false, 1.0)
-	draw_line(Vector2(x, y), Vector2(x + w, y), WARN, 2.0)
-	draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + 25), "LAST HAVEN // FIELD DIRECTIVES", HORIZONTAL_ALIGNMENT_LEFT, w - 26, 14, TEXT)
-	var keys := ["inspected", "blueprint", "expedition", "survived"]
-	var names := ["Inspect a survivor", "Place a construction blueprint", "Dispatch a salvage expedition", "Survive until Day 2"]
-	var count := 0
+	var rect := SettlementUILayout.objective_panel()
+	_draw_ui_panel(rect,WARN)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,24),"LAST HAVEN  //  FIELD OBJECTIVES",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,12,TEXT)
+	var keys := ["inspected","blueprint","expedition","survived"]
+	var names := ["Inspect a survivor","Place a construction blueprint","Dispatch a salvage expedition","Survive until Day 2"]
+	var done := 0
 	for key in keys:
-		if bool(sim.field_objectives.get(key, false)):
-			count += 1
-	draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + 45), "%d / 4 COMPLETE  // CLICK A DIRECTIVE FOR ACTION" % count, HORIZONTAL_ALIGNMENT_LEFT, w - 26, 10, MUTED)
-	for i in range(4):
-		var complete := bool(sim.field_objectives.get(keys[i], false))
-		var ry := y + 74.0 + float(i) * 28.0
-		var col := GOOD if complete else TEXT
-		draw_circle(Vector2(x + 22, ry - 4), 7.0, GOOD if complete else Color("#4c5959"))
-		if complete:
-			draw_string(ThemeDB.fallback_font, Vector2(x + 18, ry), "✓", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#13251b"))
-		draw_string(ThemeDB.fallback_font, Vector2(x + 37, ry), names[i], HORIZONTAL_ALIGNMENT_LEFT, w - 48, 12, col)
-	if count >= 4:
-		draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + h - 9), "FIRST CHAPTER COMPLETE // CONTINUE REBUILDING", HORIZONTAL_ALIGNMENT_LEFT, w - 25, 9, GOOD)
+		if bool(sim.field_objectives.get(key,false)):
+			done += 1
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,45),"%d/4 COMPLETE   •   SELECT A DIRECTIVE" % done,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,MUTED)
+	for i in range(keys.size()):
+		var complete := bool(sim.field_objectives.get(keys[i],false))
+		var ry := rect.position.y + 75.0 + float(i)*26.0
+		draw_circle(Vector2(rect.position.x+18,ry-4),5.0,GOOD if complete else Color("#43575c"))
+		draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+32,ry),str(names[i]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-42,11,GOOD if complete else TEXT)
 
 func _handle_objective_click(position: Vector2) -> bool:
-	var area := Rect2(18, 139, 318, 192)
+	var area := SettlementUILayout.objective_panel()
 	if not area.has_point(position):
 		return false
-	var row := int(floor((position.y - 199.0) / 28.0))
+	var row := int(floor((position.y - area.position.y - 61.0)/26.0))
 	if row == 0 and not sim.get_alive_citizens().is_empty():
 		var citizen: Dictionary = sim.get_alive_citizens()[0]
 		_focus_world_position(Vector2(citizen["position"]))
@@ -839,46 +828,45 @@ func _focus_world_position(world: Vector2) -> void:
 
 func _draw_build_palette() -> void:
 	var catalog := sim.get_build_catalog()
-	var left := 18.0
-	var top := 139.0
-	var width := 316.0
-	var row_height := 30.0
-	var height := 83.0 + float(catalog.size()) * row_height
-	draw_rect(Rect2(left, top, width, height), Color("#10191beF"))
-	draw_rect(Rect2(left, top, width, height), WARN, false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 25), "BUILD // SETTLEMENT INFRASTRUCTURE", HORIZONTAL_ALIGNMENT_LEFT, width - 25, 13, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 46), "MATERIALS %.0f   [F] ROTATE   [ESC] EXIT" % float(sim.stockpiles["industry"].get("materials", 0.0)), HORIZONTAL_ALIGNMENT_LEFT, width - 25, 11, MUTED)
-	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 66), "SELECT A STRUCTURE, THEN CLICK THE GROUND", HORIZONTAL_ALIGNMENT_LEFT, width - 25, 10, WARN)
-	for i in range(catalog.size()):
-		var item: Dictionary = catalog[i]
-		var y := top + 75.0 + float(i) * row_height
-		var active := i == build_catalog_index
-		var affordable := float(sim.stockpiles["industry"].get("materials", 0.0)) >= float(item["cost"])
+	var rect := SettlementUILayout.build_palette(get_viewport_rect().size,catalog.size())
+	var rows := SettlementUILayout.palette_rows(get_viewport_rect().size,catalog.size())
+	var first := SettlementUILayout.palette_first(build_catalog_index,catalog.size(),rows)
+	_draw_ui_panel(rect,WARN)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,22),"BUILD  //  INFRASTRUCTURE",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,13,TEXT)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,41),"MAT %.0f    Q/E CYCLE   F ROTATE" % float(sim.stockpiles["industry"].get("materials",0.0)),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,MUTED)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,58),"%d-%d OF %d   •   CLICK STRUCTURE TO SELECT" % [first+1,first+rows,catalog.size()],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,WARN)
+	for row in range(rows):
+		var i := first+row
+		var entry: Dictionary = catalog[i]
+		var y := rect.position.y+70.0+float(row)*28.0
+		var active := i==build_catalog_index
+		var affordable := float(sim.stockpiles["industry"].get("materials",0.0)) >= float(entry["cost"])
 		if active:
-			draw_rect(Rect2(left + 5, y, width - 10, row_height - 2), Color("#54432f"))
-		draw_string(ThemeDB.fallback_font, Vector2(left + 14, y + 19), str(item["name"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 200, 12, TEXT if affordable else MUTED)
-		draw_string(ThemeDB.fallback_font, Vector2(left + 239, y + 19), "%.0f MAT" % float(item["cost"]), HORIZONTAL_ALIGNMENT_LEFT, 62, 11, GOOD if affordable else BAD)
+			draw_rect(Rect2(rect.position.x+6,y,rect.size.x-12,27),Color("#54422c"))
+		draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+12,y+18),str(entry["name"]).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-105,11,TEXT if affordable else MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-90,y+18),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,78,10,GOOD if affordable else BAD)
 
 func _handle_build_palette_click(position: Vector2) -> bool:
 	var catalog := sim.get_build_catalog()
-	var area := Rect2(18, 139, 316, 83.0 + float(catalog.size()) * 30.0)
-	if not area.has_point(position):
+	var rect := SettlementUILayout.build_palette(get_viewport_rect().size,catalog.size())
+	if not rect.has_point(position):
 		return false
-	var index := int(floor((position.y - 214.0) / 30.0))
-	if index >= 0 and index < catalog.size():
-		build_catalog_index = index
+	var rows := SettlementUILayout.palette_rows(get_viewport_rect().size,catalog.size())
+	var first := SettlementUILayout.palette_first(build_catalog_index,catalog.size(),rows)
+	var row := int(floor((position.y-rect.position.y-70.0)/28.0))
+	if row >= 0 and row < rows:
+		build_catalog_index = first+row
 		build_rotated = false
 	return true
 
 func _draw_toolbar() -> void:
 	var vp := get_viewport_rect().size
-	var width := (vp.x - 24.0) / float(TOOLBAR_NAMES.size())
-	var y := vp.y - 65.0
-	draw_rect(Rect2(0, y - 2.0, vp.x, 69.0), Color("#0a1012"))
-	for index in range(TOOLBAR_NAMES.size()):
-		var x := 12.0 + float(index) * width
+	var descriptions := ["Construction tools","Regional operations","Civic and legal policy","Production and trade","External faction relations","Civilization recovery","Save the settlement","Restore a save","Controls and objectives"]
+	var selected := -1
+	for i in range(TOOLBAR_NAMES.size()):
+		var rect := SettlementUILayout.navbar_rect(vp,i)
 		var active := false
-		match index:
+		match i:
 			0: active = build_mode
 			1: active = world_map_mode
 			2: active = governance_mode
@@ -886,22 +874,28 @@ func _draw_toolbar() -> void:
 			4: active = faction_mode
 			5: active = civilization_mode
 			8: active = help_mode
-		var rect := Rect2(x + 2.0, y + 4.0, width - 7.0, 50.0)
-		draw_rect(rect, Color("#62452f") if active else Color("#1a2426"))
-		draw_rect(rect, WARN if active else Color("#465456"), false, 1.0)
-		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 26.0), TOOLBAR_NAMES[index], HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 13, TEXT)
-		draw_string(ThemeDB.fallback_font, Vector2(x + 13.0, y + 43.0), "[" + TOOLBAR_HINTS[index] + "]", HORIZONTAL_ALIGNMENT_LEFT, int(width - 25.0), 11, WARN if active else MUTED)
+		if rect.has_point(get_local_mouse_position()):
+			selected = i
+		var highlight := active or selected==i
+		draw_rect(rect,Color("#3a3130") if active else (Color("#28383d") if selected==i else Color("#162329")))
+		draw_rect(rect,WARN if active else (Color("#789ca8") if selected==i else Color("#40565e")),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,20),TOOLBAR_NAMES[i],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-39,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-9,rect.position.y+20),TOOLBAR_HINTS[i],HORIZONTAL_ALIGNMENT_RIGHT,21,9,WARN if highlight else MUTED)
+	if selected >= 0:
+		var hovered_rect := SettlementUILayout.navbar_rect(vp,selected)
+		var left := clampf(hovered_rect.position.x,8.0,maxf(8.0,vp.x-240))
+		var tip := Rect2(left,vp.y-87,236,25)
+		draw_rect(tip,Color("#101e23e9"))
+		draw_rect(tip,Color("#566a72"),false,1.0)
+		draw_string(ThemeDB.fallback_font,tip.position+Vector2(9,17),descriptions[selected],HORIZONTAL_ALIGNMENT_LEFT,tip.size.x-16,10,TEXT)
 
 func _handle_toolbar_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
-	if position.y < vp.y - 65.0:
-		return false
-	var button_width := (vp.x - 24.0) / float(TOOLBAR_NAMES.size())
-	var index := int(floor((position.x - 12.0) / button_width))
-	if index >= 0 and index < TOOLBAR_KEYS.size():
-		# The B keyboard shortcut has a *different* meaning inside Civilization
-		# Command (emergency treasury spend). A toolbar click must only build.
+	for index in range(TOOLBAR_NAMES.size()):
+		if not SettlementUILayout.navbar_rect(vp,index).has_point(position):
+			continue
 		if index == 0:
+			# Click Build must never invoke Civilization treasury's B shortcut.
 			var was_building := build_mode and not civilization_mode and not world_map_mode
 			build_mode = not was_building
 			world_map_mode = false
@@ -919,7 +913,8 @@ func _handle_toolbar_click(position: Vector2) -> bool:
 			action.keycode = TOOLBAR_KEYS[index]
 			action.pressed = true
 			_unhandled_input(action)
-	return true
+		return true
+	return false
 
 func _draw_event_toasts() -> void:
 	var vp := get_viewport_rect().size
