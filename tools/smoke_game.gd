@@ -178,6 +178,36 @@ func _smoke() -> void:
 		push_error("SMOKE: Clicking active Build toolbar did not close construction")
 		quit(1)
 		return
+	# The command screens must be mouse-operable; input must act on the
+	# selected mode without changing unrelated treasury or game state.
+	instance.economy_mode = true
+	instance.governance_mode = false
+	var old_item: int = instance.economy_item_index
+	if not instance._handle_panel_action_click(instance._panel_action_rect(1,5).get_center()):
+		push_error("SMOKE: Industry NEXT ITEM button does not accept mouse clicks")
+		quit(1)
+		return
+	if instance.economy_item_index != (old_item+1) % instance.ECONOMY_ITEMS.size():
+		push_error("SMOKE: Industry NEXT ITEM click did not change selection")
+		quit(1)
+		return
+	instance._handle_panel_action_click(instance._panel_action_rect(4,5).get_center())
+	if instance.economy_mode:
+		push_error("SMOKE: Industry CLOSE mouse button did not dismiss panel")
+		quit(1)
+		return
+	instance.governance_mode = true
+	var old_law: int = instance.governance_law_index
+	instance._handle_panel_action_click(instance._panel_action_rect(1,4).get_center())
+	if instance.governance_law_index != (old_law+1) % instance.GOVERNANCE_LAWS.size():
+		push_error("SMOKE: Civic NEXT LAW action did not change highlighted law")
+		quit(1)
+		return
+	instance._handle_panel_action_click(instance._panel_action_rect(3,4).get_center())
+	if instance.governance_mode:
+		push_error("SMOKE: Civic CLOSE action did not dismiss panel")
+		quit(1)
+		return
 	# Renderer-specific regression tests: lighting must have a real
 	# night/day difference and the new terrain must be an actual 3D mesh.
 	var world: SettlementWorld3D = instance.settlement_world
