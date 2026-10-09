@@ -149,6 +149,42 @@ func _smoke() -> void:
 		push_error("SMOKE: Clicking active Build toolbar did not close construction")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: 3D world, perspective camera, terrain, buildings, survivors, gameplay, save/load and toolbar safety")
+	# Renderer-specific regression tests: lighting must have a real
+	# night/day difference and the new terrain must be an actual 3D mesh.
+	var world: SettlementWorld3D = instance.settlement_world
+	var ground := world.terrain_layer.get_child(0) as MeshInstance3D
+	if ground == null or not (ground.mesh is ArrayMesh):
+		push_error("SMOKE: Height-mapped 3D terrain is unavailable")
+		quit(1)
+		return
+	if not (world.materials["roof"] is ShaderMaterial):
+		push_error("SMOKE: Weathered physical roof material is unavailable")
+		quit(1)
+		return
+	world._update_daylight(12.0)
+	var sunlight_noon := world.light.light_energy
+	world._update_daylight(23.0)
+	var sunlight_night := world.light.light_energy
+	if sunlight_noon < sunlight_night * 3.0 or world.command_lamp.light_energy < 0.3:
+		push_error("SMOKE: Daylight/night lighting curve is broken")
+		quit(1)
+		return
+	if world.animated_vent_fans.is_empty():
+		push_error("SMOKE: Powered mechanical visual details are missing")
+		quit(1)
+		return
+	var rotor := world.animated_vent_fans[0]
+	var before_rotation := rotor.rotation.y
+	world._animate_machinery(0.25, true)
+	if is_equal_approx(before_rotation, rotor.rotation.y):
+		push_error("SMOKE: Running industrial fan has no motion")
+		quit(1)
+		return
+	world._animate_machinery(0.25, false)
+	if not is_equal_approx(rotor.rotation.y, before_rotation + 0.25 * 2.8):
+		push_error("SMOKE: Industrial fan did not stop without power")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: 3D world, realistic terrain, weathered materials, day-night, powered machines, gameplay and save/load")
 	instance.queue_free()
 	quit(0)
