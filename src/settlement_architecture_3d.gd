@@ -90,7 +90,7 @@ static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, m
 		var left := Vector3(-half,height+0.23,z)
 		var right := Vector3(half,height+0.23,z)
 		var apex := Vector3(0,height+ridge+0.23,z)
-		var triangle: Array[Vector3] = [left,apex,right] if side < 0.0 else [left,right,apex]
+		var triangle: Array = [left,apex,right] if side < 0.0 else [left,right,apex]
 		for vertex in triangle:
 			gable.set_uv(Vector2((vertex.x+half)/maxf(1.0,size.x),(vertex.y-height)/maxf(1.0,ridge)))
 			gable.add_vertex(vertex)
