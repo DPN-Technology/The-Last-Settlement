@@ -86,7 +86,7 @@ func _smoke() -> void:
 		push_error("SMOKE: Directive did not open construction")
 		quit(1)
 		return
-	instance._handle_build_palette_click(SettlementUILayout.build_palette(instance.get_viewport_rect().size, sim.get_build_catalog().size()).position + Vector2(45,70 + 2 * 28 + 10))
+	instance._handle_build_palette_click(SettlementUILayout.build_palette(instance.get_viewport_rect().size, sim.get_build_catalog().size()).position + Vector2(45,134 + 2 * 27 + 13))
 	if instance.build_catalog_index != 2:
 		push_error("SMOKE: Construction catalog did not respond to mouse")
 		quit(1)
@@ -127,6 +127,35 @@ func _smoke() -> void:
 		push_error("SMOKE: Clickable blueprint cancellation failed")
 		quit(1)
 		return
+	# Expanded catalog is real gameplay, not an inaccessible decorative menu.
+	for required in ["farm","medical","industry"]:
+		var found := false
+		for entry in sim.get_build_catalog():
+			if str(entry["type"])==required:
+				found = true
+		if not found:
+			push_error("SMOKE: Essential production/care building missing: "+required)
+			quit(1)
+			return
+	instance.build_mode = true
+	instance._handle_build_palette_click(SettlementUILayout.build_category_rect(instance.get_viewport_rect().size,4).get_center())
+	if instance.build_category != "SERVICES" or str(sim.get_build_catalog()[instance.build_catalog_index]["type"]) != "farm":
+		push_error("SMOKE: Service building category did not filter to real crop fields")
+		quit(1)
+		return
+	var farm_site := Vector2(1820,920)
+	if not sim.place_blueprint("farm",farm_site):
+		push_error("SMOKE: Farm catalog option cannot create an actual blueprint")
+		quit(1)
+		return
+	var new_id := int(sim.blueprints[-1]["id"])
+	if not sim.cancel_blueprint(new_id):
+		push_error("SMOKE: New farm blueprint cannot be cancelled")
+		quit(1)
+		return
+	instance._set_build_category("ALL")
+	instance.build_mode = false
+
 	# All toolbars and resource chips must fit in the live viewport and share
 	# click geometry; previous hard-coded 118px/88px HUD obscured the 3D world.
 	var screen: Vector2 = instance.get_viewport_rect().size
@@ -183,7 +212,7 @@ func _smoke() -> void:
 	instance.economy_mode = true
 	instance.governance_mode = false
 	var old_item: int = instance.economy_item_index
-	if not instance._handle_panel_action_click(instance._panel_action_rect(1,5).get_center()):
+	if not instance._handle_panel_action_click(instance._panel_action_rect(1,8).get_center()):
 		push_error("SMOKE: Industry NEXT ITEM button does not accept mouse clicks")
 		quit(1)
 		return
@@ -191,7 +220,20 @@ func _smoke() -> void:
 		push_error("SMOKE: Industry NEXT ITEM click did not change selection")
 		quit(1)
 		return
-	instance._handle_panel_action_click(instance._panel_action_rect(4,5).get_center())
+	# New production actions must affect the real batch queue.
+	instance.economy_recipe_index = 0
+	var initial_batches := sim.economy_simulation.production_queue.size()
+	instance._handle_panel_action_click(instance._panel_action_rect(6,8).get_center())
+	if sim.economy_simulation.production_queue.size() != initial_batches+1:
+		push_error("SMOKE: Industry QUEUE action did not create a live production batch")
+		quit(1)
+		return
+	instance._handle_command_content_click(SettlementUILayout.side_panel(screen,480.0).position+Vector2(75,158+3*22+10))
+	if instance.economy_item_index != 3:
+		push_error("SMOKE: Clicking an item in Industry did not select it")
+		quit(1)
+		return
+	instance._handle_panel_action_click(instance._panel_action_rect(7,8).get_center())
 	if instance.economy_mode:
 		push_error("SMOKE: Industry CLOSE mouse button did not dismiss panel")
 		quit(1)
@@ -203,11 +245,46 @@ func _smoke() -> void:
 		push_error("SMOKE: Civic NEXT LAW action did not change highlighted law")
 		quit(1)
 		return
+	instance._handle_command_content_click(SettlementUILayout.side_panel(screen,480.0).position+Vector2(55,263+2*28+10))
+	if instance.governance_law_index != 2:
+		push_error("SMOKE: Clicking governance law row did not select labor policy")
+		quit(1)
+		return
+	var old_setting := str(sim.governance_simulation.laws["labor"])
+	instance._handle_panel_action_click(instance._panel_action_rect(2,4).get_center())
+	if str(sim.governance_simulation.laws["labor"]) == old_setting:
+		push_error("SMOKE: Governance change button did not update real law")
+		quit(1)
+		return
 	instance._handle_panel_action_click(instance._panel_action_rect(3,4).get_center())
 	if instance.governance_mode:
 		push_error("SMOKE: Civic CLOSE action did not dismiss panel")
 		quit(1)
 		return
+	# The regional map projection and list must select the same actual site.
+	instance.world_map_mode = true
+	var available_locations := sim.world_simulation.get_discovered_locations()
+	if available_locations.size()<2:
+		push_error("SMOKE: No explored salvage location available on starting map")
+		quit(1)
+		return
+	var destination: Dictionary = available_locations[1]
+	instance._world_map_select(SettlementUILayout.region_point(screen,Vector2(destination["position"])))
+	if instance.selected_world_location_id != int(destination["id"]):
+		push_error("SMOKE: Regional map marker selection uses incorrect projection")
+		quit(1)
+		return
+	instance.selected_world_location_id = 1
+	if instance._dispatch_region():
+		push_error("SMOKE: Home location illegally allowed a salvage mission")
+		quit(1)
+		return
+	instance._handle_region_click(SettlementUILayout.region_site_row(screen,1).get_center())
+	if instance.selected_world_location_id != int(destination["id"]):
+		push_error("SMOKE: Regional site list click did not select location")
+		quit(1)
+		return
+	instance.world_map_mode = false
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
 	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
