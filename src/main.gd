@@ -21,12 +21,13 @@ var help_mode := false
 var incident_panel_visible := false
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
-var camera_offset := Vector2(72, -8)
-var zoom := 0.86
+var camera_offset := Vector2(-75, -34)
+var zoom := 1.04
 var dragging := false
 var drag_origin := Vector2.ZERO
 var selected_citizen: Dictionary = {}
 var selected_building: Dictionary = {}
+var selected_blueprint: Dictionary = {}
 var build_mode := false
 var build_catalog_index := 0
 var build_rotated := false
@@ -68,6 +69,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	sim.update(delta)
+	sim.check_field_objectives()
 	_update_citizens(delta)
 	if playtest_notice_seconds > 0.0:
 		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
@@ -113,6 +115,11 @@ func _draw() -> void:
 		_draw_world()
 		_draw_utility_overlay()
 	_draw_hud()
+	if not help_mode and not update_mode:
+		if build_mode:
+			_draw_build_palette()
+		elif not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode:
+			_draw_field_objectives()
 	if help_mode:
 		_draw_help_panel()
 	elif update_mode:
@@ -651,7 +658,7 @@ func _draw_hud() -> void:
 
 	draw_string(ThemeDB.fallback_font, Vector2(24,32), "DPN // THE LAST SETTLEMENT", HORIZONTAL_ALIGNMENT_LEFT, -1, 23, TEXT)
 	draw_string(ThemeDB.fallback_font, Vector2(24,57), "CIVILIZATION RECOVERY COMMAND // %s" % sim.settlement_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
-	draw_string(ThemeDB.fallback_font, Vector2(24,89), "DAY %03d %02d:%02d // MAT %.0f // BP %d // ROOMS %d // GRID %.0f/%.0f // BAT %.0f%% // SAN %.0f%%" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms, float(sim.utility_state["power_generated"]), float(sim.utility_state["power_demand"]), 100.0 * float(sim.utility_state["battery_charge"]) / maxf(1.0,float(sim.utility_state["battery_capacity"])), float(sim.utility_state["sanitation"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
+	draw_string(ThemeDB.fallback_font, Vector2(24,105), "DAY %03d %02d:%02d   MAT %.0f   BLUEPRINTS %d   ROOMS %d   GRID %.0f/%.0f   BAT %.0f%%   SAN %.0f%%" % [sim.day, int(sim.hour), int((sim.hour - floor(sim.hour)) * 60.0), float(sim.resources["materials"]), sim.blueprints.size(), sim.completed_rooms, float(sim.utility_state["power_generated"]), float(sim.utility_state["power_demand"]), 100.0 * float(sim.utility_state["battery_charge"]) / maxf(1.0,float(sim.utility_state["battery_capacity"])), float(sim.utility_state["sanitation"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
 
 	var alive := sim.get_alive_citizens().size()
 	var stats := [
@@ -692,6 +699,91 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(22, 125, width, 37), PANEL_SOLID, true)
 		draw_rect(Rect2(22, 125, width, 37), GOOD, false, 1.0)
 		draw_string(ThemeDB.fallback_font, Vector2(35, 148), playtest_notice, HORIZONTAL_ALIGNMENT_LEFT, width - 25.0, 12, GOOD)
+
+func _draw_field_objectives() -> void:
+	var x := 18.0
+	var y := 139.0
+	var w := 318.0
+	var h := 192.0
+	draw_rect(Rect2(x, y, w, h), Color("#111a1cdd"))
+	draw_rect(Rect2(x, y, w, h), Color("#5a6259"), false, 1.0)
+	draw_line(Vector2(x, y), Vector2(x + w, y), WARN, 2.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + 25), "LAST HAVEN // FIELD DIRECTIVES", HORIZONTAL_ALIGNMENT_LEFT, w - 26, 14, TEXT)
+	var keys := ["inspected", "blueprint", "expedition", "survived"]
+	var names := ["Inspect a survivor", "Place a construction blueprint", "Dispatch a salvage expedition", "Survive until Day 2"]
+	var count := 0
+	for key in keys:
+		if bool(sim.field_objectives.get(key, false)):
+			count += 1
+	draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + 45), "%d / 4 COMPLETE  // CLICK A DIRECTIVE FOR ACTION" % count, HORIZONTAL_ALIGNMENT_LEFT, w - 26, 10, MUTED)
+	for i in range(4):
+		var complete := bool(sim.field_objectives.get(keys[i], false))
+		var ry := y + 74.0 + float(i) * 28.0
+		var col := GOOD if complete else TEXT
+		draw_circle(Vector2(x + 22, ry - 4), 7.0, GOOD if complete else Color("#4c5959"))
+		if complete:
+			draw_string(ThemeDB.fallback_font, Vector2(x + 18, ry), "✓", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#13251b"))
+		draw_string(ThemeDB.fallback_font, Vector2(x + 37, ry), names[i], HORIZONTAL_ALIGNMENT_LEFT, w - 48, 12, col)
+	if count >= 4:
+		draw_string(ThemeDB.fallback_font, Vector2(x + 15, y + h - 9), "FIRST CHAPTER COMPLETE // CONTINUE REBUILDING", HORIZONTAL_ALIGNMENT_LEFT, w - 25, 9, GOOD)
+
+func _handle_objective_click(position: Vector2) -> bool:
+	var area := Rect2(18, 139, 318, 192)
+	if not area.has_point(position):
+		return false
+	var row := int(floor((position.y - 199.0) / 28.0))
+	if row == 0 and sim.citizens.size() > 0:
+		var citizen: Dictionary = sim.get_alive_citizens()[0]
+		_focus_world_position(Vector2(citizen["position"]))
+		selected_citizen = citizen
+		selected_building = {}
+		selected_blueprint = {}
+		sim.complete_field_objective("inspected")
+	elif row == 1:
+		build_mode = true
+	elif row == 2:
+		world_map_mode = true
+	elif row == 3:
+		sim.paused = false
+		sim.speed = 4.0
+	return true
+
+func _focus_world_position(world: Vector2) -> void:
+	var vp := get_viewport_rect().size
+	camera_offset = Vector2(vp.x * 0.50, vp.y * 0.48) / zoom - world
+
+func _draw_build_palette() -> void:
+	var catalog := sim.get_build_catalog()
+	var left := 18.0
+	var top := 139.0
+	var width := 316.0
+	var row_height := 30.0
+	var height := 83.0 + float(catalog.size()) * row_height
+	draw_rect(Rect2(left, top, width, height), Color("#10191beF"))
+	draw_rect(Rect2(left, top, width, height), WARN, false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 25), "BUILD // SETTLEMENT INFRASTRUCTURE", HORIZONTAL_ALIGNMENT_LEFT, width - 25, 13, TEXT)
+	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 46), "MATERIALS %.0f   [F] ROTATE   [ESC] EXIT" % float(sim.stockpiles["industry"].get("materials", 0.0)), HORIZONTAL_ALIGNMENT_LEFT, width - 25, 11, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(left + 15, top + 66), "SELECT A STRUCTURE, THEN CLICK THE GROUND", HORIZONTAL_ALIGNMENT_LEFT, width - 25, 10, WARN)
+	for i in range(catalog.size()):
+		var item: Dictionary = catalog[i]
+		var y := top + 75.0 + float(i) * row_height
+		var active := i == build_catalog_index
+		var affordable := float(sim.stockpiles["industry"].get("materials", 0.0)) >= float(item["cost"])
+		if active:
+			draw_rect(Rect2(left + 5, y, width - 10, row_height - 2), Color("#54432f"))
+		draw_string(ThemeDB.fallback_font, Vector2(left + 14, y + 19), str(item["name"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 200, 12, TEXT if affordable else MUTED)
+		draw_string(ThemeDB.fallback_font, Vector2(left + 239, y + 19), "%.0f MAT" % float(item["cost"]), HORIZONTAL_ALIGNMENT_LEFT, 62, 11, GOOD if affordable else BAD)
+
+func _handle_build_palette_click(position: Vector2) -> bool:
+	var catalog := sim.get_build_catalog()
+	var area := Rect2(18, 139, 316, 83.0 + float(catalog.size()) * 30.0)
+	if not area.has_point(position):
+		return false
+	var index := int(floor((position.y - 214.0) / 30.0))
+	if index >= 0 and index < catalog.size():
+		build_catalog_index = index
+		build_rotated = false
+	return true
 
 func _draw_toolbar() -> void:
 	var vp := get_viewport_rect().size
