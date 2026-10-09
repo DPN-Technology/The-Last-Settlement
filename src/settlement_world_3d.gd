@@ -619,6 +619,9 @@ func _make_survivor(c: Dictionary) -> Node3D:
 	person.name = "Survivor_%s" % str(c["id"])
 	survivors_layer.add_child(person)
 	if _try_authored_model(person, "res://assets/3d/characters/survivor.glb"):
+		# Correct the imported human's world scale and material. The original
+		# CC0 rig otherwise appears as a glowing white mannequin next to huts.
+		SurvivorVisuals3D.prepare(person.get_node("ProductionArt"), person, c, materials)
 		# Selection node remains part of the gameplay layer, not the art asset.
 		var art_selection := Node3D.new()
 		art_selection.name = "Selection"
