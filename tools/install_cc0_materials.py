@@ -49,7 +49,7 @@ def install() -> None:
             if payload is None or not payload.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError(f"Invalid PNG texture: {name}")
             if len(payload) < 10_000 or len(payload) > MAX_BYTES:
-                raise ValueError(f"Unexpected PBR texture length: {name}")
+                raise ValueError(f"Unexpected PBR texture length: {name} bytes={len(payload)} url={url}")
             actual = hashlib.sha256(payload).hexdigest()
             expected = MATERIALS_SHA256.get(name)
             if expected and expected != actual:
