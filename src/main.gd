@@ -819,10 +819,26 @@ func _handle_toolbar_click(position: Vector2) -> bool:
 	var button_width := (vp.x - 24.0) / float(TOOLBAR_NAMES.size())
 	var index := int(floor((position.x - 12.0) / button_width))
 	if index >= 0 and index < TOOLBAR_KEYS.size():
-		var action := InputEventKey.new()
-		action.keycode = TOOLBAR_KEYS[index]
-		action.pressed = true
-		_unhandled_input(action)
+		# The B keyboard shortcut has a *different* meaning inside Civilization
+		# Command (emergency treasury spend). A toolbar click must only build.
+		if index == 0:
+			var was_building := build_mode and not civilization_mode and not world_map_mode
+			build_mode = not was_building
+			world_map_mode = false
+			update_mode = false
+			governance_mode = false
+			economy_mode = false
+			faction_mode = false
+			civilization_mode = false
+			help_mode = false
+			selected_citizen = {}
+			selected_building = {}
+			selected_blueprint = {}
+		else:
+			var action := InputEventKey.new()
+			action.keycode = TOOLBAR_KEYS[index]
+			action.pressed = true
+			_unhandled_input(action)
 	return true
 
 func _draw_event_toasts() -> void:
