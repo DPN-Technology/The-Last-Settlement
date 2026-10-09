@@ -95,6 +95,15 @@ jobs:
           test -s "$TEMPLATE_DIR/windows_release_x86_64.exe"
           test -s "$TEMPLATE_DIR/windows_debug_x86_64.exe"
 
+      - name: Install and import pinned CC0 3D survivor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/install_cc0_assets.py
+          GODOT=".godot-build/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --import
+          test -s assets/3d/characters/survivor.glb
+
       - name: Verify project parses before export
         shell: bash
         run: |
