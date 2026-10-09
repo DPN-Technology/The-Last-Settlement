@@ -788,8 +788,8 @@ func _draw_hud() -> void:
 	draw_rect(badge,Color("#662628") if is_hovered else Color("#3d2024"))
 	draw_rect(badge,ACCENT,false,1.0)
 	draw_string(ThemeDB.fallback_font,badge.position+Vector2(5,21),"DPN",HORIZONTAL_ALIGNMENT_LEFT,27,10,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,21),"THE LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,16,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % sim.settlement_name,HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,21),"THE LAST SETTLEMENT" if vp.x>=1000 else "LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,16 if vp.x>=1000 else 12,TEXT)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % sim.settlement_name if vp.x>=1000 else "Overview ›",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
 	if is_hovered:
 		draw_line(Vector2(identity.position.x+44,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),GOOD,1.0)
 
@@ -823,8 +823,11 @@ func _draw_hud() -> void:
 	var summary := "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
 	if vp.x >= 1120.0:
 		summary = "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Power: %.0f produced / %.0f needed  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),battery_percent]
-	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-170,10,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(vp.x-145,69),_active_screen_label(),HORIZONTAL_ALIGNMENT_RIGHT,131,10,GOOD)
+	elif vp.x < 920.0:
+		summary = "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Projects: %d" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size()]
+	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-175,10,MUTED)
+	var attention := _settlement_attention()
+	draw_string(ThemeDB.fallback_font,Vector2(vp.x-152,69),str(attention[0]),HORIZONTAL_ALIGNMENT_RIGHT,138,10,Color(attention[1]))
 
 	if selected_citizen.is_empty() and selected_building.is_empty():
 		if incident_panel_visible:
@@ -858,6 +861,19 @@ func _draw_hud() -> void:
 		draw_rect(notice,PANEL_SOLID)
 		draw_rect(notice,GOOD,false,1.0)
 		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
+
+func _settlement_attention() -> Array:
+	# Surface the most urgent actionable risk instead of a project codename.
+	var living := sim.get_alive_citizens().size()
+	if living == 0:
+		return ["NO SURVIVORS",BAD]
+	if float(sim.resources["water"]) < float(living) * 2.0:
+		return ["CHECK WATER",WARN]
+	if float(sim.resources["food"]) < float(living) * 2.0:
+		return ["CHECK FOOD",WARN]
+	if float(sim.utility_state["power_generated"]) < float(sim.utility_state["power_demand"]):
+		return ["POWER SHORTFALL",WARN]
+	return [_active_screen_label(),GOOD]
 
 func _next_settlement_goal() -> String:
 	if not bool(sim.field_objectives.get("inspected",false)):
