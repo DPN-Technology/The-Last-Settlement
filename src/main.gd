@@ -837,7 +837,7 @@ func _draw_build_palette() -> void:
 	var first := SettlementUILayout.palette_first(build_catalog_index,catalog.size(),rows)
 	_draw_ui_panel(rect,WARN)
 	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,22),"BUILD  //  INFRASTRUCTURE",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,13,TEXT)
-	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,41),"MAT %.0f    Q/E CYCLE   F ROTATE" % float(sim.stockpiles["industry"].get("materials",0.0)),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,MUTED)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,41),"MAT %.0f    Q/E OR WHEEL CYCLE   F ROTATE" % float(sim.stockpiles["industry"].get("materials",0.0)),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,MUTED)
 	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,58),"%d-%d OF %d   •   CLICK STRUCTURE TO SELECT" % [first+1,first+rows,catalog.size()],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,WARN)
 	for row in range(rows):
 		var i := first+row
@@ -1506,9 +1506,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			settlement_world.zoom_camera(-1.0)
+			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
+				build_catalog_index = maxi(0,build_catalog_index-1)
+				build_rotated = false
+			else:
+				settlement_world.zoom_camera(-1.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			settlement_world.zoom_camera(1.0)
+			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
+				build_catalog_index = mini(sim.get_build_catalog().size()-1,build_catalog_index+1)
+				build_rotated = false
+			else:
+				settlement_world.zoom_camera(1.0)
 		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
 			dragging = event.pressed
 			drag_origin = event.position
