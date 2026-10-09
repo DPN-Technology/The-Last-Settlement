@@ -26,8 +26,25 @@ func _smoke() -> void:
 		push_error("SMOKE: Tutorial must not block the settlement by default")
 		quit(1)
 		return
-	if not (instance.settlement_visuals is SettlementVisuals):
-		push_error("SMOKE: Scene visual renderer unavailable")
+	if not (instance.settlement_world is SettlementWorld3D):
+		push_error("SMOKE: True 3D world scene unavailable")
+		quit(1)
+		return
+	if instance.settlement_world.camera == null or not (instance.settlement_world.camera is Camera3D):
+		push_error("SMOKE: Perspective Camera3D unavailable")
+		quit(1)
+		return
+	if instance.settlement_world.terrain_layer == null or instance.settlement_world.terrain_layer.get_child_count() < 10:
+		push_error("SMOKE: Three-dimensional terrain failed to initialize")
+		quit(1)
+		return
+	instance.settlement_world.sync(sim, {}, {}, false, Vector2(700, 450), sim.get_build_catalog()[0], false, 0.016)
+	if instance.settlement_world.structure_layer.get_child_count() < sim.buildings.size():
+		push_error("SMOKE: Building meshes missing in 3D")
+		quit(1)
+		return
+	if instance.settlement_world.people.size() < sim.get_alive_citizens().size():
+		push_error("SMOKE: 3D survivors were not created")
 		quit(1)
 		return
 	var original_pause := sim.paused
@@ -132,6 +149,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Clicking active Build toolbar did not close construction")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: scene, rendering, pause, objectives, build catalog, saves, blueprint cancel and toolbar mode safety")
+	print("PLAYTEST SMOKE PASS: 3D world, perspective camera, terrain, buildings, survivors, gameplay, save/load and toolbar safety")
 	instance.queue_free()
 	quit(0)
