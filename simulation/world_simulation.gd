@@ -113,6 +113,7 @@ func create_expedition(sim: SettlementSimulation, location_id: int, max_members:
 		"encounter_resolved":false
 	})
 	next_expedition_id += 1
+	sim.complete_field_objective("expedition")
 	sim.add_event("EXPEDITION DEPARTED", "%d survivors departed for %s." % [members.size(), destination["name"]], "intel")
 	return true
 
