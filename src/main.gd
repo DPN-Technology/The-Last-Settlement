@@ -161,6 +161,10 @@ func _draw() -> void:
 	_draw_panel_actions()
 
 func _panel_action_items() -> Array:
+	if help_mode:
+		return []
+	if update_mode:
+		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
 	if governance_mode:
 		return [["PREV LAW",KEY_UP],["NEXT LAW",KEY_DOWN],["CHANGE",KEY_ENTER],["CLOSE",KEY_ESCAPE]]
 	if economy_mode:
@@ -169,8 +173,6 @@ func _panel_action_items() -> Array:
 		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["SEND AID",KEY_A],["TRADE",KEY_D],["TRUCE",KEY_Z],["CLOSE",KEY_ESCAPE]]
 	if civilization_mode:
 		return [["PREV SITE",KEY_LEFT],["NEXT SITE",KEY_RIGHT],["PREV ROUTE",KEY_UP],["NEXT ROUTE",KEY_DOWN],["CLOSE",KEY_ESCAPE]]
-	if update_mode:
-		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
 	if world_map_mode:
 		return [["DISPATCH",KEY_G],["CLOSE",KEY_ESCAPE]]
 	return []
