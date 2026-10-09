@@ -26,8 +26,9 @@ window/handheld/orientation=1
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-; Compatibility remains the fallback for lower-end PCs. The Windows
-; 3D playtest profile can be changed to Forward+ after renderer validation.
+; The runtime 3D world supports PBR models and lit geometry.
+; Vulkan Forward+ can be selected with --rendering-method gl_compatibility
+; fallback depending on player GPU and future production-art gate.
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [environment]
