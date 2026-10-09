@@ -732,7 +732,7 @@ func _handle_objective_click(position: Vector2) -> bool:
 	if not area.has_point(position):
 		return false
 	var row := int(floor((position.y - 199.0) / 28.0))
-	if row == 0 and sim.citizens.size() > 0:
+	if row == 0 and not sim.get_alive_citizens().is_empty():
 		var citizen: Dictionary = sim.get_alive_citizens()[0]
 		_focus_world_position(Vector2(citizen["position"]))
 		selected_citizen = citizen
@@ -862,72 +862,85 @@ func _draw_event_panel() -> void:
 func _draw_selection_panel() -> void:
 	if not selected_citizen.is_empty():
 		_draw_citizen_panel(selected_citizen)
+	elif not selected_blueprint.is_empty():
+		_draw_blueprint_panel(selected_blueprint)
 	elif not selected_building.is_empty():
 		_draw_building_panel(selected_building)
 
 func _draw_citizen_panel(c: Dictionary) -> void:
 	var vp := get_viewport_rect().size
-	var x := vp.x - 390.0
-	var y := 140.0
-	var w := 372.0
-	var h := vp.y - 188.0
-	draw_rect(Rect2(x,y,w,h), PANEL_SOLID)
-	draw_rect(Rect2(x,y,w,h), ACCENT, false, 2.0)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+30), "SURVIVOR // #%03d" % int(c["id"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+60), c["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+84), "AGE %d  •  %s  •  %s" % [int(c["age"]), c["job"], c["trait"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+112), "CURRENT: %s" % c["current_action"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, RUST)
-	var duty_enabled := sim.is_selected_work_enabled(c)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+132), "SHIFT: %s  •  %s PRIORITY: %s  •  DUTY: %s" % [c["shift"], c["job"].to_upper(), "-" if not duty_enabled else str(int(c["work_priority"].get(c["job"],3))), "ACTIVE" if duty_enabled else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOOD if duty_enabled else WARN)
-	var partner_name := "NONE"
-	if int(c.get("partner_id",0)) > 0:
-		var partner := sim.get_citizen_by_id(int(c["partner_id"]))
-		if not partner.is_empty():
-			partner_name = partner["name"]
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+150), "SEX: %s  •  PARTNER: %s" % [str(c.get("sex","UNKNOWN")).to_upper(), partner_name], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
-
-	var rows := [
-		["HEALTH", c["health"]],
-		["MORALE", c["morale"]],
-		["LOYALTY", c["loyalty"]],
+	var x := vp.x - 370.0
+	var y := 139.0
+	var w := 350.0
+	var h := minf(465.0, vp.y - 250.0)
+	draw_rect(Rect2(x, y, w, h), PANEL_SOLID)
+	draw_rect(Rect2(x, y, w, h), ACCENT, false, 2.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 27), "SURVIVOR // %03d" % int(c["id"]), HORIZONTAL_ALIGNMENT_LEFT, w - 34, 11, ACCENT)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 58), str(c["name"]), HORIZONTAL_ALIGNMENT_LEFT, w - 32, 21, TEXT)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 80), "%s // AGE %d // %s SHIFT" % [str(c["job"]), int(c["age"]), str(c["shift"])], HORIZONTAL_ALIGNMENT_LEFT, w - 34, 11, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 100), "NOW: " + str(c["current_action"]), HORIZONTAL_ALIGNMENT_LEFT, w - 34, 12, RUST)
+	var meters := [
+		["HEALTH", float(c["health"])],
 		["HUNGER", 100.0 - float(c["hunger"])],
 		["THIRST", 100.0 - float(c["thirst"])],
 		["REST", 100.0 - float(c["fatigue"])],
-		["STRESS RESIST", 100.0 - float(c["stress"])],
-		["SOCIAL", 100.0 - float(c.get("social_need",0.0))]
+		["MORALE", float(c["morale"])],
+		["STRESS", 100.0 - float(c["stress"])]
 	]
-	var ry := y + 186.0
-	for row in rows:
-		_draw_meter(Vector2(x+20, ry), w-40.0, row[0], float(row[1]))
-		ry += 34.0
+	for i in range(meters.size()):
+		_draw_meter(Vector2(x + 18, y + 126 + float(i) * 32.0), w - 36.0, str(meters[i][0]), float(meters[i][1]))
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 328), "TRAIT: %s" % str(c["trait"]), HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 346), "SKILLS   BUILD %d   MED %d   FARM %d" % [int(c["skills"]["construction"]), int(c["skills"]["medicine"]), int(c["skills"]["farming"])], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 364), "ON DUTY: %s    PRIORITY: %d" % ["YES" if sim.is_selected_work_enabled(c) else "NO", int(c["work_priority"].get(c["job"], 3))], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, GOOD if sim.is_selected_work_enabled(c) else WARN)
+	var action_y := y + h - 57.0
+	var labels := ["[T] SHIFT", "[P] PRIORITY", "[W] DUTY"]
+	for i in range(3):
+		var rx := x + 12.0 + float(i) * 112.0
+		draw_rect(Rect2(rx, action_y, 106, 39), Color("#263437"))
+		draw_rect(Rect2(rx, action_y, 106, 39), RUST, false, 1.0)
+		draw_string(ThemeDB.fallback_font, Vector2(rx + 8, action_y + 25), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 96, 12, TEXT)
 
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry+12), "SKILL MATRIX", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
-	ry += 38.0
-	for skill in ["construction","medicine","farming","engineering","security"]:
-		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), skill.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 132, 11, MUTED)
-		draw_string(ThemeDB.fallback_font, Vector2(x+180,ry), "%02d" % int(c["skills"][skill]), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, TEXT)
-		ry += 24.0
+func _draw_blueprint_panel(blueprint: Dictionary) -> void:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 370.0
+	var y := 139.0
+	draw_rect(Rect2(x, y, 350, 206), PANEL_SOLID)
+	draw_rect(Rect2(x, y, 350, 206), ACCENT, false, 2.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 27), "CONSTRUCTION IN PROGRESS", HORIZONTAL_ALIGNMENT_LEFT, 314, 12, WARN)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 56), str(blueprint["name"]), HORIZONTAL_ALIGNMENT_LEFT, 314, 21, TEXT)
+	var percentage := 100.0 * float(blueprint["progress"]) / maxf(1.0, float(blueprint["work_required"]))
+	_draw_meter(Vector2(x + 18, y + 93), 314, "WORK COMPLETE", percentage)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 137), "MATERIALS COMMITTED %.0f" % float(blueprint["material_cost"]), HORIZONTAL_ALIGNMENT_LEFT, 314, 11, MUTED)
+	draw_rect(Rect2(x + 16, y + 152, 316, 37), Color("#503435"))
+	draw_rect(Rect2(x + 16, y + 152, 316, 37), BAD, false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(x + 30, y + 176), "CANCEL BLUEPRINT (75% MATERIAL REFUND)", HORIZONTAL_ALIGNMENT_LEFT, 297, 11, TEXT)
 
-	ry += 8.0
-	if c["injury"] != "":
-		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "INJURY // %s // TREATMENT %d%%" % [c["injury"], int(c["treatment_progress"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, BAD)
-		ry += 24.0
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "SOCIAL RECORD", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
-	ry += 24.0
-	var children_count: int = c.get("children_ids", []).size()
-	var memory_count: int = c.get("memories", []).size()
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "CHILDREN %d   MEMORIES %d" % [children_count, memory_count], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
-	ry += 22.0
-	var memories: Array = c.get("memories", [])
-	if not memories.is_empty():
-		draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "LATEST // %s" % str(memories[0]["text"]), HORIZONTAL_ALIGNMENT_LEFT, w-40, 10, TEXT)
-		ry += 24.0
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "POCKET INVENTORY", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
-	ry += 28.0
-	var inv: Dictionary = c["inventory"]
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "RATION %d   WATER %d   MED %d   SCRAP %d" % [int(inv["food_ration"]),int(inv["water_ration"]),int(inv["medicine"]),int(inv["scrap"])], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, MUTED)
-	ry += 28.0
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,ry), "[T] SHIFT   [P] PRIORITY   [W] TOGGLE DUTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
+func _handle_inspector_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	var x := vp.x - 370.0
+	var y := 139.0
+	if not selected_blueprint.is_empty():
+		if Rect2(x + 16, y + 152, 316, 37).has_point(position):
+			sim.cancel_blueprint(int(selected_blueprint["id"]))
+			selected_blueprint = {}
+			return true
+		return Rect2(x, y, 350, 206).has_point(position)
+	if not selected_citizen.is_empty():
+		var h := minf(465.0, vp.y - 250.0)
+		for i in range(3):
+			if Rect2(x + 12 + float(i) * 112.0, y + h - 57.0, 106, 39).has_point(position):
+				if i == 0:
+					sim.cycle_selected_shift(selected_citizen)
+				elif i == 1:
+					sim.cycle_selected_priority(selected_citizen)
+				else:
+					sim.toggle_selected_work(selected_citizen)
+				return true
+		return Rect2(x, y, 350, h).has_point(position)
+	if not selected_building.is_empty():
+		if Rect2(vp.x - 370.0, 139, 350, 270).has_point(position):
+			return true
+	return false
 
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
@@ -966,6 +979,7 @@ func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> voi
 
 func _select_at(screen_pos: Vector2) -> void:
 	var world := _screen_to_world(screen_pos)
+	selected_blueprint = {}
 	var nearest: Dictionary = {}
 	var nearest_distance := 18.0 / zoom
 	for c in sim.citizens:
@@ -978,7 +992,16 @@ func _select_at(screen_pos: Vector2) -> void:
 	if not nearest.is_empty():
 		selected_citizen = nearest
 		selected_building = {}
+		sim.complete_field_objective("inspected")
 		return
+
+	for blueprint in sim.blueprints:
+		var bp_rect := Rect2(Vector2(blueprint["position"]) - Vector2(blueprint["size"])/2.0, Vector2(blueprint["size"]))
+		if bp_rect.has_point(world):
+			selected_blueprint = blueprint
+			selected_citizen = {}
+			selected_building = {}
+			return
 
 	for b in sim.buildings:
 		var rect := Rect2(b["position"] - b["size"]/2.0, b["size"])
