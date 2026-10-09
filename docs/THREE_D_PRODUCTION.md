@@ -16,6 +16,26 @@ A believable post-collapse settlement: weathered concrete, corroded sheet steel,
 - Existing game simulation and UI stay operational. The old `SettlementVisuals` 2D path is no longer used to render the world.
 - Windows 3D preview is an Actions artifact. No new installer or stable release should be pushed before in-game approval.
 
+## First actual source-licensed art integration (development branch)
+
+- The Windows export and Godot CI import a **real CC0 rigged human**
+  into `assets/3d/characters/survivor.glb` from an immutable upstream Git commit.
+  Animation playback selects compatible walk and idle clips where present.
+- Photo-based Poly Haven **1K diffuse + normal** maps replace the procedural
+  shader on the core building concrete, walls, roof, steel, and gravel.
+- All seven third-party items use locked Git blob or SHA-256 fingerprints.
+  CI fails if a downloaded asset is modified, malformed or unavailable.
+- Import takes place at **build time**; players do not download art at runtime.
+- Licensing, original URLs, and checksums are recorded in
+  `assets/3d/ASSET-CREDITS.md` and the installation scripts under `tools/`.
+- Current building bodies remain modular **geometry placeholders** despite
+  the genuine photographic materials; the human is a rigged base model, not
+  a finished textured and costumed survival character.
+
+Remaining major art work: licensed realistic wasteland outfits, authored
+building models with true entry/exit geometry, modular ruined architecture,
+rigged activity animations, rain/smoke/weather, and actual GPU performance
+profiling from a running Windows build.
 ## Art pipeline for the next milestone
 
 The renderer looks for external `PackedScene` models in these locations and uses them instead of its built-in 3D geometry **when available**:
