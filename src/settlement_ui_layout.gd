@@ -196,3 +196,11 @@ static func workshop_action(size: Vector2, index: int) -> Rect2:
 static func workshop_entry(size: Vector2) -> Rect2:
 	var panel := side_panel(size,480.0)
 	return Rect2(panel.position+Vector2(16.0,316.0),Vector2(panel.size.x-32.0,29.0))
+
+# Settlement plan view, independent from the wider regional mission atlas.
+static func settlement_minimap(size: Vector2) -> Rect2:
+	return Rect2(16.0,size.y-BOTTOM_H-184.0,238.0,170.0)
+
+static func minimap_plot(size: Vector2) -> Rect2:
+	var box := settlement_minimap(size)
+	return Rect2(box.position+Vector2(12,35),box.size-Vector2(24,49))
