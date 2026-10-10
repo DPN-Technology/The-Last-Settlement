@@ -771,32 +771,38 @@ func _draw_faction_panel() -> void:
 
 func _draw_help_panel() -> void:
 	var vp := get_viewport_rect().size
-	var usable_height := vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-18.0
-	var w := minf(692.0,vp.x-32.0)
-	var h := minf(492.0,usable_height)
+	var usable_h := vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-18.0
+	var w := minf(780.0,vp.x-36.0)
+	var h := minf(502.0,usable_h)
 	var x := (vp.x-w)*0.5
-	var y := SettlementUILayout.TOP_H+maxf(8.0,(usable_height-h)*0.5)
+	var y := SettlementUILayout.TOP_H+maxf(8.0,(usable_h-h)*0.5)
 	var rect := Rect2(x,y,w,h)
 	_draw_ui_panel(rect,ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+31),"FIELD GUIDE  /  QUICK START",HORIZONTAL_ALIGNMENT_LEFT,w-40,19,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+52),"ESC or F1 to return to the live settlement",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+23,y+29),"FIELD GUIDE   /   HOW TO PLAY",HORIZONTAL_ALIGNMENT_LEFT,w-48,18,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+23,y+51),"Every command below works through a real simulation system.",HORIZONTAL_ALIGNMENT_LEFT,w-46,12,GOOD)
 	var lessons := [
-		["SURVIVE","Keep an eye on FOOD, WATER, POWER and morale in the compact top row. Hover a metric for its meaning."],
-		["BUILD","Press B to select a blueprint. Q/E changes structures, F rotates compatible items, click terrain to place."],
-		["INSPECT","Left-click a survivor or building to open details. F3 expands the opening objectives."],
-		["EXPAND","M opens the region. Select a discovered location and dispatch a salvage expedition with G."],
-		["COMMAND","V governs, K opens industry, O tracks factions, J manages civilization. Use ESC to close."],
-		["TIME & FILES","SPACE pauses; 1/2/3 sets time speed. S saves, L loads, F8 captures screenshots, F9 logs diagnostics."]
+		["01  SURVIVE","Food and water sustain your people.","Power shortages drain the battery."],
+		["02  CONSTRUCT","Build opens categorized facility plans.","Click terrain to build. Q/E browse; F rotates."],
+		["03  EXPLORE","Region shows discovered sites and their risks.","Select a site and dispatch a salvage team."],
+		["04  GOVERN & ALLIES","Change real civic laws in Govern.","Factions appear after radio contact."],
+		["05  PRODUCE","Industry trades actual goods and credits.","Choose recipes and add workshop orders."],
+		["06  EXPAND THE NATION","Six tabs manage colonies, routes and policy.","Salvage a ruin before founding a settlement."]
 	]
-	var line_height := minf(62.0, maxf(39.0,(h-112.0)/6.0))
+	var gap := 12.0
+	var card_w := (w-46.0-gap)/2.0
+	var card_h := maxf(84.0,minf(106.0,(h-139.0)/3.0))
 	for i in range(lessons.size()):
-		var ry := y+87.0+float(i)*line_height
-		if ry>y+h-28.0:
-			break
-		var row: Array = lessons[i]
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,ry),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,ry+19),str(row[1]),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+h-15),"F4  FULLSCREEN    •    F8  SCREENSHOT    •    F9  PLAYTEST REPORT",HORIZONTAL_ALIGNMENT_LEFT,w-40,10,GOOD)
+		var col := i%2
+		var row := int(i/2)
+		var box := Rect2(x+17.0+float(col)*(card_w+gap),y+69.0+float(row)*(card_h+8.0),card_w,card_h)
+		draw_rect(box,Color("#172a35"))
+		draw_rect(box,Color("#496772"),false,1)
+		draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,25),str(lessons[i][0]),HORIZONTAL_ALIGNMENT_LEFT,card_w-23,13,TEXT)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,53),str(lessons[i][1]),HORIZONTAL_ALIGNMENT_LEFT,card_w-23,11,MUTED)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,76),str(lessons[i][2]),HORIZONTAL_ALIGNMENT_LEFT,card_w-23,11,GOOD)
+	draw_rect(Rect2(x+17,y+h-46,w-34,31),Color("#20343b"))
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+h-25),"SPACE  PAUSE    S  SAVE    L  LOAD    F8  SCREENSHOT    F9  REPORT    ESC  CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-54,11,TEXT)
 
 func _draw_update_panel() -> void:
 	var vp := get_viewport_rect().size
