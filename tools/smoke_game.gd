@@ -25,6 +25,15 @@ func _smoke() -> void:
 		push_error("SMOKE: DPN crimson/black shared command skin is missing")
 		quit(1)
 		return
+	# Full-screen red line captures were absent from the isolated 3D pass:
+	# lock the UI decoration toggle to reversible behavior without gameplay
+	# state changes, so the player can isolate any residual graphics artifact.
+	DPNUISkin.diagnostic_minimal_strokes=true
+	if not DPNUISkin.diagnostic_minimal_strokes:
+		push_error("SMOKE: UI graphics safety mode unavailable")
+		quit(1)
+		return
+	DPNUISkin.diagnostic_minimal_strokes=false
 	# Prevent the exact unsafe draw command family from creeping back into the
 	# Windows portable build while testing red diagonal line artifacts.
 	if str(ProjectSettings.get_setting("rendering/renderer/rendering_method",""))!="gl_compatibility":
@@ -33,7 +42,7 @@ func _smoke() -> void:
 		return
 	for source_path in ["res://src/main.gd","res://src/dpn_ui_skin.gd","res://src/region_atlas.gd"]:
 		var source_code := FileAccess.get_file_as_string(source_path)
-		if source_code.is_empty() or source_code.contains("draw_line(") or source_code.contains("draw_polyline("):
+		if source_code.is_empty() or source_code.contains("draw_line(") or source_code.contains("draw_polyline(") or source_code.contains("draw_colored_polygon(") or source_code.contains("draw_primitive("):
 			push_error("SMOKE: Unsafe raw canvas line primitives in "+source_path)
 			quit(1)
 			return
