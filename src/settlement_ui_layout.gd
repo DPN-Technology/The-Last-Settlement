@@ -118,3 +118,29 @@ static func build_action_rect(size: Vector2, index: int) -> Rect2:
 	var panel := build_palette(size,0)
 	var half := (panel.size.x-31.0)*0.5
 	return Rect2(panel.position+Vector2(12.0+float(index)*(half+7.0),panel.size.y-35.0),Vector2(half,25.0))
+
+# Full roster command is intentionally a centered *modal*, separate from the
+# construction and nation side panels; all hit targets use these same helpers.
+static func workforce_panel(size: Vector2) -> Rect2:
+	var width := minf(675.0,size.x-28.0)
+	var height := minf(545.0,size.y-TOP_H-BOTTOM_H-20.0)
+	return Rect2((size.x-width)*0.5,TOP_H+9.0,width,height)
+
+static func workforce_page_size(size: Vector2) -> int:
+	return 8 if workforce_panel(size).size.y>=510.0 else 5
+
+static func workforce_row(size: Vector2, index: int) -> Rect2:
+	var panel := workforce_panel(size)
+	return Rect2(panel.position+Vector2(16,99+float(index)*28.0),Vector2(panel.size.x-32,27))
+
+static func workforce_job(size: Vector2, index: int) -> Rect2:
+	var panel := workforce_panel(size)
+	var gap := 7.0
+	var unit := (panel.size.x-39.0-gap*3.0)/4.0
+	return Rect2(panel.position+Vector2(16.0+float(index%4)*(unit+gap),panel.size.y-158.0+float(int(index/4))*35.0),Vector2(unit,30))
+
+static func workforce_action(size: Vector2, index: int) -> Rect2:
+	var panel := workforce_panel(size)
+	var gap := 8.0
+	var unit := (panel.size.x-32.0-2.0*gap)/3.0
+	return Rect2(panel.position+Vector2(16.0+float(index)*(unit+gap),panel.size.y-41.0),Vector2(unit,29))
