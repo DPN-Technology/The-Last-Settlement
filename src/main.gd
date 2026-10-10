@@ -299,9 +299,17 @@ func _draw_workforce_panel() -> void:
 		var active := int(p["id"])==workforce_selected_id
 		var hovered := box.has_point(get_local_mouse_position())
 		DPNUISkin.list_row(self,box,active,hovered)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(p["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x*0.43,12,TEXT)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(p["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x*0.35,12,TEXT)
 		var info := "%s  /  %s  /  %s" % [str(p["job"]),str(p["shift"]), "ON" if sim.is_selected_work_enabled(p) else "OFF"]
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x*0.45,18),info,HORIZONTAL_ALIGNMENT_RIGHT,box.size.x*0.52,10,GOOD if sim.is_selected_work_enabled(p) else WARN)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x*0.38,17),info,HORIZONTAL_ALIGNMENT_LEFT,box.size.x*0.36,10,GOOD if sim.is_selected_work_enabled(p) else WARN)
+		# Two concise live status bars turn the roster into a readable management
+		# interface, rather than a list of names and generic role labels.
+		var hbar := Rect2(box.end.x-119.0,box.position.y+12.0,49.0,7.0)
+		var mbar := Rect2(box.end.x-61.0,box.position.y+12.0,49.0,7.0)
+		DPNUISkin.meter(self,hbar,float(p.get("health",0.0))/100.0,GOOD if float(p.get("health",0.0))>=50.0 else BAD)
+		DPNUISkin.meter(self,mbar,float(p.get("morale",0.0))/100.0,GOOD if float(p.get("morale",0.0))>=45.0 else WARN)
+		draw_string(ThemeDB.fallback_font,hbar.position+Vector2(0,-3),"HP",HORIZONTAL_ALIGNMENT_LEFT,20,8,MUTED)
+		draw_string(ThemeDB.fallback_font,mbar.position+Vector2(0,-3),"MO",HORIZONTAL_ALIGNMENT_LEFT,20,8,MUTED)
 	var chosen := _workforce_person()
 	var intro_y := y+h-180
 	if chosen.is_empty():
@@ -309,11 +317,17 @@ func _draw_workforce_panel() -> void:
 	else:
 		var assignable := int(chosen.get("age",0))>=18 and str(chosen["job"])!="Child" and not bool(chosen.get("on_expedition",false))
 		draw_string(ThemeDB.fallback_font,Vector2(x+17,intro_y),"%s  /  %s" % [str(chosen["name"]).to_upper(),"SELECT A ROLE" if assignable else "UNAVAILABLE FOR REASSIGNMENT"],HORIZONTAL_ALIGNMENT_LEFT,w-33,11,GOOD if assignable else WARN)
+	var assignable := not chosen.is_empty() and int(chosen.get("age",0))>=18 and not bool(chosen.get("on_expedition",false)) and not bool(chosen.get("incarcerated",false))
 	for j in range(CitizenFactory.JOBS.size()):
 		var role := str(CitizenFactory.JOBS[j])
 		var rect := SettlementUILayout.workforce_job(vp,j)
 		var selected := not chosen.is_empty() and role==str(chosen.get("job",""))
-		DPNUISkin.button(self,rect,role.to_upper(),rect.has_point(get_local_mouse_position()),selected,false,not chosen.is_empty())
+		DPNUISkin.button(self,rect,role.to_upper(),rect.has_point(get_local_mouse_position()),selected,false,assignable)
+	var duty_labels := ["SHIFT  /  "+str(chosen.get("shift","---")) if not chosen.is_empty() else "SHIFT  /  ---",
+		"DUTY  /  "+("ON" if sim.is_selected_work_enabled(chosen) else "OFF") if not chosen.is_empty() else "DUTY  /  ---"]
+	for j in range(2):
+		var duty_rect := SettlementUILayout.workforce_duty_control(vp,j)
+		DPNUISkin.button(self,duty_rect,duty_labels[j],duty_rect.has_point(get_local_mouse_position()),j==1 and not chosen.is_empty() and sim.is_selected_work_enabled(chosen),false,assignable,true)
 	if not chosen.is_empty():
 		var skill := CitizenFactory.best_skill_for_job(chosen)
 		draw_string(ThemeDB.fallback_font,Vector2(x+17,y+h-54),"Current skill: %s %d  •  role changes take effect in simulation" % [skill.capitalize(),int(chosen["skills"].get(skill,0))],HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
@@ -349,6 +363,21 @@ func _handle_workforce_click(position: Vector2) -> bool:
 				playtest_notice="ASSIGNMENT UNCHANGED  /  CHECK AGE, ROLE OR AVAILABILITY"
 			playtest_notice_seconds=5.0
 			return true
+	for i in range(2):
+		if not SettlementUILayout.workforce_duty_control(vp,i).has_point(position):
+			continue
+		var selected_person := _workforce_person()
+		if selected_person.is_empty() or int(selected_person.get("age",0))<18 or bool(selected_person.get("on_expedition",false)) or bool(selected_person.get("incarcerated",false)):
+			playtest_notice="WORKFORCE CONTROL UNAVAILABLE  /  SELECT AN ON-SITE ADULT"
+		else:
+			if i==0:
+				sim.cycle_selected_shift(selected_person)
+				playtest_notice="SHIFT UPDATED  /  "+str(selected_person["shift"])
+			else:
+				sim.toggle_selected_work(selected_person)
+				playtest_notice="DUTY "+("ACTIVE" if sim.is_selected_work_enabled(selected_person) else "PAUSED")
+		playtest_notice_seconds=4.5
+		return true
 	for i in range(3):
 		if SettlementUILayout.workforce_action(vp,i).has_point(position):
 			if i==0:
