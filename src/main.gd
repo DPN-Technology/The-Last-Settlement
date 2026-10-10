@@ -591,7 +591,7 @@ func _draw_utility_overlay() -> void:
 	for node in nodes:
 		var p := _world_point(node["position"])
 		var ring := WARN if mode == "POWER" else (Color("#5aa7c7") if mode == "WATER" else Color("#88924b"))
-		draw_arc(p, 16.0 * zoom, 0.0, TAU, 24, ring, 2.0)
+		DPNUISkin.arc(self,p, 16.0 * zoom, 0.0, TAU, 24, ring, 2.0)
 
 func _region_can_dispatch(location: Dictionary) -> bool:
 	if location.is_empty():
@@ -658,7 +658,7 @@ func _draw_settlement_minimap() -> void:
 		var marker := _settlement_minimap_project(Vector2(person.get("position",Vector2(700,450))),plot)
 		draw_circle(marker,1.6,Color("#f8e8d3"))
 	var focus_point := _settlement_minimap_project(settlement_world.game_position(settlement_world.focus),plot)
-	draw_arc(focus_point,6.0,0.0,TAU,20,ACCENT,1.6)
+	DPNUISkin.arc(self,focus_point,6.0,0.0,TAU,20,ACCENT,1.6)
 	DPNUISkin.stroke(self,focus_point-Vector2(9,0),focus_point+Vector2(9,0),ACCENT,1.0)
 	DPNUISkin.stroke(self,focus_point-Vector2(0,9),focus_point+Vector2(0,9),ACCENT,1.0)
 	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,frame.size.y-5),"CLICK TO FOCUS  /  BUILDINGS + CREW",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-24,9,MUTED)
@@ -702,7 +702,7 @@ func _draw_world_map() -> void:
 	var home := SettlementUILayout.region_point(vp,Vector2(600,410))
 	var range_px := minf(map.size.x/1200.0,map.size.y/820.0)*sim.world_simulation.get_radio_range()
 	# Only the thin radio boundary is drawn; it does not conceal the terrain.
-	draw_arc(home,range_px,0.0,TAU,80,Color("#eb566b",0.47),1.5)
+	DPNUISkin.arc(self,home,range_px,0.0,TAU,80,Color("#eb566b",0.47),1.5)
 	# Home -> North Ridge Relay is an actual salvage objective. Show only
 	# discovered destinations here; other ruins remain secret until found.
 	var relay := sim.world_simulation.get_location_by_id(3)
@@ -723,7 +723,7 @@ func _draw_world_map() -> void:
 		var focused := selected_world_location_id == id
 		if focused:
 			draw_circle(location_pos,14.0,Color("#e33950",0.22))
-			draw_arc(location_pos,13.0,0.0,TAU,32,ACCENT,2.5)
+			DPNUISkin.arc(self,location_pos,13.0,0.0,TAU,32,ACCENT,2.5)
 		draw_circle(location_pos,7.0,Color("#111016"))
 		draw_circle(location_pos,5.0,color)
 		if map.size.x >= 370.0:
