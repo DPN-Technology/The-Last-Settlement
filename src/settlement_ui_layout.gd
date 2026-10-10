@@ -15,9 +15,36 @@ static func identity_rect(size: Vector2) -> Rect2:
 	return Rect2(8.0,5.0,maxf(156.0,resource_left-16.0),49.0)
 
 static func overview_rect(size: Vector2) -> Rect2:
-	var width := minf(420.0,maxf(240.0,size.x-28.0))
-	var height := minf(397.0,maxf(224.0,size.y-TOP_H-BOTTOM_H-22.0))
+	var width := minf(682.0,maxf(290.0,size.x-28.0))
+	var height := minf(624.0,maxf(360.0,size.y-TOP_H-BOTTOM_H-22.0))
 	return Rect2(14.0,TOP_H+9.0,width,height)
+
+# Executive dashboard shares pixel-perfect input and draw geometry.
+static func overview_tab_rect(size: Vector2, index: int) -> Rect2:
+	var p := overview_rect(size)
+	var gap := 6.0
+	var w := (p.size.x-34.0-3.0*gap)/4.0
+	return Rect2(p.position+Vector2(17.0+float(index)*(w+gap),78.0),Vector2(w,33.0))
+
+static func overview_metric_rect(size: Vector2, index: int) -> Rect2:
+	var p := overview_rect(size)
+	var gap := 7.0
+	var w := (p.size.x-34.0-3.0*gap)/4.0
+	return Rect2(p.position+Vector2(17.0+float(index)*(w+gap),123.0),Vector2(w,64.0))
+
+static func overview_quick_rect(size: Vector2, index: int) -> Rect2:
+	var p := overview_rect(size)
+	var gap := 7.0
+	var w := (p.size.x-34.0-2.0*gap)/3.0
+	return Rect2(p.position.x+17.0+float(index)*(w+gap),p.end.y-86.0,w,32.0)
+
+static func overview_visible_rows(size: Vector2) -> int:
+	var p := overview_rect(size)
+	return clampi(int(floor((p.size.y-309.0)/38.0)),1,7)
+
+static func overview_data_row(size: Vector2, index: int) -> Rect2:
+	var p := overview_rect(size)
+	return Rect2(p.position+Vector2(17.0,226.0+float(index)*38.0),Vector2(p.size.x-34.0,35.0))
 
 static func overview_button_rect(size: Vector2, index: int) -> Rect2:
 	var panel := overview_rect(size)
