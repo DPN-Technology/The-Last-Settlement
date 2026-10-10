@@ -200,7 +200,6 @@ func _draw() -> void:
 	else:
 		_draw_world()
 		_draw_utility_overlay()
-	DPNUISkin.backdrop(self,get_viewport_rect().size,ui_animation_clock)
 	_draw_hud()
 	if not help_mode and not update_mode:
 		if build_mode:
@@ -1501,6 +1500,7 @@ func _draw_hud() -> void:
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
 	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#08080deb"))
 	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),ACCENT,1.4)
+	DPNUISkin.backdrop(self,vp,ui_animation_clock)
 	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-45),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-270,11,MUTED)
 	_draw_time_controls()
 	_draw_toolbar()
