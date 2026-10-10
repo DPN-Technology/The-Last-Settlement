@@ -22,6 +22,10 @@ var update_manager := UpdateManager.new()
 var update_mode := false
 var help_mode := false
 var incident_panel_visible := false
+var incident_filter_index := 0
+var incident_page := 0
+var incident_selected_index := 0
+var incident_acknowledged: Dictionary = {}
 var field_directives_visible := false
 var overview_visible := false
 var workforce_mode := false
@@ -256,6 +260,10 @@ func _draw() -> void:
 		_draw_settlement_minimap()
 	if ui_diagnostic_pass != 4 and overview_visible and not workforce_mode:
 		_draw_overview()
+	# Draw the incident console LAST, above every other menu and HUD surface.
+	# F2 no longer creates an invisible/persistent panel underneath other modes.
+	if incident_panel_visible:
+		_draw_event_panel()
 
 
 # The F6 / PEOPLE command gives players direct, saved staffing control.
@@ -1634,9 +1642,7 @@ func _draw_hud() -> void:
 	DPNUISkin.button(self,warning,str(attention[0]),warning.has_point(get_local_mouse_position()),false,str(attention[0]) in ["STORM: TAKE COVER","NO SURVIVORS","POWER SHORTFALL","CHECK FOOD","CHECK WATER"],true,true)
 
 	if selected_citizen.is_empty() and selected_building.is_empty() and not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and not help_mode and not update_mode:
-		if incident_panel_visible:
-			_draw_event_panel()
-		else:
+		if not incident_panel_visible:
 			_draw_event_toasts()
 
 	var hint := "DRAG PAN  •  ALT+DRAG ORBIT  •  SCROLL ZOOM  •  SPACE PAUSE  •  F8 SCREENSHOT"
@@ -2052,26 +2058,185 @@ func _draw_event_toasts() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(left + 29, row_y + 3), str(incident.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 263, 11, TEXT)
 		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 17), str(incident.get("body", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 9, MUTED)
 
+func _incident_entries() -> Array[Dictionary]:
+	return SettlementIncidentUI.groups(sim.events,incident_filter_index,incident_acknowledged)
+
+func _incident_selected_event() -> Dictionary:
+	var entries := _incident_entries()
+	if entries.is_empty():
+		return {}
+	incident_selected_index=clampi(incident_selected_index,0,entries.size()-1)
+	return entries[incident_selected_index]
+
+func _incident_open() -> void:
+	incident_panel_visible=true
+	incident_page=0
+	incident_selected_index=0
+
+func _incident_navigate(route: String) -> void:
+	incident_panel_visible=false
+	if route=="WORKFORCE":
+		if not workforce_mode:
+			_toggle_workforce()
+		return
+	var index := TOOLBAR_NAMES.find(route)
+	if index<0 or index>5:
+		return
+	# An event's related system must OPEN, never toggle a currently open
+	# screen off because the incident overlay happened to cover it.
+	if (route=="BUILD" and build_mode) or (route=="REGION" and world_map_mode) or (route=="GOVERN" and governance_mode) or (route=="INDUSTRY" and economy_mode) or (route=="FACTIONS" and faction_mode):
+		return
+	_handle_toolbar_click(SettlementUILayout.navbar_rect(get_viewport_rect().size,index).get_center())
+
+func _handle_incident_click(position: Vector2) -> bool:
+	if not incident_panel_visible:
+		return false
+	var size := get_viewport_rect().size
+	var panel := SettlementIncidentUI.panel_rect(size)
+	# Outside clicks close this modal but do NOT activate buildings, routes
+	# or background toolbar stations under the dismissing click.
+	if not panel.has_point(position) or SettlementIncidentUI.close_rect(size).has_point(position):
+		incident_panel_visible=false
+		return true
+	for index in range(SettlementIncidentUI.FILTERS.size()):
+		if SettlementIncidentUI.tab_rect(size,index).has_point(position):
+			incident_filter_index=index
+			incident_page=0
+			incident_selected_index=0
+			return true
+	var rows := SettlementIncidentUI.visible_rows(size)
+	var entries := _incident_entries()
+	var pages := maxi(1,int(ceil(float(entries.size())/float(rows))))
+	for index in range(2):
+		if SettlementIncidentUI.page_rect(size,index).has_point(position):
+			incident_page=clampi(incident_page+(-1 if index==0 else 1),0,pages-1)
+			incident_selected_index=mini(entries.size()-1,incident_page*rows) if not entries.is_empty() else 0
+			return true
+	for index in range(mini(rows,maxi(0,entries.size()-incident_page*rows))):
+		if SettlementIncidentUI.row_rect(size,index).has_point(position):
+			incident_selected_index=incident_page*rows+index
+			return true
+	for index in range(4):
+		if not SettlementIncidentUI.action_rect(size,index).has_point(position):
+			continue
+		if index==3:
+			incident_panel_visible=false
+		elif index==0:
+			var selected := _incident_selected_event()
+			if not selected.is_empty():
+				incident_acknowledged[str(selected["signature"])]=true
+				playtest_notice="INCIDENT ACKNOWLEDGED  /  HISTORY PRESERVED"
+				playtest_notice_seconds=3.0
+		elif index==1:
+			for item in entries:
+				incident_acknowledged[str(item["signature"])]=true
+			playtest_notice="VISIBLE INCIDENTS MARKED READ  /  HISTORY PRESERVED"
+			playtest_notice_seconds=3.0
+		elif index==2:
+			var selected := _incident_selected_event()
+			if not selected.is_empty():
+				var route := SettlementIncidentUI.route_for_event(selected)
+				if not route.is_empty():
+					_incident_navigate(route)
+				else:
+					playtest_notice="NO DIRECT SYSTEM ACTION FOR THIS RECORD"
+					playtest_notice_seconds=4.0
+		return true
+	return true
+
+func _incident_turn_page(delta: int) -> void:
+	var rows := SettlementIncidentUI.visible_rows(get_viewport_rect().size)
+	var count := _incident_entries().size()
+	var pages := maxi(1,int(ceil(float(count)/float(rows))))
+	incident_page=clampi(incident_page+delta,0,pages-1)
+	incident_selected_index=mini(count-1,incident_page*rows) if count>0 else 0
+
 func _draw_event_panel() -> void:
-	var vp := get_viewport_rect().size
-	var panel_w := 350.0
-	var panel_x := vp.x - panel_w - 18
-	var panel_y := SettlementUILayout.TOP_H + 10.0
-	_draw_ui_panel(Rect2(panel_x,panel_y,panel_w,vp.y-panel_y-SettlementUILayout.BOTTOM_H-10),ACCENT)
-	draw_string(ThemeDB.fallback_font, Vector2(panel_x + 18, panel_y + 30), "/// SETTLEMENT INCIDENT CHANNEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT)
-	var ey := panel_y + 60.0
-	for e in sim.events:
-		var marker := GOOD
-		if e["severity"] == "warning":
-			marker = WARN
-		elif e["severity"] == "critical":
-			marker = BAD
-		draw_circle(Vector2(panel_x + 22, ey - 4), 3.0, marker)
-		draw_string(ThemeDB.fallback_font, Vector2(panel_x + 34, ey), "%s // D%d" % [e["title"], int(e["day"])], HORIZONTAL_ALIGNMENT_LEFT, panel_w - 50, 11, TEXT)
-		draw_string(ThemeDB.fallback_font, Vector2(panel_x + 34, ey + 18), e["body"], HORIZONTAL_ALIGNMENT_LEFT, panel_w - 55, 10, MUTED)
-		ey += 58.0
-		if ey > vp.y - SettlementUILayout.BOTTOM_H - 16:
+	var size := get_viewport_rect().size
+	var panel := SettlementIncidentUI.panel_rect(size)
+	# Modal focus screen: keep the world recognizable but remove ambiguity
+	# about which screen owns mouse/key interactions.
+	draw_rect(Rect2(0,SettlementUILayout.TOP_H,size.x,size.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H),Color("#050409",0.24))
+	DPNUISkin.frame(self,panel,ui_animation_clock,true)
+	var left := panel.position.x
+	var top := panel.position.y
+	var inner := panel.size.x-34.0
+	draw_string(ThemeDB.fallback_font,Vector2(left+17,top+26),"DPN // SETTLEMENT INCIDENT COMMAND",HORIZONTAL_ALIGNMENT_LEFT,panel.size.x-79.0,15,TEXT)
+	DPNUISkin.button(self,SettlementIncidentUI.close_rect(size),"X",SettlementIncidentUI.close_rect(size).has_point(get_local_mouse_position()),false,true)
+	var unique := SettlementIncidentUI.groups(sim.events,0,incident_acknowledged)
+	var alert_count := 0
+	var unread_count := 0
+	for e in unique:
+		if str(e.get("severity","")) in ["critical","warning"]:
+			alert_count+=1
+		if not bool(e.get("read",false)):
+			unread_count+=1
+	var metrics := [["RECORDS",str(unique.size()),false],["ATTENTION",str(alert_count),alert_count>0],["UNREAD",str(unread_count),unread_count>0]]
+	var metric_gap := 7.0
+	var metric_w := (inner-2.0*metric_gap)/3.0
+	for index in range(metrics.size()):
+		var metric: Array=metrics[index]
+		DPNUISkin.metric_card(self,Rect2(left+17.0+float(index)*(metric_w+metric_gap),top+47.0,metric_w,59.0),str(metric[0]),str(metric[1]),"",bool(metric[2]))
+	for i in range(SettlementIncidentUI.FILTERS.size()):
+		var tab := SettlementIncidentUI.tab_rect(size,i)
+		DPNUISkin.button(self,tab,str(SettlementIncidentUI.FILTERS[i]),tab.has_point(get_local_mouse_position()),i==incident_filter_index)
+	var entries := _incident_entries()
+	var rows := SettlementIncidentUI.visible_rows(size)
+	var pages := maxi(1,int(ceil(float(entries.size())/float(rows))))
+	incident_page=clampi(incident_page,0,pages-1)
+	incident_selected_index=clampi(incident_selected_index,0,maxi(0,entries.size()-1))
+	draw_string(ThemeDB.fallback_font,Vector2(left+19,top+175),"LIVE EVENT RECORDS  /  PAGE %d OF %d" % [incident_page+1,pages],HORIZONTAL_ALIGNMENT_LEFT,inner-120.0,11,ACCENT)
+	for index in range(2):
+		var rect := SettlementIncidentUI.page_rect(size,index)
+		DPNUISkin.button(self,rect,"<" if index==0 else ">",rect.has_point(get_local_mouse_position()),false,false,(index==0 and incident_page>0) or (index==1 and incident_page<pages-1),true)
+	for i in range(rows):
+		var event_index := incident_page*rows+i
+		if event_index>=entries.size():
 			break
+		var event: Dictionary=entries[event_index]
+		var rect := SettlementIncidentUI.row_rect(size,i)
+		var selected := event_index==incident_selected_index
+		var severity := str(event.get("severity","intel"))
+		var tint := BAD if severity=="critical" else (WARN if severity=="warning" else GOOD)
+		DPNUISkin.list_row(self,rect,selected,rect.has_point(get_local_mouse_position()),severity=="critical")
+		draw_rect(Rect2(rect.position+Vector2(7,10),Vector2(4,rect.size.y-20)),tint)
+		var is_read := bool(event.get("read",false))
+		var title := str(event.get("title","SYSTEM EVENT"))
+		var occurrence := int(event.get("occurrences",1))
+		if occurrence>1:
+			title+="  x%d" % occurrence
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(19,20),title,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-100.0,12,MUTED if is_read else TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-13,rect.position.y+20),"D%d / %02d:%02d" % [int(event.get("day",0)),int(float(event.get("hour",0.0))),int(fposmod(float(event.get("hour",0.0)),1.0)*60.0)],HORIZONTAL_ALIGNMENT_RIGHT,106,10,MUTED)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(19,39),str(event.get("body","")),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-38.0,10,MUTED)
+	var details := SettlementIncidentUI.details_rect(size)
+	draw_rect(details,Color("#110e16"))
+	DPNUISkin.outline(self,details,Color("#673241"))
+	var chosen := _incident_selected_event()
+	if not chosen.is_empty():
+		draw_string(ThemeDB.fallback_font,details.position+Vector2(11,19),"SELECTED  /  "+str(chosen.get("severity","intel")).to_upper(),HORIZONTAL_ALIGNMENT_LEFT,details.size.x-22.0,11,ACCENT)
+		draw_string(ThemeDB.fallback_font,details.position+Vector2(11,41),str(chosen.get("title","")),HORIZONTAL_ALIGNMENT_LEFT,details.size.x-22.0,14,TEXT)
+		var body := str(chosen.get("body",""))
+		var max_chars := maxi(22,int((details.size.x-24.0)/6.7))
+		var words := body.split(" ")
+		var line := ""
+		var rendered := 0
+		for word in words:
+			if line.length()+word.length()+1>max_chars and not line.is_empty():
+				draw_string(ThemeDB.fallback_font,details.position+Vector2(12,63+float(rendered)*17.0),line,HORIZONTAL_ALIGNMENT_LEFT,details.size.x-24.0,11,MUTED)
+				rendered+=1
+				line=""
+				if rendered>=2:
+					break
+			line+=(" " if not line.is_empty() else "")+word
+		if rendered<2 and not line.is_empty():
+			draw_string(ThemeDB.fallback_font,details.position+Vector2(12,63+float(rendered)*17.0),line,HORIZONTAL_ALIGNMENT_LEFT,details.size.x-24.0,11,MUTED)
+	else:
+		draw_string(ThemeDB.fallback_font,details.position+Vector2(12,37),"NO RECORDS IN THIS FILTER",HORIZONTAL_ALIGNMENT_LEFT,details.size.x-24.0,14,MUTED)
+	var linked := not chosen.is_empty() and not SettlementIncidentUI.route_for_event(chosen).is_empty()
+	var captions := ["ACKNOWLEDGE","MARK ALL READ","OPEN SYSTEM","CLOSE"]
+	for i in range(captions.size()):
+		var button := SettlementIncidentUI.action_rect(size,i)
+		DPNUISkin.button(self,button,captions[i],button.has_point(get_local_mouse_position()),false,i==3,not entries.is_empty() if i<2 else (linked if i==2 else true),true)
 
 func _draw_selection_panel() -> void:
 	if not selected_citizen.is_empty():
@@ -2406,7 +2571,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			playtest_notice_seconds=7.0
 			queue_redraw()
 			return
-		if workforce_mode and event.keycode not in [KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
+		if incident_panel_visible and event.keycode not in [KEY_F2,KEY_ESCAPE,KEY_PAGEUP,KEY_PAGEDOWN,KEY_F8]:
+			return
+		if workforce_mode and event.keycode not in [KEY_F2,KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
 		match event.keycode:
 			KEY_F6:
@@ -2418,7 +2585,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F1:
 				help_mode = not help_mode
 			KEY_F2:
-				incident_panel_visible = not incident_panel_visible
+				if incident_panel_visible:
+					incident_panel_visible=false
+				else:
+					_incident_open()
+			KEY_PAGEUP:
+				if incident_panel_visible:
+					_incident_turn_page(-1)
+			KEY_PAGEDOWN:
+				if incident_panel_visible:
+					_incident_turn_page(1)
 			KEY_F3:
 				field_directives_visible = not field_directives_visible
 			KEY_F4:
@@ -2729,7 +2905,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not selected_building.is_empty():
 					_apply_facility_action(1)
 			KEY_ESCAPE:
-				if workforce_mode:
+				if incident_panel_visible:
+					incident_panel_visible=false
+				elif workforce_mode:
 					workforce_mode=false
 				elif pending_demolition_key!="":
 					pending_demolition_key=""
@@ -2759,6 +2937,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					selected_blueprint = {}
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if _handle_incident_click(event.position):
+				return
 			if _handle_toolbar_click(event.position):
 				overview_visible = false
 				return
@@ -2811,21 +2991,29 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				_select_at(event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			if incident_panel_visible:
+				_incident_turn_page(-1)
+				return
 			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
 				_cycle_build_selection(-1)
 			else:
 				settlement_world.zoom_camera(-1.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			if incident_panel_visible:
+				_incident_turn_page(1)
+				return
 			if build_mode and SettlementUILayout.build_palette(get_viewport_rect().size,sim.get_build_catalog().size()).has_point(event.position):
 				_cycle_build_selection(1)
 			else:
 				settlement_world.zoom_camera(1.0)
 		elif event.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
+			if incident_panel_visible:
+				return
 			dragging = event.pressed
 			drag_origin = event.position
 	elif event is InputEventMouseMotion:
 		mouse_world = _screen_to_world(event.position)
-		if dragging:
+		if dragging and not incident_panel_visible:
 			var drag_delta: Vector2 = event.position - drag_origin
 			if event.alt_pressed:
 				settlement_world.orbit_camera(drag_delta)
