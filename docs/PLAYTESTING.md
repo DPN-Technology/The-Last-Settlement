@@ -1,3 +1,11 @@
+## Emergency mission recall
+
+When a mission is **Outbound** or **Searching**, the right-side active-expedition list now includes a clickable **RECALL TEAM** control. This immediately changes that expedition to **Returning**. An outbound team turns back from the distance it actually traveled (the map marker follows its shortened route). A team already searching must make the full trip home. Incomplete missions do not award phantom loot or refund provisions. Recalling a returning or finished mission is rejected. Arrival clears each surviving member's offsite assignment so they can resume work in Last Haven.
+
+**Windows test:** dispatch a team and run 1× until it is one-third of the way out. Click Recall Team. Confirm its marker reverses from that location, not from the remote site; check the status changes to Returning and the control becomes disabled. Let the team arrive and confirm Workforce includes the returned personnel. Capture F8 before and after.
+
+---
+
 # Region Mission Planner — PR #6 playtest
 
 **This preview changes gameplay, not merely the layout of the map.**
