@@ -1,3 +1,22 @@
+# ACTIVE BLOCKER — ISSUE #9: RED DIAGONAL UI LINES (OCTOBER 10)
+
+**Not resolved.** The player supplied another direct F8 comparison (`last-settlement-1791653529-3D.png`, `last-settlement-1791653529-FULL.png`, and matching graphics report): the unadorned 3D pass is clean; the composite FULL pass retains diagonal red lines despite OpenGL Compatibility rendering and the all-filled-rectangle UI code from the previous attempt.
+
+**New isolate-by-pass tool — Ctrl+F12.** Launch the latest PR #6 Windows EXE, leave the settlement displayed, then press **Ctrl+F12 once**. The game captures six screenshots consecutively in `playtest-screenshots` and opens that directory; there is no need to toggle settings and photograph the monitor six times. These are generated from different real CanvasItem draw passes, not simulated mockups:
+
+1. `0-FULL.png`: normal player HUD, panels, 3D world and widgets
+2. `1-WORLD_COMPOSITE.png`: draws ONLY the dedicated 3D SubViewport texture via the top-level CanvasItem
+3. `2-HUD_ONLY.png`: world texture plus top telemetry, bottom dock and status feed, but no separate Build/Region/Nation inspector panels or minimap
+4. `3-PANELS_ONLY.png`: regular 3D and panel/widget layers **without the global top/bottom HUD**
+5. `4-NO_WIDGETS.png`: HUD and main content panel, but no directive tab, action footer, minimap or overview
+6. `5-BARE_CANVAS.png`: world texture plus a tiny solid black/text test badge only, with no DPN skin
+
+The accompanying `PASS-REPORT.txt` records the actual renderer, OS, filenames and capture success. A clean `WORLD_COMPOSITE` but dirty `HUD_ONLY` isolates the HUD path; clean `HUD_ONLY` but dirty `PANELS_ONLY` isolates other menus/widgets; dirty `WORLD_COMPOSITE` isolates the main 2D texture compositor rather than the DPN panel code. **Send the six PNGs and the report to issue #9** (or back here) for targeted removal of the first implicated call family. This only changes displayed passes temporarily; simulation actions, inputs, saved games, menus and normal play resume immediately after capture.
+
+**Prior controls:** `F8` captures ordinary FULL/3D pairs. `Ctrl+F10` temporarily suppresses ornamental strokes. `Ctrl+F12` captures the deeper six-pass suite. Plain F10/F12 remain updater shortcuts. Issue #9 must stay OPEN; green headless CI does not prove graphical correctness on the player's Windows GPU.
+
+---
+
 # RED STREAKS — PLAYER F8 CAPTURES PROVED UI-ONLY (OCTOBER 10)
 
 The player supplied **paired original F8 screenshots** from the same frame. The long diagonal crimson streaks are present in `-FULL.png` but **absent** from `-3D.png`. This is direct evidence that the artifact is introduced by the Godot CanvasItem UI/compositing layer, not world materials, terrain, 3D lighting or GPU-rendered 3D models. Earlier theories that blamed monitor photography are superseded by these actual saved PNGs.
