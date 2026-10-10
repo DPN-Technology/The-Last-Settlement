@@ -29,7 +29,7 @@ static var diagnostic_minimal_strokes := false
 
 # Use ONLY filled axis-aligned rectangles for decorative strokes.
 # Godot's Windows canvas triangulation can exhibit cross-screen red streaks
-# with both draw_line() and draw_colored_polygon() on affected GPUs.
+# with native canvas lines and triangulated polygons on affected GPUs.
 # This implementation never submits a freeform polygon or line primitive.
 static func stroke(canvas: CanvasItem, point_a: Vector2, point_b: Vector2, tint: Color, thickness: float = 1.0) -> void:
 	if diagnostic_minimal_strokes:
