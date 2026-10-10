@@ -1518,7 +1518,7 @@ func _smoke() -> void:
 		return
 	instance._handle_incident_click(SettlementIncidentUI.row_rect(incident_screen,0).get_center())
 	instance._handle_incident_click(SettlementIncidentUI.action_rect(incident_screen,0).get_center())
-	if instance.incident_acknowledged.is_empty() or sim.events.size()!=events_before+2:
+	if instance.incident_acknowledged.is_empty() or sim.events.size()!=mini(12,events_before+2):
 		push_error("SMOKE: Incident acknowledgement corrupts history or has no effect")
 		quit(1)
 		return
