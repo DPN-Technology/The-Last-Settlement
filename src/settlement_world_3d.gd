@@ -66,6 +66,7 @@ var camera: Camera3D
 var light: DirectionalLight3D
 var world_environment: Environment
 var sky_material: ProceduralSkyMaterial
+var weather_effects: SettlementWeather3D
 var command_lamp: OmniLight3D
 var prior_lighting_hour := -10.0
 var structure_layer: Node3D
@@ -88,6 +89,8 @@ var visual_time := 0.0
 func _ready() -> void:
 	_create_materials()
 	_create_environment()
+	weather_effects=SettlementWeather3D.new()
+	add_child(weather_effects)
 	terrain_layer = Node3D.new()
 	terrain_layer.name = "Terrain"
 	add_child(terrain_layer)
@@ -269,6 +272,21 @@ func _update_daylight(hour: float) -> void:
 	sky_material.sky_top_color = Color("#0d1b2a").lerp(Color("#3b5566"), daylight)
 	sky_material.sky_horizon_color = Color("#222c3a").lerp(Color("#9d9788"), daylight)
 	command_lamp.light_energy = lerpf(1.7, 0.0, daylight) + twilight * 0.14
+
+
+func _update_weather_environment(sim: SettlementSimulation) -> void:
+	# Recalculate from daylight source values every frame. Weather can begin
+	# between the daylight threshold updates without accumulating color drift.
+	var dust_strength := sim.weather_simulation.intensity if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM else 0.0
+	var solar := sin((sim.hour-6.0)/12.0*PI)
+	var daylight := clampf(solar,0.0,1.0)
+	var base_fog := Color("#202d36").lerp(Color("#6c6d63"),daylight)
+	var base_horizon := Color("#222c3a").lerp(Color("#9d9788"),daylight)
+	world_environment.fog_density=lerpf(0.00095,0.0085,dust_strength)
+	world_environment.fog_light_color=base_fog.lerp(Color("#8e7154"),dust_strength*0.75)
+	sky_material.sky_horizon_color=base_horizon.lerp(Color("#8e6c52"),dust_strength*0.75)
+	world_environment.ambient_light_energy=lerpf(0.095,0.25,daylight)*(1.0-0.20*dust_strength)
+	light.light_energy=lerpf(0.03,0.83,daylight)*(1.0-0.28*dust_strength)
 
 func _box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var obj := MeshInstance3D.new()
@@ -456,6 +474,8 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 		_rebuild_structures(sim)
 	_update_people(sim, selected_citizen)
 	_update_daylight(sim.hour)
+	_update_weather_environment(sim)
+	weather_effects.update_weather(sim.weather_simulation.condition,sim.weather_simulation.intensity,focus,delta,sim.paused)
 	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)) and not sim.paused)
 	_animate_industry(delta, _industry_operating(sim) and not sim.paused)
 	# Construction hologram updates without re-instantiating building meshes.
