@@ -95,6 +95,16 @@ jobs:
           chmod +x ".godot-ci/Godot_v4.3-stable_linux.x86_64"
           ".godot-ci/Godot_v4.3-stable_linux.x86_64" --version
 
+      - name: Install and import pinned CC0 3D survivor for smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/install_cc0_assets.py
+          python3 tools/install_cc0_materials.py
+          GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --import
+          test -s assets/3d/characters/survivor.glb
+
       - name: Godot project parse gate
         shell: bash
         run: |
@@ -108,6 +118,22 @@ jobs:
             echo "::error::Godot reported a GDScript parse/load failure."
             exit 1
           fi
+          test "$GODOT_EXIT" -eq 0
+
+      - name: Boot the playable game and verify core controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          set +e
+          "$GODOT" --headless --path . --script res://tools/smoke_game.gd 2>&1 | tee smoke-game.log
+          GODOT_EXIT="${PIPESTATUS[0]}"
+          set -e
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|Parser Error|SMOKE:' smoke-game.log; then
+            echo "::error::The playable game smoke check reported an error."
+            exit 1
+          fi
+          grep -q 'PLAYTEST SMOKE PASS' smoke-game.log
           test "$GODOT_EXIT" -eq 0
 
   policy:

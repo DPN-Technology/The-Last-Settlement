@@ -14,6 +14,17 @@ on:
       - ".github/workflows/windows-build.yml"
       - "packaging/windows/**"
       - "tools/release_manifest.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "src/**"
+      - "simulation/**"
+      - "assets/**"
+      - ".github/workflows/windows-build.yml"
+      - "packaging/windows/**"
+      - "tools/release_manifest.py"
   workflow_dispatch:
 
 permissions:
@@ -84,6 +95,16 @@ jobs:
           test -s "$TEMPLATE_DIR/windows_release_x86_64.exe"
           test -s "$TEMPLATE_DIR/windows_debug_x86_64.exe"
 
+      - name: Install and import pinned CC0 3D survivor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/install_cc0_assets.py
+          python3 tools/install_cc0_materials.py
+          GODOT=".godot-build/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --import
+          test -s assets/3d/characters/survivor.glb
+
       - name: Verify project parses before export
         shell: bash
         run: |
@@ -122,11 +143,14 @@ jobs:
 
           1. Extract the complete ZIP to a normal folder.
           2. Keep TheLastSettlement.exe and TheLastSettlement.pck together.
-          3. Double-click TheLastSettlement.exe.
+          3. Start with Launch-TheLastSettlement.cmd (SAFE OpenGL renderer).
+          4. Use Launch-TheLastSettlement-HighGraphics.cmd only to compare
+             Vulkan Forward+ if the compatibility path causes trouble.
+          5. Press F8 to capture a direct in-game PNG if lines persist.
 
-          This stable build is currently unsigned. Windows SmartScreen may
-          show an "Unknown publisher" warning until DPN Technology adds a Windows
-          code-signing certificate to the release pipeline.
+          Unsigned builds can trigger a Windows SmartScreen warning. Windows
+          may show "Unknown publisher" until DPN Technology uses a signing
+          certificate for the release pipeline.
 
           Do not delete or rename TheLastSettlement.pck. The executable loads
           the game data from that file.
@@ -135,14 +159,114 @@ jobs:
           THE OLD WORLD DIED. BUILD THE NEXT ONE.
           EOF
 
+      - name: Add playtest metadata and one-click launcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > dist/windows/Launch-TheLastSettlement.cmd <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "TheLastSettlement.exe" (
+            echo Game executable missing. Extract the complete portable ZIP.
+            pause
+            exit /b 1
+          )
+          if not exist "TheLastSettlement.pck" (
+            echo Game data missing. Keep the EXE and PCK in the same folder.
+            pause
+            exit /b 1
+          )
+          start "" "TheLastSettlement.exe" --rendering-method gl_compatibility
+          EOF
+          cat > dist/windows/Launch-TheLastSettlement-Compatibility.cmd <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "TheLastSettlement.exe" (
+            echo Game executable missing. Extract all files from the ZIP.
+            pause
+            exit /b 1
+          )
+          start "" "TheLastSettlement.exe" --rendering-method gl_compatibility
+          EOF
+          cat > dist/windows/Launch-TheLastSettlement-HighGraphics.cmd <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "TheLastSettlement.exe" (
+            echo Game executable missing. Extract all files from the ZIP.
+            pause
+            exit /b 1
+          )
+          if not exist "TheLastSettlement.pck" (
+            echo Game data missing. Keep the EXE and PCK together.
+            pause
+            exit /b 1
+          )
+          start "" "TheLastSettlement.exe" --rendering-method forward_plus
+          EOF
+          {
+            printf 'THE LAST SETTLEMENT // PLAYTEST BUILD\n'
+            printf 'Commit: %s\n' "$GITHUB_SHA"
+            printf 'Event: %s\n' "$GITHUB_EVENT_NAME"
+            printf 'Run: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            printf 'Default renderer: OpenGL compatibility / GPU-safe line primitives.\n'
+            printf 'High-graphics comparison: Launch-TheLastSettlement-HighGraphics.cmd\n'
+            printf 'Press F8 for direct PNG evidence of any display lines.\n'
+            printf 'For feedback press F9 in the game; see docs/PLAYTESTING.md.\n'
+            printf 'Back up save data before opening a development build.\n'
+          } > dist/windows/PLAYTEST-INFO.txt
+
       - name: Create portable ZIP
         shell: bash
         run: |
           set -euo pipefail
           cd dist/windows
-          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             SHA256SUMS.txt
+          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             PLAYTEST-INFO.txt             Launch-TheLastSettlement.cmd             Launch-TheLastSettlement-Compatibility.cmd             Launch-TheLastSettlement-HighGraphics.cmd             SHA256SUMS.txt
           cd ../..
           test -s dist/TheLastSettlement-Windows-x86_64.zip
+
+      - name: Publish independently visible playtest hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            echo '### The Last Settlement // Windows Playtest Integrity'
+            echo ''
+            echo 'These checksums were calculated by the build runner **before** artifact upload.'
+            echo 'They establish download integrity relative to this GitHub Actions run; they are not a code-signing certificate or malware clearance.'
+            echo ''
+            echo 'Commit: `'"$GITHUB_SHA"'`'
+            echo ''
+            echo '```text'
+            cat dist/windows/SHA256SUMS.txt
+            echo '```'
+            echo ''
+            echo 'Development builds are **unsigned**. Keep browser and Windows security protections enabled.'
+          ) >> "$GITHUB_STEP_SUMMARY"
+
+      # GitHub Actions creates its own ZIP around uploaded artifacts.
+      # Publish the raw files as a SECOND artifact so playtesters can extract
+      # them directly rather than unpacking a ZIP inside another ZIP.
+      # Retain the original ZIP artifact for downstream Windows packaging.
+      - name: Upload direct Windows playtest files (single extraction)
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TheLastSettlement-Windows-Playtest-Direct
+          path: |
+            dist/windows/TheLastSettlement.exe
+            dist/windows/TheLastSettlement.pck
+            dist/windows/README-WINDOWS.txt
+            dist/windows/PLAYTEST-INFO.txt
+            dist/windows/Launch-TheLastSettlement.cmd
+            dist/windows/Launch-TheLastSettlement-Compatibility.cmd
+            dist/windows/Launch-TheLastSettlement-HighGraphics.cmd
+            dist/windows/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
 
       - name: Upload Windows portable build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -156,6 +280,7 @@ jobs:
 
   package-windows:
     name: Windows Installer + Final Portable Package
+    if: github.event_name != 'pull_request'
     needs: build-windows
     runs-on: windows-latest
     timeout-minutes: 20
@@ -214,7 +339,7 @@ jobs:
             "$pckHash  TheLastSettlement.pck"
           ) | Set-Content "payload\SHA256SUMS.txt" -Encoding ascii
           New-Item -ItemType Directory -Force -Path "dist" | Out-Null
-          Compress-Archive -Path "payload\TheLastSettlement.exe","payload\TheLastSettlement.pck","payload\README-WINDOWS.txt","payload\SHA256SUMS.txt" -DestinationPath "dist\TheLastSettlement-Windows-x86_64.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "payload\TheLastSettlement.exe","payload\TheLastSettlement.pck","payload\README-WINDOWS.txt","payload\PLAYTEST-INFO.txt","payload\Launch-TheLastSettlement.cmd","payload\Launch-TheLastSettlement-HighGraphics.cmd","payload\SHA256SUMS.txt" -DestinationPath "dist\TheLastSettlement-Windows-x86_64.zip" -CompressionLevel Optimal -Force
 
       - name: Build per-user MSI installer
         shell: pwsh

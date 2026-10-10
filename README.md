@@ -719,16 +719,25 @@ Visual complexity can increase dramatically later without throwing away the core
 
 # RUN THE CURRENT BUILD
 
+## Playable now — Stable Windows v1.0.5
+
+**Download the game from [the latest stable Windows release](https://github.com/DPN-Technology/The-Last-Settlement/releases/latest).** Use the `TheLastSettlement-Setup-x64.msi` installer for a normal Windows install, or the `TheLastSettlement-Windows-x86_64.zip` if you prefer a portable copy. Godot is not required to play.
+
+## Windows playtests — play changes *before* merge
+
+The Windows Build workflow also produces **pull-request portable playtest candidates**. Open [DPN Settlement Windows Build](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml), select a successful pull-request run, and download the `TheLastSettlement-Windows-x86_64` artifact. Extract its inner `TheLastSettlement-Windows-x86_64.zip`, then run `Launch-TheLastSettlement.cmd` or `TheLastSettlement.exe`.
+
+**F9** in-game writes a game-state-only JSON diagnostic report and opens its folder on Windows, so gameplay bugs can be reproduced with the exact test commit from `PLAYTEST-INFO.txt`. **S/L** saves and loads. Keep your stable installation separate, and **back up saves before opening any development candidate**.
+
+Full instructions, controls and smoke-test checklist: **[Windows Playtesting Guide](docs/PLAYTESTING.md)**.
+
 ## Windows Installer — Recommended
 
 The easiest Windows path is now the **MSI installer**. You do **not** need Godot installed.
 
-1. Open the repository's **Actions** tab.
-2. Select **DPN Settlement Windows Build**.
-3. Open the newest successful run.
-4. Download **TheLastSettlement-Windows-Installer**.
-5. Extract the artifact ZIP.
-6. Run **`TheLastSettlement-Setup-x64.msi`**.
+1. Open the [latest stable release](https://github.com/DPN-Technology/The-Last-Settlement/releases/latest).
+2. Download **`TheLastSettlement-Setup-x64.msi`**.
+3. Run the installer.
 
 The installer is a per-user package, so it installs under your Windows profile instead of requiring a machine-wide Program Files install. It creates:
 
@@ -742,10 +751,10 @@ The installer carries the branded The Last Settlement application icon and insta
 
 If you do not want to install the game:
 
-1. Download **TheLastSettlement-Windows-Portable-Final** from the newest successful Windows Build run.
-2. Extract `TheLastSettlement-Windows-x86_64.zip`.
+1. Download `TheLastSettlement-Windows-x86_64.zip` from the [latest stable release](https://github.com/DPN-Technology/The-Last-Settlement/releases/latest).
+2. Extract the ZIP completely.
 3. Keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
-4. Double-click **`TheLastSettlement.exe`**.
+4. Double-click **`Launch-TheLastSettlement.cmd`** (new builds) or **`TheLastSettlement.exe`**.
 
 Both Windows deliverables now include an **artifact-specific SHA-256 manifest**, and the pipeline verifies those hashes before upload.
 
@@ -845,6 +854,7 @@ No external art pack is required for the current prototype.
 | **8** | Contribute available resources to selected recovery megaproject |
 | **9** | Cycle eligible Last Haven founding/migration candidate |
 | **0** | Add/remove highlighted survivor from four-person founding roster |
+| **F9** | Capture a game-only playtest report and open its folder on Windows (new builds) |
 | **F10** | Open/close Update Command and check stable release channel |
 | **F11** | Download selected verified Windows update MSI |
 | **F12** | Save game and hand verified MSI to Windows installer |
