@@ -932,6 +932,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"market_index": economy_simulation.market_index,
 			"industry_stock": economy_simulation.industry_stock,
 			"production_queue": economy_simulation.production_queue,
+			"production_paused": economy_simulation.production_paused,
 			"next_batch_id": economy_simulation.next_batch_id,
 			"price_update_hour": economy_simulation.price_update_hour,
 			"trade_log": economy_simulation.trade_log,
@@ -1046,6 +1047,7 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.market_index = economy.get("market_index", economy_simulation.market_index)
 		economy_simulation.industry_stock = economy.get("industry_stock", economy_simulation.industry_stock)
 		economy_simulation.production_queue = _restore_dict_array(economy.get("production_queue", economy_simulation.production_queue))
+		economy_simulation.production_paused = bool(economy.get("production_paused",false))
 		economy_simulation.next_batch_id = int(economy.get("next_batch_id", economy_simulation.next_batch_id))
 		economy_simulation.price_update_hour = float(economy.get("price_update_hour", economy_simulation.price_update_hour))
 		economy_simulation.trade_log = _restore_dict_array(economy.get("trade_log", economy_simulation.trade_log))
