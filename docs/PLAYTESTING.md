@@ -1,3 +1,9 @@
+# ADDITIONAL TERRAIN MATERIAL PASS
+
+Beyond 3D instanced scatter, the ground now has a brighter multi-scale clay/limestone/gravel albedo bake and a tangent-space height-derived normal texture. Both are generated locally in Godot's GL Compatibility renderer and contain no web/runtime dependencies. The existing opaque ground failsafe and terrain culling fix are unchanged. The normal texture is verified by the headless game smoke test. Visual parity with the provided concept art remains a future licensed-art direction target.
+
+---
+
 # WORLD REALISM — PLAYABLE 3D GRAPHICS PASS
 
 This is an actual Godot implementation, not the generated visual target. A new art-direction module adds MultiMesh-instanced wasteland rocks (700), scrap (250), and dry scrub (480), plus environmental salvage stations; each supported facility receives corroded exterior armor, welded panel seams, entry protective details, supply pallets, service conduit and roof fittings. Furnished building interiors gain floor tile seams, short dividers, job-specific equipment and localized task lamps. Rooftop additions use the existing cutaway metadata and should disappear when buildings are opened. All new props are decorative and do not change simulation logic, path collision, speed control, saves, or HUD rendering.

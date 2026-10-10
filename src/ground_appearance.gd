@@ -26,14 +26,17 @@ static func bake_image() -> Image:
 			var medium := gravel.get_noise_2d(float(x), float(y)) * 0.5 + 0.5
 			var fine := speckles.get_noise_2d(float(x), float(y)) * 0.5 + 0.5
 			var wear := smoothstep(0.45, 0.79, high)
-			var dark := Color("#2c2922")
-			var clay := Color("#514738")
-			var stony := Color("#6b6354")
-			var base := dark.lerp(clay, 0.19 + high * 0.54)
-			base = base.lerp(stony, medium * 0.20)
-			base = base.darkened(wear * 0.11)
-			var pebble := smoothstep(0.76, 0.92, fine) * 0.16
-			base = base.lightened(pebble)
+			# Exposed clay, sun-bleached gravel and eroded stone establish
+			# larger readable patterns instead of one uniform brown surface.
+			var dark := Color("#39332c")
+			var clay := Color("#806b55")
+			var stony := Color("#a0927a")
+			var base := dark.lerp(clay, 0.24 + high * 0.55)
+			base = base.lerp(stony, medium * 0.27)
+			base = base.darkened(wear * 0.12)
+			var mineral := smoothstep(0.74, 0.92, fine) * 0.17
+			var sediment := smoothstep(0.58, 0.84, medium) * 0.09
+			base = base.lightened(mineral + sediment)
 			image.set_pixel(x, y, base)
 	image.generate_mipmaps()
 	return image
@@ -41,9 +44,28 @@ static func bake_image() -> Image:
 static func bake() -> ImageTexture:
 	return ImageTexture.create_from_image(bake_image())
 
+# Height-derived tangent-space bump. Fully baked offline at startup and
+# supported by Godot's GL Compatibility path without procedural fragment noise.
+static func bake_normal_image(albedo: Image) -> Image:
+	var normal := Image.create(TEXTURE_SIZE,TEXTURE_SIZE,false,Image.FORMAT_RGB8)
+	for y in range(TEXTURE_SIZE):
+		for x in range(TEXTURE_SIZE):
+			var l: float=albedo.get_pixel(maxi(0,x-1),y).get_luminance()
+			var r: float=albedo.get_pixel(mini(TEXTURE_SIZE-1,x+1),y).get_luminance()
+			var up: float=albedo.get_pixel(x,maxi(0,y-1)).get_luminance()
+			var down: float=albedo.get_pixel(x,mini(TEXTURE_SIZE-1,y+1)).get_luminance()
+			var n := Vector3((l-r)*3.4,(up-down)*3.4,1.0).normalized()
+			normal.set_pixel(x,y,Color(n.x*0.5+0.5,n.y*0.5+0.5,n.z*0.5+0.5))
+	normal.generate_mipmaps()
+	return normal
+
 static func new_ground_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = bake()
+	var color_image := bake_image()
+	mat.albedo_texture = ImageTexture.create_from_image(color_image)
+	mat.normal_enabled = true
+	mat.normal_texture = ImageTexture.create_from_image(bake_normal_image(color_image))
+	mat.normal_scale = 0.62
 	mat.albedo_color = Color("#cac2b2")
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mat.uv1_scale = Vector3.ONE

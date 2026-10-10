@@ -1441,6 +1441,10 @@ func _smoke() -> void:
 		push_error("SMOKE: Baked earth/gravel albedo texture is not bound to terrain")
 		quit(1)
 		return
+	if not ground_material.normal_enabled or ground_material.normal_texture==null:
+		push_error("SMOKE: terrain is missing the new baked tangent-space surface relief")
+		quit(1)
+		return
 	if ground_material.cull_mode != BaseMaterial3D.CULL_DISABLED:
 		push_error("SMOKE: Generated ground triangles can still be backface-culled")
 		quit(1)
