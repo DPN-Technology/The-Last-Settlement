@@ -595,15 +595,24 @@ func _draw_world_map() -> void:
 		var r := SettlementUILayout.region_site_row(vp,i)
 		var selected := int(entry["id"]) == selected_world_location_id
 		var risk := float(entry.get("danger",0.0))
-		draw_rect(r,Color("#48252d") if selected else (Color("#261923") if r.has_point(get_local_mouse_position()) else Color("#131016")))
-		draw_rect(Rect2(r.position,Vector2(3,r.size.y)),ACCENT if selected else (BAD if risk>0.50 else GOOD))
+		DPNUISkin.list_row(self,r,selected,r.has_point(get_local_mouse_position()),risk>0.50)
 		draw_string(ThemeDB.fallback_font,r.position+Vector2(8,17),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,r.size.x-44,10,TEXT if selected else MUTED)
 		draw_string(ThemeDB.fallback_font,r.position+Vector2(r.size.x-34,17),"%d%%" % int(risk*100.0),HORIZONTAL_ALIGNMENT_RIGHT,28,9,WARN if risk<0.5 else BAD)
 	if discovered.size()>site_rows:
 		draw_string(ThemeDB.fallback_font,Vector2(22,vp.y-SettlementUILayout.BOTTOM_H-15),"%d sites visible  /  %d discovered" % [site_rows,discovered.size()],HORIZONTAL_ALIGNMENT_LEFT,200,10,WARN)
 	# Normalized projection shared with _world_map_select; all nodes remain
 	# within the map canvas, regardless of normal or fullscreen resolution.
-	draw_rect(map,Color("#0d0c13"))
+	draw_rect(map,Color("#0b0a11"))
+	draw_rect(Rect2(map.position,Vector2(map.size.x,3)),ACCENT)
+	draw_rect(Rect2(map.position+Vector2(0,3),Vector2(3,map.size.y-3)),Color("#842334"))
+	draw_string(ThemeDB.fallback_font,map.position+Vector2(12,19),"DPN  /  REGIONAL INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,map.size.x-25,10,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(map.end.x-13,map.end.y-13),"LIVE TACTICAL PROJECTION   •   RADIO FOG ACTIVE",HORIZONTAL_ALIGNMENT_RIGHT,map.size.x-22,9,MUTED)
+	# Thin rotating command radar indicates active regional telemetry. It never
+	# changes the real discovered-site flags or dispatch distances.
+	var radar_centre := SettlementUILayout.region_point(vp,Vector2(600,410))
+	var radar_tip := radar_centre+Vector2(cos(ui_animation_clock*0.33),sin(ui_animation_clock*0.33))*minf(map.size.x,map.size.y)*0.31
+	draw_line(radar_centre,radar_tip,Color("#e94258",0.48),1.0)
+	draw_arc(radar_centre,minf(map.size.x,map.size.y)*0.31,0.0,TAU,72,Color("#a32c42",0.20),1.0)
 	for line in range(1,7):
 		var gx := map.position.x+map.size.x*float(line)/7.0
 		var gy := map.position.y+map.size.y*float(line)/7.0
@@ -675,9 +684,7 @@ func _draw_world_map() -> void:
 	for index in range(3):
 		var rect := SettlementUILayout.region_team_control(vp,index)
 		var hovered := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#553238") if hovered else Color("#16111b"))
-		draw_rect(rect,ACCENT if hovered else Color("#526c79"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(7,19),controls[index],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-13,10,TEXT)
+		DPNUISkin.button(self,rect,controls[index],hovered,false,false,true,true)
 	var roster_names := PackedStringArray()
 	for id in mission.get("members",[]):
 		var citizen := sim.get_citizen_by_id(int(id))
@@ -689,9 +696,7 @@ func _draw_world_map() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(px,py+259),"One-way %.1fh  •  search %.1fh  •  hazard %.0f%%" % [float(mission["travel_hours"]),float(mission["search_hours"]),float(mission["risk"])*100.0],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-36,10,WARN if float(mission["risk"])<0.45 else BAD)
 	var dispatch := SettlementUILayout.region_dispatch_rect(vp)
 	var can_go := bool(mission["ok"])
-	draw_rect(dispatch,Color("#245448") if can_go else Color("#33363d"))
-	draw_rect(dispatch,GOOD if can_go else WARN,false,1)
-	draw_string(ThemeDB.fallback_font,dispatch.position+Vector2(11,22),"DISPATCH TEAM  /  PROVISION & DEPART [G]" if can_go else str(mission["reason"]),HORIZONTAL_ALIGNMENT_LEFT,dispatch.size.x-20,11,TEXT if can_go else WARN)
+	DPNUISkin.button(self,dispatch,"AUTHORIZE DEPLOYMENT  [G]" if can_go else str(mission["reason"]),dispatch.has_point(get_local_mouse_position()),can_go,false,true)
 	draw_string(ThemeDB.fallback_font,Vector2(px,py+340),"ACTIVE EXPEDITIONS   %d" % sim.world_simulation.get_active_expeditions().size(),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-30,12,ACCENT)
 	var ey := py+363.0
 	var visible_expeditions := sim.world_simulation.get_active_expeditions()
@@ -708,9 +713,7 @@ func _draw_world_map() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(px,ey+15),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-130,10,MUTED)
 		var recall := SettlementUILayout.region_recall_rect(vp,row)
 		var can_recall := stage in ["outbound","searching"]
-		draw_rect(recall,Color("#623035") if can_recall and recall.has_point(get_local_mouse_position()) else (Color("#3b2a30") if can_recall else Color("#15121b")))
-		draw_rect(recall,ACCENT if can_recall else Color("#435a62"),false,1)
-		draw_string(ThemeDB.fallback_font,recall.position+Vector2(9,17),"RECALL TEAM" if can_recall else "RETURNING",HORIZONTAL_ALIGNMENT_LEFT,recall.size.x-12,10,TEXT if can_recall else MUTED)
+		DPNUISkin.button(self,recall,"RECALL" if can_recall else "RETURN",recall.has_point(get_local_mouse_position()),false,can_recall,can_recall,true)
 		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#251721"))
 		draw_rect(Rect2(px,ey+20,(side.size.x-36.0)*completion,3.0),GOOD)
 		ey+=48.0
@@ -972,9 +975,7 @@ func _draw_civilization_panel() -> void:
 	for idx in range(CIVILIZATION_TABS.size()):
 		var box := SettlementUILayout.civilization_tab_rect(vp,idx)
 		var active := civilization_tab==idx
-		draw_rect(box,Color("#5b2930") if active else (Color("#2b4149") if box.has_point(get_local_mouse_position()) else Color("#172a33")))
-		draw_rect(box,ACCENT if active else Color("#4b6670"),false,1.0)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(5,21),str(CIVILIZATION_TABS[idx]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-9,10,TEXT if active else MUTED)
+		DPNUISkin.button(self,box,str(CIVILIZATION_TABS[idx]),box.has_point(get_local_mouse_position()),active,false,true,true)
 	var left := x+21.0
 	var max_width := w-43.0
 	var top := y+122.0
@@ -984,7 +985,7 @@ func _draw_civilization_panel() -> void:
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+24),"Stage: %s    |    Communities: %d    |    Trade routes: %d" % [str(civ.endgame_stage).capitalize(),settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,max_width,12,MUTED)
 			_draw_meter(Vector2(left,top+51),max_width,"REGIONAL RECOVERY",civ.recovery_score)
 			_draw_meter(Vector2(left,top+92),max_width,"CIVILIZATION STABILITY",civ.civilization_stability)
-			draw_line(Vector2(left,top+128),Vector2(panel.end.x-18,top+128),Color("#47636d"),1.0)
+			draw_line(Vector2(left,top+128),Vector2(panel.end.x-18,top+128),Color("#643845"),1.0)
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+150),"YOUR NEXT OBJECTIVE",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,ACCENT)
 			var foundable := civ.get_foundable_locations(sim)
 			var next_step := "Explore the region and salvage an abandoned site."
@@ -1016,7 +1017,7 @@ func _draw_civilization_panel() -> void:
 				draw_string(ThemeDB.fallback_font,Vector2(left,top+107),"Food %.0f   Water %.0f   Materials %.0f   Parts %.0f" % [float(resources["food"]),float(resources["water"]),float(resources["materials"]),float(resources["parts"])],HORIZONTAL_ALIGNMENT_LEFT,max_width,11,MUTED)
 				var modules: Dictionary = settlement.get("modules",{})
 				draw_string(ThemeDB.fallback_font,Vector2(left,top+134),"Housing %d   Farms %d   Clinics %d   Workshops %d" % [int(modules.get("housing",0)),int(modules.get("farm",0)),int(modules.get("clinic",0)),int(modules.get("workshop",0))],HORIZONTAL_ALIGNMENT_LEFT,max_width,11,TEXT)
-				draw_line(Vector2(left,top+155),Vector2(panel.end.x-18,top+155),Color("#47636d"),1.0)
+				draw_line(Vector2(left,top+155),Vector2(panel.end.x-18,top+155),Color("#643845"),1.0)
 				if key == "LAST_HAVEN":
 					draw_string(ThemeDB.fallback_font,Vector2(left,top+181),"LAST HAVEN IS YOUR CAPITAL",HORIZONTAL_ALIGNMENT_LEFT,max_width,13,ACCENT)
 					draw_string(ThemeDB.fallback_font,Vector2(left,top+208),"Use Build to add facilities to the capital.",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,TEXT)
@@ -1053,11 +1054,10 @@ func _draw_civilization_panel() -> void:
 				var pname := str(CIV_RECOVERY_PROJECTS[i])
 				var card := Rect2(left,top+42.0+float(i)*50.0,max_width,46.0)
 				var current := i==civilization_recovery_project_index
-				draw_rect(card,Color("#492c34") if current else Color("#19303a"))
-				draw_rect(Rect2(card.position,Vector2(3,card.size.y)),ACCENT if current else Color("#40606b"))
+				DPNUISkin.list_row(self,card,current,card.has_point(get_local_mouse_position()))
 				draw_string(ThemeDB.fallback_font,card.position+Vector2(10,19),pname,HORIZONTAL_ALIGNMENT_LEFT,card.size.x-100,12,TEXT)
 				draw_string(ThemeDB.fallback_font,Vector2(card.end.x-89,card.position.y+19),"%.0f%%" % civ.get_recovery_project_progress(pname),HORIZONTAL_ALIGNMENT_RIGHT,80,12,GOOD if civ._recovery_project_complete(pname) else WARN)
-				draw_rect(Rect2(card.position+Vector2(10,33),Vector2(card.size.x-20,3)),Color("#314650"))
+				draw_rect(Rect2(card.position+Vector2(10,33),Vector2(card.size.x-20,3)),Color("#38212b"))
 				draw_rect(Rect2(card.position+Vector2(10,33),Vector2((card.size.x-20)*civ.get_recovery_project_progress(pname)/100.0,3)),GOOD)
 			var selected_name := str(CIV_RECOVERY_PROJECTS[civilization_recovery_project_index])
 			var project: Dictionary = civ.recovery_projects[selected_name]
@@ -1074,7 +1074,7 @@ func _draw_civilization_panel() -> void:
 			var keys := ["autonomy","freight","security"]
 			for i in range(3):
 				var py := top+64.0+float(i)*44.0
-				draw_rect(Rect2(left,py-15.0,max_width,37),Color("#18303a"))
+				draw_rect(Rect2(left,py-15.0,max_width,37),Color("#21151e"))
 				draw_string(ThemeDB.fallback_font,Vector2(left+11,py+1),labels[i],HORIZONTAL_ALIGNMENT_LEFT,170,12,TEXT)
 				draw_string(ThemeDB.fallback_font,Vector2(left+190,py+1),str(civ.civilization_policies[keys[i]]),HORIZONTAL_ALIGNMENT_LEFT,max_width-206,12,GOOD)
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+211),"FEDERAL COUNCIL  /  ACTUAL NETWORK",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,ACCENT)
@@ -1092,7 +1092,7 @@ func _draw_civilization_panel() -> void:
 			else:
 				var candidate: Dictionary = candidates[civilization_candidate_index]
 				var is_rostered := civ.founding_roster.has(int(candidate["id"]))
-				draw_rect(Rect2(left,top+78,max_width,102),Color("#173039"))
+				draw_rect(Rect2(left,top+78,max_width,102),Color("#1e151e"))
 				draw_string(ThemeDB.fallback_font,Vector2(left+12,top+108),"%d/%d  •  %s" % [civilization_candidate_index+1,candidates.size(),str(candidate["name"])],HORIZONTAL_ALIGNMENT_LEFT,max_width-24,15,TEXT)
 				draw_string(ThemeDB.fallback_font,Vector2(left+12,top+131),"Job: %s    •    Age %d" % [str(candidate["job"]),int(candidate["age"])],HORIZONTAL_ALIGNMENT_LEFT,max_width-24,11,MUTED)
 				draw_string(ThemeDB.fallback_font,Vector2(left+12,top+157),"Status: "+("SELECTED FOR MIGRATION" if is_rostered else "AVAILABLE"),HORIZONTAL_ALIGNMENT_LEFT,max_width-24,12,GOOD if is_rostered else WARN)
@@ -1117,7 +1117,7 @@ func _draw_faction_panel() -> void:
 		var relay := sim.world_simulation.get_location_by_id(3)
 		var restored := bool(relay.get("restored",false))
 		var known := sim.world_simulation.get_discovered_locations().size()
-		draw_rect(Rect2(x+17,y+54,w-34,94),Color("#182c35"))
+		draw_rect(Rect2(x+17,y+54,w-34,94),Color("#1c151f"))
 		draw_rect(Rect2(x+17,y+54,4,94),WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+30,y+79),"NO NEIGHBORS IN RADIO RANGE",HORIZONTAL_ALIGNMENT_LEFT,w-60,14,WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+30,y+103),"Diplomacy begins after contact with other communities.",HORIZONTAL_ALIGNMENT_LEFT,w-62,11,TEXT)
@@ -1126,7 +1126,7 @@ func _draw_faction_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+224),"01    Open Region and select North Ridge Relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+255),"02    Dispatch a salvage team to restore the relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+286),"03    Wait for the team to finish its mission.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
-		draw_line(Vector2(x+20,y+313),Vector2(panel.end.x-18,y+313),Color("#52717b"),1.0)
+		draw_line(Vector2(x+20,y+313),Vector2(panel.end.x-18,y+313),Color("#673b47"),1.0)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+344),"RELAY STATUS",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+370),"North Ridge Relay: "+("ONLINE" if restored else "AWAITING REPAIRS"),HORIZONTAL_ALIGNMENT_LEFT,w-40,13,GOOD if restored else WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+393),"The restored relay extends radio coverage by 140 units.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
@@ -1138,9 +1138,7 @@ func _draw_faction_panel() -> void:
 	for idx in range(count):
 		var box := Rect2(x+17.0+float(idx)*(tab_width+gap),y+48.0,tab_width,34.0)
 		var active := idx==faction_index
-		draw_rect(box,Color("#5a2c32") if active else (Color("#2b4147") if box.has_point(get_local_mouse_position()) else Color("#172b33")))
-		draw_rect(box,ACCENT if active else Color("#4d656f"),false,1)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(7,20),str(visible[idx]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-14,10,TEXT if active else MUTED)
+		DPNUISkin.button(self,box,str(visible[idx]),box.has_point(get_local_mouse_position()),active,false,true,true)
 	var faction_name := str(visible[faction_index])
 	var info: Dictionary = factions.factions[faction_name]
 	var location: Dictionary = sim.world_simulation.get_location_by_id(int(info["location_id"]))
@@ -1152,7 +1150,7 @@ func _draw_faction_panel() -> void:
 	_draw_meter(Vector2(x+20,y+161),w-40.0,"REPUTATION",clampf((float(info["reputation"])+100.0)*0.5,0.0,100.0))
 	_draw_meter(Vector2(x+20,y+202),w-40.0,"STRENGTH",float(info["strength"]))
 	_draw_meter(Vector2(x+20,y+243),w-40.0,"INFLUENCE / WEALTH",float(info["wealth"]))
-	draw_line(Vector2(x+20,y+282),Vector2(panel.end.x-18,y+282),Color("#52717b"),1)
+	draw_line(Vector2(x+20,y+282),Vector2(panel.end.x-18,y+282),Color("#673b47"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+307),"TRADE AGREEMENT: "+("ACTIVE" if bool(info["trade_agreement"]) else "NOT SIGNED"),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,GOOD if bool(info["trade_agreement"]) else MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+333),"SEND AID: 8 food + 2 medicine  •  +9 reputation",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+354),"TRADE: needs reputation 30 or higher.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
@@ -1487,27 +1485,25 @@ func _next_settlement_goal() -> String:
 func _draw_overview() -> void:
 	var vp := get_viewport_rect().size
 	var area := SettlementUILayout.overview_rect(vp)
-	draw_rect(area,Color("#101a20f6"))
-	draw_rect(area,Color("#789aa3"),false,1.5)
-	draw_rect(Rect2(area.position,Vector2(area.size.x,3)),ACCENT)
+	_draw_ui_panel(area,ACCENT)
 	var left := area.position.x+17.0
 	var full_width := area.size.x-34.0
 	var top := area.position.y
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+29),"YOUR SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,full_width,17,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % _display_settlement_name(),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+68),"Day %d   |   %02d:%02d   |   %s" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),"Paused" if sim.paused else "Simulation running"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,MUTED)
-	draw_line(Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#41575e"),1.0)
+	draw_line(Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#603644"),1.0)
 	var complete := 0
 	for value in sim.field_objectives.values():
 		if bool(value):
 			complete += 1
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+100),"YOUR NEXT STEP  •  %d/4 goals completed" % complete,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+120),_next_settlement_goal(),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,TEXT)
-	draw_line(Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#31484e"),1.0)
+	draw_line(Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#432734"),1.0)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+154),"SUPPLIES & BUILDING",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+174),"Building materials: %.0f" % float(sim.resources["materials"]),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+193),"Projects being built: %d    |    Rooms finished: %d" % [sim.blueprints.size(),sim.completed_rooms],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
-	draw_line(Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#31484e"),1.0)
+	draw_line(Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#432734"),1.0)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+228),"ESSENTIAL SYSTEMS",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	var power_available := float(sim.utility_state["power_generated"])
 	var power_needed := float(sim.utility_state["power_demand"])
@@ -1516,7 +1512,7 @@ func _draw_overview() -> void:
 	var charge := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+268),"Battery charge: %.0f%%    |    Sanitation: %.0f%%" % [charge,float(sim.utility_state["sanitation"])],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
 	if area.size.y>350.0:
-		draw_line(Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#31484e"),1.0)
+		draw_line(Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#432734"),1.0)
 		var weather := sim.weather_simulation
 		if weather.condition==WeatherSimulation.DUST_STORM:
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"DUST FRONT: %.1fh remaining  /  %.0f%% strength" % [weather.remaining_hours(sim),weather.intensity*100.0],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
@@ -1528,9 +1524,7 @@ func _draw_overview() -> void:
 	for index in range(buttons.size()):
 		var rect := SettlementUILayout.overview_button_rect(vp,index)
 		var over := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#344f55") if over else Color("#1e333a"))
-		draw_rect(rect,GOOD if over else Color("#58747e"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,19),buttons[index],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-14,10,TEXT)
+		DPNUISkin.button(self,rect,buttons[index],over,false,index==2,true,true)
 
 func _handle_overview_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -1900,9 +1894,8 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	var labels := ["[T] SHIFT", "[P] PRIORITY", "[W] DUTY"]
 	for i in range(3):
 		var rx := x + 12.0 + float(i) * 112.0
-		draw_rect(Rect2(rx, action_y, 106, 39), Color("#263437"))
-		draw_rect(Rect2(rx, action_y, 106, 39), RUST, false, 1.0)
-		draw_string(ThemeDB.fallback_font, Vector2(rx + 8, action_y + 25), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 96, 12, TEXT)
+		var assignment_rect := Rect2(rx,action_y,106,39)
+		DPNUISkin.button(self,assignment_rect,labels[i],assignment_rect.has_point(get_local_mouse_position()),false,false,true,true)
 
 func _draw_blueprint_panel(blueprint: Dictionary) -> void:
 	var vp := get_viewport_rect().size
@@ -1915,9 +1908,8 @@ func _draw_blueprint_panel(blueprint: Dictionary) -> void:
 	var percentage := 100.0 * float(blueprint["progress"]) / maxf(1.0, float(blueprint["work_required"]))
 	_draw_meter(Vector2(x + 18, y + 93), 314, "WORK COMPLETE", percentage)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 137), "MATERIALS COMMITTED %.0f" % float(blueprint["material_cost"]), HORIZONTAL_ALIGNMENT_LEFT, 314, 11, MUTED)
-	draw_rect(Rect2(x + 16, y + 152, 316, 37), Color("#503435"))
-	draw_rect(Rect2(x + 16, y + 152, 316, 37), BAD, false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(x + 30, y + 176), "CANCEL BLUEPRINT (75% MATERIAL REFUND)", HORIZONTAL_ALIGNMENT_LEFT, 297, 11, TEXT)
+	var cancel_project := Rect2(x+16,y+152,316,37)
+	DPNUISkin.button(self,cancel_project,"CANCEL BLUEPRINT   /   75% REFUND",cancel_project.has_point(get_local_mouse_position()),false,true)
 
 func _handle_inspector_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -2050,8 +2042,7 @@ func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> voi
 	draw_string(ThemeDB.fallback_font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, 150, 10, MUTED)
 	draw_string(ThemeDB.fallback_font, pos + Vector2(width-42,0), "%d%%" % int(clampf(value,0.0,100.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, TEXT)
 	var bar_y := pos.y + 10.0
-	draw_rect(Rect2(pos.x,bar_y,width,8), Color("#25282c"))
-	draw_rect(Rect2(pos.x,bar_y,width * clampf(value,0.0,100.0)/100.0,8), ACCENT if value < 45.0 else GOOD)
+	DPNUISkin.meter(self,Rect2(pos.x,bar_y,width,8),value/100.0,ACCENT if value < 45.0 else GOOD)
 
 func _select_at(screen_pos: Vector2) -> void:
 	var world := _screen_to_world(screen_pos)
