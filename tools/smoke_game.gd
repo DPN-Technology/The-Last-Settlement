@@ -1597,7 +1597,7 @@ func _smoke() -> void:
 		push_error("SMOKE: named facilities, entry lights or staged interiors missing")
 		quit(1)
 		return
-	var snapshot := sim.resources.duplicate(true)
+	var readability_resource_snapshot := sim.resources.duplicate(true)
 	var actor: Dictionary=sim.get_settlement_citizens()[0]
 	instance.selected_citizen=actor
 	instance.build_mode=false
@@ -1614,7 +1614,7 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance._toggle_camera_follow()
-	if instance.camera_follow_citizen_id!=0 or sim.resources!=snapshot:
+	if instance.camera_follow_citizen_id!=0 or sim.resources!=readability_resource_snapshot:
 		push_error("SMOKE: unfollow did not stop or changed resources")
 		quit(1)
 		return
