@@ -26,7 +26,7 @@ static func page_rect(screen: Vector2, index: int) -> Rect2:
 	return Rect2(rect.end.x-111.0+float(index)*47.0,rect.position.y+158.0,42.0,25.0)
 
 static func visible_rows(screen: Vector2) -> int:
-	return clampi(int(floor((panel_rect(screen).size.y-358.0)/54.0)),2,9)
+	return clampi(int(floor((panel_rect(screen).size.y-358.0)/54.0)),1,9)
 
 static func row_rect(screen: Vector2, index: int) -> Rect2:
 	var rect := panel_rect(screen)
