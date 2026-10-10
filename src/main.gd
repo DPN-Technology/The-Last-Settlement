@@ -648,10 +648,10 @@ func _draw_settlement_minimap() -> void:
 			tint=Color("#c8d1c7")
 		draw_rect(footprint,Color("#0a0d10"))
 		draw_rect(footprint.grow(-1.0),tint)
-		draw_rect(footprint,Color("#e9decb",0.42),false,1.0)
+		DPNUISkin.outline(self,footprint,Color("#e9decb",0.42),1.0)
 	for blueprint in sim.blueprints:
 		var ghost := _settlement_minimap_project(Vector2(blueprint["position"]),plot)
-		draw_rect(Rect2(ghost-Vector2(3,3),Vector2(6,6)),Color("#f05267"),false,1.0)
+		DPNUISkin.outline(self,Rect2(ghost-Vector2(3,3),Vector2(6,6)),Color("#f05267"),1.0)
 	for person in sim.get_settlement_citizens():
 		if bool(person.get("on_expedition",false)):
 			continue
@@ -683,7 +683,7 @@ func _draw_world_map() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(17,SettlementUILayout.TOP_H+27.0),"REGION  /  EXPLORE & SALVAGE",HORIZONTAL_ALIGNMENT_LEFT,440,17,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(17,SettlementUILayout.TOP_H+45.0),"Select a discovered location to inspect it.",HORIZONTAL_ALIGNMENT_LEFT,320,11,MUTED)
 	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#100d12ee"))
-	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#613541"),false,1)
+	DPNUISkin.outline(self,Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#613541"),1.0)
 	var discovered := sim.world_simulation.get_discovered_locations()
 	var site_rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/32.0)))
 	for i in range(site_rows):
@@ -732,7 +732,7 @@ func _draw_world_map() -> void:
 			var label_y := clampf(location_pos.y-11.0,map.position.y+42.0,map.end.y-32.0)
 			var caption := Rect2(label_x-3.0,label_y-13.0,123.0,20.0)
 			draw_rect(caption,Color("#07090c",0.81))
-			draw_rect(caption,Color("#9c3445",0.8) if focused else Color("#445355",0.43),false,1.0)
+			DPNUISkin.outline(self,caption,Color("#9c3445",0.8) if focused else Color("#445355",0.43),1.0)
 			draw_string(ThemeDB.fallback_font,Vector2(label_x+3.0,label_y+1.0),label,HORIZONTAL_ALIGNMENT_LEFT,112.0,11,TEXT)
 	for expedition in sim.world_simulation.get_active_expeditions():
 		var destination: Dictionary = sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
@@ -1645,7 +1645,7 @@ func _draw_hud() -> void:
 		var width := minf(vp.x - 44.0, 650.0)
 		var notice := Rect2(14,top_h+10.0,width,32)
 		draw_rect(notice,PANEL_SOLID)
-		draw_rect(notice,GOOD,false,1.0)
+		DPNUISkin.outline(self,notice,GOOD,1.0)
 		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
 
 func _settlement_attention() -> Array:
