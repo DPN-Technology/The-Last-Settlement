@@ -1,3 +1,29 @@
+# INCIDENT CHANNEL & COMMAND MENU INPUT FIX — ISSUE #10
+
+The player confirmed that the persistent red-line issue #9 is **fixed** in the Windows build containing the cached DPN raster controls. Issue #9 is closed from that player confirmation. The new issue **#10** addresses the unresponsive, oversized Settlement Incident Channel and basic command-screen usability.
+
+## Implemented playable changes
+
+- **F2** opens a modal **DPN / Settlement Incident Command** panel above whatever other screen is open (World, Workforce, Nation, Industry, Build, etc). It no longer disappears underneath some modes or traps the player.
+- Close it with the visible upper-right **X**, the bottom **CLOSE** action, **F2** again, **Escape**, or a click on the shaded space outside the command window. Clicks outside only dismiss the modal; they will *not* accidentally place buildings or activate covered toolbar controls.
+- Four working event filters: **ALL**, **ALERTS** (critical and warning), **OPERATIONS** (routine/positive), and **UNREAD**. Use the previous/next page arrows, Page Up/Page Down, or the mouse wheel to browse. Clicking an event selects its full briefing.
+- Real counts for distinct event groups, current alerts and unread records. Repeated identical messages (especially duplicate **LOAD COMPLETE** entries) are grouped with an occurrence count rather than filling the panel with identical rows. This presentation grouping does not mutate the actual save/history.
+- Click **ACKNOWLEDGE** to mark a selected incident as read for the current session, or **MARK ALL READ** to acknowledge all records in the active filter. History is not deleted. **OPEN SYSTEM** opens a *real* related gameplay screen only for events that clearly reference one (e.g. grid → Build, production → Industry, relay → Region, council → Govern, staff duty → Workforce). Unsupported events do not pretend to be actionable.
+- A clearly visible **X** has also been added to Workforce, Build, Region, Govern, Industry, Workshop, Factions, Nation, Guide, Update and survivor/facility inspector screens. Close hit targets share the same responsive geometry as the drawn buttons.
+
+## Windows acceptance
+
+1. Press **F2** when no panel is open. Click the upper-right X; reopen and use CLOSE; reopen and hit Escape; reopen and press F2. All four dismissal methods must work instantly.
+2. Open **Industry** or **Nation**, press F2, and verify Incident Command appears **above** it. Clicking the shaded world must close only Incident Command, leaving Industry/Nation open. Mouse wheel during the modal should change incident pages, not the settlement camera zoom.
+3. Generate multiple SAVE/LOAD events and verify repeated entries show an `xN` count. Change filter tabs and use pagination, select an entry and acknowledge it; the original simulation events must remain available.
+4. Select a real **PRODUCTION** or **GRID** incident, click **OPEN SYSTEM** and confirm Industry or Build opens. Records without a related game screen must not launch fabricated actions.
+5. Open Build, Region, Govern, Industry, Workshop, Factions, Nation, Workforce, Guide and a survivor inspector; verify each has a mouse-clickable upper-right X that closes the intended screen without touching simulation state.
+6. Test at 960×720, 1366×768 and 1920×1080, then use **F8** for direct screenshots of Incident Command and representative other menus.
+
+**Scope limit:** These changes make the screens interactive, accessible and consistent, but do not yet turn every existing management page into a finished commercial-grade interface. Continue improving the remaining menu content and layout through tracked player feedback. Keep PR #6 unmerged until Windows playtesting is approved.
+
+---
+
 # ACTIVE BLOCKER — ISSUE #9: RED DIAGONAL UI LINES (OCTOBER 10)
 
 **Not resolved.** The player supplied another direct F8 comparison (`last-settlement-1791653529-3D.png`, `last-settlement-1791653529-FULL.png`, and matching graphics report): the unadorned 3D pass is clean; the composite FULL pass retains diagonal red lines despite OpenGL Compatibility rendering and the all-filled-rectangle UI code from the previous attempt.
