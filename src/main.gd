@@ -628,9 +628,15 @@ func _draw_world_map() -> void:
 		if destination.is_empty():
 			continue
 		var end := SettlementUILayout.region_point(vp,Vector2(destination["position"]))
-		var progress := clampf(float(expedition["progress"])/maxf(1.0,float(expedition["distance"])),0.0,1.0)
-		var exp_pos := home.lerp(end,progress if str(expedition["status"]) == "outbound" else (1.0-progress if str(expedition["status"]) == "returning" else 1.0))
-		draw_line(home,end,Color("#ca57586f"),1.4)
+		var traveled := float(expedition["progress"])
+		var distance := maxf(1.0,float(expedition["distance"]))
+		var phase := str(expedition["status"])
+		var return_distance := float(expedition.get("return_distance",distance))
+		var recalled := bool(expedition.get("recalled",false))
+		var route_end := home.lerp(end,clampf(return_distance/distance,0.0,1.0)) if recalled else end
+		var fraction := clampf(traveled/distance,0.0,1.0)
+		var exp_pos := home.lerp(end,fraction) if phase=="outbound" else (route_end.lerp(home,clampf(traveled/maxf(0.01,return_distance),0.0,1.0)) if phase=="returning" else end)
+		draw_line(home,route_end,Color("#ca57586f"),1.4)
 		draw_circle(exp_pos,5.0,ACCENT)
 		draw_string(ThemeDB.fallback_font,exp_pos+Vector2(7,-7),"EXP %d" % int(expedition["id"]),HORIZONTAL_ALIGNMENT_LEFT,70,9,TEXT)
 	_draw_ui_panel(side,ACCENT)
@@ -681,16 +687,23 @@ func _draw_world_map() -> void:
 	draw_string(ThemeDB.fallback_font,dispatch.position+Vector2(11,22),"DISPATCH TEAM  /  PROVISION & DEPART [G]" if can_go else str(mission["reason"]),HORIZONTAL_ALIGNMENT_LEFT,dispatch.size.x-20,11,TEXT if can_go else WARN)
 	draw_string(ThemeDB.fallback_font,Vector2(px,py+340),"ACTIVE EXPEDITIONS   %d" % sim.world_simulation.get_active_expeditions().size(),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-30,12,ACCENT)
 	var ey := py+363.0
-	for expedition in sim.world_simulation.get_active_expeditions():
+	var visible_expeditions := sim.world_simulation.get_active_expeditions()
+	for row in range(visible_expeditions.size()):
 		if ey>side.end.y-92:
 			break
+		var expedition: Dictionary = visible_expeditions[row]
 		var target := sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
 		var stage := str(expedition["status"])
 		var elapsed := float(expedition.get("progress",0.0))
-		var phase_target := float(expedition.get("search_hours",6.0)) if stage=="searching" else float(expedition.get("distance",1.0))
-		var completion := clampf(elapsed/maxf(1.0,phase_target),0.0,1.0)
-		draw_string(ThemeDB.fallback_font,Vector2(px,ey),"Team %d  •  %s  •  %d survivors" % [int(expedition["id"]),stage.capitalize(),expedition["members"].size()],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,11,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(px,ey+15),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,10,MUTED)
+		var phase_target := float(expedition.get("search_hours",6.0)) if stage=="searching" else float(expedition.get("return_distance",expedition["distance"])) if stage=="returning" else float(expedition.get("distance",1.0))
+		var completion := clampf(elapsed/maxf(0.01,phase_target),0.0,1.0)
+		draw_string(ThemeDB.fallback_font,Vector2(px,ey),"Team %d  •  %s" % [int(expedition["id"]),stage.capitalize()],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-130,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(px,ey+15),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-130,10,MUTED)
+		var recall := SettlementUILayout.region_recall_rect(vp,row)
+		var can_recall := stage in ["outbound","searching"]
+		draw_rect(recall,Color("#623035") if can_recall and recall.has_point(get_local_mouse_position()) else (Color("#3b2a30") if can_recall else Color("#1b2930")))
+		draw_rect(recall,ACCENT if can_recall else Color("#435a62"),false,1)
+		draw_string(ThemeDB.fallback_font,recall.position+Vector2(9,17),"RECALL TEAM" if can_recall else "RETURNING",HORIZONTAL_ALIGNMENT_LEFT,recall.size.x-12,10,TEXT if can_recall else MUTED)
 		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#293d43"))
 		draw_rect(Rect2(px,ey+20,(side.size.x-36.0)*completion,3.0),GOOD)
 		ey+=48.0
@@ -712,6 +725,17 @@ func _world_map_select(screen_pos: Vector2) -> void:
 
 func _handle_region_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
+	var side := SettlementUILayout.side_panel(vp,372.0)
+	var active := sim.world_simulation.get_active_expeditions()
+	for i in range(active.size()):
+		if side.position.y+363.0+float(i)*48.0>side.end.y-92.0:
+			break
+		if SettlementUILayout.region_recall_rect(vp,i).has_point(position):
+			var expedition: Dictionary=active[i]
+			if sim.world_simulation.recall_expedition(sim,int(expedition["id"])):
+				playtest_notice="TEAM %d RECALLED  /  RETURNING TO LAST HAVEN" % int(expedition["id"])
+				playtest_notice_seconds=5.0
+			return true
 	var discovered := sim.world_simulation.get_discovered_locations()
 	var rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/29.0)))
 	for i in range(rows):
