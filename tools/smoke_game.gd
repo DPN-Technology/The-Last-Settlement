@@ -1523,12 +1523,12 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance._handle_incident_click(SettlementIncidentUI.tab_rect(incident_screen,3).get_center())
-	var unread_groups := instance._incident_entries()
+	var unread_groups: Array[Dictionary] = instance._incident_entries()
 	if not unread_groups.is_empty() and bool(unread_groups[0].get("read",false)):
 		push_error("SMOKE: Unread filter includes acknowledged events")
 		quit(1)
 		return
-	var active_economy := instance.economy_mode
+	var active_economy: bool = bool(instance.economy_mode)
 	if not instance._handle_incident_click(Vector2(2.0,incident_screen.y*0.5)) or instance.incident_panel_visible or instance.economy_mode!=active_economy:
 		push_error("SMOKE: Outside click leaked through F2 modal or failed to dismiss")
 		quit(1)
