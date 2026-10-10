@@ -96,4 +96,4 @@ static func draw_cartography(canvas: CanvasItem, region: Rect2, atlas: RegionAtl
 	canvas.draw_string(ThemeDB.fallback_font,Vector2(region.end.x-16,region.position.y+20),"N  ↑",HORIZONTAL_ALIGNMENT_RIGHT,66.0,13,Color("#ec5363"))
 	canvas.draw_rect(Rect2(region.position.x,region.end.y-27.0,region.size.x,27.0),Color("#080b11",0.93))
 	canvas.draw_string(ThemeDB.fallback_font,Vector2(region.position.x+12,region.end.y-9),"LAND   /   WATER   /   ROAD TRACES   •   SELECT MARKERS TO PLAN MISSIONS",HORIZONTAL_ALIGNMENT_LEFT,region.size.x-26.0,10,Color("#c4bab1"))
-	canvas.draw_rect(region,Color("#9b3949",0.65),false,1.0)
+	DPNUISkin.outline(canvas,region,Color("#9b3949",0.65),1.0)
