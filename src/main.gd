@@ -2285,9 +2285,26 @@ func _capture_game_screenshot() -> void:
 		playtest_notice = "SCREENSHOT FAILED // FRAME UNAVAILABLE"
 		playtest_notice_seconds = 5.0
 		return
-	var capture_path := target_folder.path_join("last-settlement-%d.png" % int(Time.get_unix_time_from_system()))
+	var capture_id := "last-settlement-%d" % int(Time.get_unix_time_from_system())
+	var capture_path := target_folder.path_join(capture_id+"-FULL.png")
 	if screenshot.save_png(capture_path) == OK:
-		playtest_notice = "GAME SCREENSHOT SAVED // " + capture_path.get_file()
+		# A raw camera-pass capture isolates all 3D rendering from the DPN
+		# canvas UI. If the streak is ONLY in FULL, isolate UI; if in both,
+		# isolate engine/GPU. If neither, check Windows display/camera path.
+		var world_saved := false
+		if settlement_viewport!=null:
+			var scene_img: Image=settlement_viewport.get_texture().get_image()
+			if scene_img!=null and not scene_img.is_empty():
+				world_saved=scene_img.save_png(target_folder.path_join(capture_id+"-3D.png"))==OK
+		var record := FileAccess.open(target_folder.path_join(capture_id+"-GRAPHICS.txt"),FileAccess.WRITE)
+		if record!=null:
+			record.store_string("THE LAST SETTLEMENT // DISPLAY ARTIFACT DIAGNOSTIC\n"+
+				"Renderer: "+str(RenderingServer.get_rendering_method())+"\n"+
+				"OS: "+OS.get_name()+"\n"+
+				"Game frame: "+str(screenshot.get_size())+"\n"+
+				"3D pass separately captured: "+str(world_saved)+"\n"+
+				"FULL=3D+UI. 3D=scene-only. Check whether streaks exist in either PNG.\n")
+		playtest_notice = "2 GRAPHICS CAPTURES SAVED [F8]" if world_saved else "GRAPHICS CAPTURE SAVED [F8]"
 		if OS.get_name() == "Windows":
 			OS.shell_open(absolute_dir)
 	else:
