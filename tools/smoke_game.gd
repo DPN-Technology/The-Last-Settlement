@@ -508,11 +508,95 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance.build_mode = false
-	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[0].get_center()) or not instance.overview_visible:
-		push_error("SMOKE: Population telemetry cannot open settlement overview")
+	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[0].get_center()) or not instance.workforce_mode:
+		push_error("SMOKE: Population telemetry cannot open playable workforce command")
 		quit(1)
 		return
-	instance.overview_visible = false
+	# Workforce uses the same rectangles for drawing and mouse hits. Reassign
+	# a real resident and verify that production's primary job actually changes.
+	var roster := sim.get_settlement_citizens()
+	if roster.is_empty():
+		push_error("SMOKE: Workforce roster unexpectedly empty")
+		quit(1)
+		return
+	instance._handle_workforce_click(SettlementUILayout.workforce_row(screen,0).get_center())
+	if instance.workforce_selected_id != int(roster[0]["id"]):
+		push_error("SMOKE: Workforce roster row fails to select survivor")
+		quit(1)
+		return
+	var original_job: String = str(roster[0]["job"])
+	var new_job := "Farmer" if original_job!="Farmer" else "Engineer"
+	var job_index := CitizenFactory.JOBS.find(new_job)
+	instance._handle_workforce_click(SettlementUILayout.workforce_job(screen,job_index).get_center())
+	if str(roster[0]["job"])!=new_job or int(roster[0]["target_blueprint_id"])!=0:
+		push_error("SMOKE: Job selection failed to change real production assignment")
+		quit(1)
+		return
+	# A Builder changing job cannot leave a claimed blueprint behind.
+	roster[0]["job"]="Builder"
+	roster[0]["target_blueprint_id"]=9002
+	var held_blueprint: Dictionary={"id":9002,"assigned_builder":int(roster[0]["id"])}
+	sim.blueprints.append(held_blueprint)
+	if not sim.assign_citizen_job(roster[0],"Engineer") or int(held_blueprint["assigned_builder"])!=0:
+		push_error("SMOKE: Reassigned Builder left stale construction lock")
+		quit(1)
+		return
+	sim.blueprints.erase(held_blueprint)
+	# Children and away teams must never be silently reassigned.
+	var second_person: Dictionary=roster[1]
+	var old_age: int=int(second_person["age"])
+	var old_role: String=str(second_person["job"])
+	second_person["age"]=8
+	second_person["job"]="Child"
+	if sim.assign_citizen_job(second_person,"Guard"):
+		push_error("SMOKE: Child was assigned adult guard duty")
+		quit(1)
+		return
+	second_person["age"]=old_age
+	second_person["job"]=old_role
+	# Pagination is a real mouse action, with no world input passthrough.
+	if roster.size()>SettlementUILayout.workforce_page_size(screen):
+		instance._handle_workforce_click(SettlementUILayout.workforce_action(screen,1).get_center())
+		if instance.workforce_page!=1:
+			push_error("SMOKE: Workforce page navigation is not clickable")
+			quit(1)
+			return
+	instance._handle_workforce_click(SettlementUILayout.workforce_action(screen,2).get_center())
+	if instance.workforce_mode:
+		push_error("SMOKE: Workforce close control did not dismiss overlay")
+		quit(1)
+		return
+	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768),Vector2(1024,600)]:
+		var personnel_panel := SettlementUILayout.workforce_panel(target_size)
+		for role_i in range(CitizenFactory.JOBS.size()):
+			if not personnel_panel.encloses(SettlementUILayout.workforce_job(target_size,role_i)):
+				push_error("SMOKE: Workforce job target falls outside modal")
+				quit(1)
+				return
+		for row_i in range(SettlementUILayout.workforce_page_size(target_size)):
+			if not personnel_panel.encloses(SettlementUILayout.workforce_row(target_size,row_i)):
+				push_error("SMOKE: Workforce roster target falls outside modal")
+				quit(1)
+				return
+		for action_i in range(3):
+			if not personnel_panel.encloses(SettlementUILayout.workforce_action(target_size,action_i)):
+				push_error("SMOKE: Workforce page action falls outside modal")
+				quit(1)
+				return
+	# Keyboard opens and closes the same command, not a second UI state.
+	var f6 := InputEventKey.new()
+	f6.keycode=KEY_F6
+	f6.pressed=true
+	instance._unhandled_input(f6)
+	if not instance.workforce_mode:
+		push_error("SMOKE: F6 failed to open workforce")
+		quit(1)
+		return
+	instance._unhandled_input(f6)
+	if instance.workforce_mode:
+		push_error("SMOKE: F6 failed to close workforce")
+		quit(1)
+		return
 	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[5].get_center()) or not instance.governance_mode:
 		push_error("SMOKE: Morale telemetry cannot open real governance controls")
 		quit(1)
@@ -809,6 +893,6 @@ func _smoke() -> void:
 			return
 	instance.help_mode=false
 	instance.civilization_mode=false
-	print("PLAYTEST SMOKE PASS: collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
+	print("PLAYTEST SMOKE PASS: workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
 	instance.queue_free()
 	quit(0)
