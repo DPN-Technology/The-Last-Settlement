@@ -64,6 +64,12 @@ static func region_dispatch_rect(size: Vector2) -> Rect2:
 	var panel := side_panel(size,372.0)
 	return Rect2(panel.position+Vector2(16.0,194.0),Vector2(panel.size.x-32.0,33.0))
 
+static func civilization_tab_rect(size: Vector2, index: int, count: int = 6) -> Rect2:
+	var area := side_panel(size,620.0)
+	var gap := 5.0
+	var width := (area.size.x-28.0-gap*float(count-1))/maxf(1.0,float(count))
+	return Rect2(area.position+Vector2(14.0+float(index)*(width+gap),66.0),Vector2(width,32.0))
+
 static func build_palette(size: Vector2, _count: int) -> Rect2:
 	var max_height := maxf(250.0,size.y-TOP_H-BOTTOM_H-23.0)
 	return Rect2(12.0,TOP_H+8.0,minf(350.0,size.x-24.0),minf(443.0,max_height))
