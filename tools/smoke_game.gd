@@ -47,6 +47,84 @@ func _smoke() -> void:
 		push_error("SMOKE: 3D survivors were not created")
 		quit(1)
 		return
+	# The industrial art has to be physical 3D equipment, and its mechanism
+	# must only run when an active job and eligible worker exist.
+	var world_3d: SettlementWorld3D=instance.settlement_world
+	if world_3d.industrial_yards.is_empty():
+		push_error("SMOKE: No physically modeled press-and-conveyor yard at the workshop")
+		quit(1)
+		return
+	var machine: Dictionary=world_3d.industrial_yards[0]
+	var yard_root: Node3D=machine["root"]
+	if yard_root.get_node_or_null("StampingRam")==null or yard_root.get_node_or_null("MovingBlankCarrier")==null or yard_root.get_node_or_null("PressUpright")==null:
+		push_error("SMOKE: Missing real industrial press components")
+		quit(1)
+		return
+	var visual_worker: Dictionary=sim.get_settlement_citizens()[0]
+	var original_worker: Dictionary=visual_worker.duplicate(true)
+	var original_hour: float=sim.hour
+	visual_worker["age"]=35
+	visual_worker["job"]="Engineer"
+	visual_worker["shift"]="DAY"
+	visual_worker["health"]=90.0
+	visual_worker["incarcerated"]=false
+	visual_worker["on_expedition"]=false
+	visual_worker["work_priority"]["Engineer"]=3
+	sim.hour=10.0
+	var eco_visual: EconomySimulation=sim.economy_simulation
+	var old_hold: bool=eco_visual.production_paused
+	eco_visual.production_paused=false
+	var active_visual_batch: Dictionary={"id":-5555,"recipe":"Machine Parts","status":"working","progress":6.0}
+	eco_visual.production_queue.push_front(active_visual_batch)
+	world_3d.sync(sim,{}, {}, false, Vector2(700,450),sim.get_build_catalog()[0],false,0.35)
+	if not world_3d._industry_operating(sim) or not bool((machine["running_light"] as MeshInstance3D).visible):
+		push_error("SMOKE: Working industrial crew does not activate the 3D equipment")
+		quit(1)
+		return
+	var press: Node3D=machine["ram"]
+	var moving_y: float=press.position.y
+	world_3d.sync(sim,{}, {}, false, Vector2(700,450),sim.get_build_catalog()[0],false,0.48)
+	if is_equal_approx(moving_y,press.position.y):
+		push_error("SMOKE: Production press has no animated hydraulic stroke")
+		quit(1)
+		return
+	var stopped_y: float=press.position.y
+	eco_visual.production_paused=true
+	world_3d.sync(sim,{}, {}, false, Vector2(700,450),sim.get_build_catalog()[0],false,0.67)
+	if not is_equal_approx(stopped_y,press.position.y) or bool((machine["running_light"] as MeshInstance3D).visible):
+		push_error("SMOKE: Paused workshop press moves or incorrectly shows RUNNING")
+		quit(1)
+		return
+	var worker_id := str(visual_worker["id"])
+	var worker_mesh: Node3D=world_3d.people[worker_id]
+	visual_worker["current_action"]="Work: Engineering"
+	SettlementActivity3D.update(worker_mesh,visual_worker,false,false,0.4)
+	if not bool((worker_mesh.get_node("LiveDutyEquipment/Construction") as Node3D).visible):
+		push_error("SMOKE: Working Engineer lacks visible 3D work equipment")
+		quit(1)
+		return
+	visual_worker["current_action"]="Off Duty"
+	SettlementActivity3D.update(worker_mesh,visual_worker,false,false,0.4)
+	if bool((worker_mesh.get_node("LiveDutyEquipment/Construction") as Node3D).visible):
+		push_error("SMOKE: Off-duty worker still appears to use machinery tools")
+		quit(1)
+		return
+	visual_worker["on_expedition"]=true
+	world_3d._update_people(sim,{})
+	if world_3d.people.has(worker_id):
+		push_error("SMOKE: Survivor deployed on expedition still rendered at home")
+		quit(1)
+		return
+	for key in original_worker.keys():
+		visual_worker[key]=original_worker[key]
+	sim.hour=original_hour
+	eco_visual.production_paused=old_hold
+	eco_visual.production_queue.erase(active_visual_batch)
+	world_3d.sync(sim,{}, {},false,Vector2(700,450),sim.get_build_catalog()[0],false,0.016)
+	if not world_3d.people.has(worker_id):
+		push_error("SMOKE: Returned survivor does not reappear in physical settlement")
+		quit(1)
+		return
 	var original_pause := sim.paused
 	var event := InputEventKey.new()
 	event.pressed = true
@@ -1126,6 +1204,6 @@ func _smoke() -> void:
 		quit(1)
 		return
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(workshop_save))
-	print("PLAYTEST SMOKE PASS: real workshop order control, regional missions and recall, workforce management, 3D navigation and save/load")
+	print("PLAYTEST SMOKE PASS: live 3D press equipment and survivor duties, real workshop order control, regional missions, navigation and save/load")
 	instance.queue_free()
 	quit(0)
