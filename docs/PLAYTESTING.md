@@ -1,3 +1,13 @@
+# OCTOBER 10 FOLLOW-UP: ARTIFICIAL POLYGON PATCHES ON HILLS
+
+New Windows screenshots confirm black void and UI notice overlap were greatly improved, but hills still show wide hard-edged patches and the map can appear to be endless uniform brown. Root cause in code: the previous "horizon fix" put a textured 1400m square PlaneMesh at y=-0.16 directly beneath the full heightfield. Procedural valleys sometimes dip below it, revealing the flat plane *on top* of the actual terrain from the camera. The horizon material was also mis-scaled by 175x in addition to its UVs, making it look visually uniform.
+
+**Correction:** replace the full underlay with an indexed four-strip ArrayMesh exterior ring from ±160 to ±700 with a deliberate 320×320 center opening. Texture UVs now match the inner landscape. The emergency lower fallback still covers ±1100 and stays at y=-13. Increase sculpted terrain grid from 100×100 to 144×144 and index shared vertices before generating normals for smoother hills. Smoke tests check that no continuation triangle can overlay interior terrain and that hill geometry is indexed. Normal player progress, buildings, interior roof logic, camera panning and 1x/4x/12x timings remain untouched.
+
+**Windows acceptance:** at 07:03 clear weather, focus far hills east/west and approach abandoned outposts; sharp brown patchwork caused by the hidden floor should be absent and the horizon should still have no black triangles. Press Home to recenter Last Haven, test Tab roof modes, and retest GL Compatibility graphics capture. This still does not achieve the target cinematic art fidelity; high-quality authored terrain textures, terrain LOD and meshes are separate future work.
+
+---
+
 # TERRAIN VEGETATION REWORK
 
 Replaced three-ball tree proxies with varied tapered trunks, angled branch silhouettes, and thirteen individually shaped foliage clumps per tree. Trees are now anchored to the actual sculpted terrain height instead of y=0, with stable deterministic variation. This remains efficient low-poly proxy vegetation pending production tree assets; it does not block navigation. Added scene assertions for tree trunk and dense crown distribution.

@@ -368,13 +368,13 @@ func _build_terrain() -> void:
 	# just under the landscape without an exposed vertical cliff / black void.
 	var horizon := MeshInstance3D.new()
 	horizon.name="GroundHorizonContinuation"
-	var horizon_mesh := PlaneMesh.new()
-	horizon_mesh.size=Vector2(1400.0,1400.0)
-	horizon.mesh=horizon_mesh
+	# Use a true annular terrain extension with a hole in the middle:
+	# a full PlaneMesh would cover negative-height valleys and leave hard
+	# material polygons on the player-visible hills.
+	horizon.mesh=WastelandDetail.horizon_ring_mesh()
 	var horizon_material := (ground.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
-	horizon_material.uv1_scale=Vector3.ONE*175.0
+	horizon_material.uv1_scale=Vector3.ONE
 	horizon.material_override=horizon_material
-	horizon.position.y=-0.16
 	terrain_layer.add_child(horizon)
 
 	# Graveled settlement access. Physical 3D roads and lane marking strips.

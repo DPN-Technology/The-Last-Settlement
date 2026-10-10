@@ -47,7 +47,8 @@ static func terrain_mesh() -> ArrayMesh:
 	noise.frequency = 0.015
 	noise.fractal_octaves = 4
 	var side := 320.0
-	var cells := 100
+	# Smaller triangles and indexed smooth normals remove stair-stepped hills.
+	var cells := 144
 	var step := side / float(cells)
 	for zi in range(cells):
 		for xi in range(cells):
@@ -63,6 +64,42 @@ static func terrain_mesh() -> ArrayMesh:
 			for v in [a,c,b,b,c,d]:
 				tool.set_uv(Vector2((v.x + 160.0)/8.0,(v.z + 160.0)/8.0))
 				tool.add_vertex(v)
+	# Deduplicate shared positions/UVs before normal generation so hill
+	# gradients shade smoothly across triangle boundaries, not as flat slabs.
+	tool.index()
+	tool.generate_normals()
+	return tool.commit()
+
+# A separate exterior ring—not a giant overlapping plane. The previous
+# 1400x1400 floor sat beneath the entire sculpted heightfield; whenever a
+# hill dipped under -0.16m its upper face was replaced by a flat polygon.
+# Four edge strips leave a literal square hole for the 320x320 real terrain.
+static func horizon_ring_mesh() -> ArrayMesh:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var inner := 160.0
+	var outer := 700.0
+	var strips: Array[Rect2] = [
+		Rect2(-outer,-outer,outer*2.0,outer-inner),
+		Rect2(-outer,inner,outer*2.0,outer-inner),
+		Rect2(-outer,-inner,outer-inner,inner*2.0),
+		Rect2(inner,-inner,outer-inner,inner*2.0)
+	]
+	for strip in strips:
+		var x0: float=strip.position.x
+		var x1: float=strip.end.x
+		var z0: float=strip.position.y
+		var z1: float=strip.end.y
+		var a := Vector3(x0,-0.06,z0)
+		var b := Vector3(x1,-0.06,z0)
+		var c := Vector3(x0,-0.06,z1)
+		var d := Vector3(x1,-0.06,z1)
+		for point in [a,c,b,b,c,d]:
+			# Match the interior UV basis so the soil texture continues
+			# naturally into the distance instead of tiling 175x more.
+			tool.set_uv(Vector2((point.x+inner)/8.0,(point.z+inner)/8.0))
+			tool.add_vertex(point)
+	tool.index()
 	tool.generate_normals()
 	return tool.commit()
 

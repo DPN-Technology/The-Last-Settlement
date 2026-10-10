@@ -1471,8 +1471,31 @@ func _smoke() -> void:
 			quit(1)
 			return
 	var far_ground: MeshInstance3D=world.terrain_layer.get_node_or_null("GroundHorizonContinuation") as MeshInstance3D
-	if far_ground==null or not (far_ground.mesh is PlaneMesh) or (far_ground.mesh as PlaneMesh).size.x<1200.0:
-		push_error("SMOKE: extended camera horizon terrain missing")
+	if far_ground==null or not (far_ground.mesh is ArrayMesh):
+		push_error("SMOKE: non-overlapping exterior horizon ring missing")
+		quit(1)
+		return
+	# A previous regression put a large plane UNDER the whole world. Hills
+	# dipping beneath the plane revealed sharp artificial brown plateaus.
+	# Check every triangle, not only vertices: the continuation must contain
+	# no surface anywhere in the sculpted 320x320 central map.
+	var ring_arrays: Array=far_ground.mesh.surface_get_arrays(0)
+	var ring_vertices: PackedVector3Array=ring_arrays[Mesh.ARRAY_VERTEX]
+	var ring_indices: PackedInt32Array=ring_arrays[Mesh.ARRAY_INDEX]
+	if ring_indices.size()<24:
+		push_error("SMOKE: terrain continuation ring has no indexed triangles")
+		quit(1)
+		return
+	for triangle in range(0,ring_indices.size(),3):
+		var c: Vector3=(ring_vertices[ring_indices[triangle]]+ring_vertices[ring_indices[triangle+1]]+ring_vertices[ring_indices[triangle+2]])/3.0
+		if maxf(absf(c.x),absf(c.z))<159.9:
+			push_error("SMOKE: horizon terrain overlaps sculpted mountains inside playfield")
+			quit(1)
+			return
+	var actual_terrain_arrays: Array=ground.mesh.surface_get_arrays(0)
+	var indices: PackedInt32Array=actual_terrain_arrays[Mesh.ARRAY_INDEX]
+	if indices.size()<30000:
+		push_error("SMOKE: terrain triangles are too coarse or do not share vertices")
 		quit(1)
 		return
 	if world.world_environment.background_mode!=Environment.BG_COLOR or world.world_environment.background_color.get_luminance()<0.07:
