@@ -65,41 +65,122 @@ func get_discovered_locations() -> Array[Dictionary]:
 			result.append(location)
 	return result
 
-func create_expedition(sim: SettlementSimulation, location_id: int, max_members: int = 3) -> bool:
+# Planning is side-effect free. UI, mouse input, and the actual dispatch use the
+# exact same validation so an unavailable expedition cannot look actionable.
+const STRATEGIES := ["balanced","cautious","rapid"]
+
+static func strategy_speed(strategy: String) -> float:
+	match strategy:
+		"cautious": return 32.0
+		"rapid": return 53.0
+		_: return 42.0
+
+static func strategy_search_hours(strategy: String) -> float:
+	match strategy:
+		"cautious": return 8.0
+		"rapid": return 4.5
+		_: return 6.0
+
+func plan_expedition(sim: SettlementSimulation, location_id: int, requested_members: int = 3, strategy: String = "balanced") -> Dictionary:
+	var plan := {"ok":false,"reason":"","members":[],"food_cost":0.0,"water_cost":0.0,"medicine_cost":0.0,"risk":0.0,"distance":0.0,"travel_hours":0.0,"search_hours":0.0,"strategy":strategy}
+	if not STRATEGIES.has(strategy):
+		plan["reason"]="Unknown mission strategy."
+		return plan
 	var destination := get_location_by_id(location_id)
-	if destination.is_empty() or not destination["discovered"] or destination["depleted"]:
-		return false
-	if str(destination["type"]) in ["trade_hub","faction_settlement"]:
-		sim.add_event("EXPEDITION BLOCKED", "%s is an inhabited settlement, not a salvage site." % destination["name"], "warning")
-		return false
+	if destination.is_empty() or not bool(destination.get("discovered",false)):
+		plan["reason"]="Choose a discovered location."
+		return plan
+	if location_id<=1 or bool(destination.get("depleted",false)) or str(destination.get("type","")) in ["settlement","player_settlement","trade_hub","faction_settlement"]:
+		plan["reason"]="This site cannot be salvaged."
+		return plan
+	for expedition in get_active_expeditions():
+		if int(expedition.get("destination_id",-1))==location_id:
+			plan["reason"]="A team is already working at this site."
+			return plan
+	var candidates: Array[Dictionary] = []
+	for citizen in sim.get_settlement_citizens():
+		if int(citizen.get("age",0))<18 or bool(citizen.get("incarcerated",false)) or float(citizen.get("health",0.0))<30.0:
+			continue
+		var role := str(citizen.get("job",""))
+		var role_bonus := 0.0
+		match role:
+			"Scavenger": role_bonus=75.0
+			"Guard": role_bonus=65.0
+			"Medic": role_bonus=45.0
+			"Engineer": role_bonus=35.0
+		var score := role_bonus+float(citizen["skills"].get("security",0))*0.2+float(citizen["health"])*0.08
+		candidates.append({"id":int(citizen["id"]),"score":score})
+	# Stable ordering makes the briefing honest and repeatable until staff change.
+	candidates.sort_custom(func(a: Dictionary,b: Dictionary) -> bool:
+		if is_equal_approx(float(a["score"]),float(b["score"])):
+			return int(a["id"])<int(b["id"])
+		return float(a["score"])>float(b["score"])
+	)
 	var members: Array[int] = []
-	for citizen in sim.get_alive_citizens():
-		if members.size() >= max_members:
+	var target_count := clampi(requested_members,1,4)
+	for candidate in candidates:
+		if members.size()>=target_count:
 			break
-		if int(citizen["age"]) < 18:
-			continue
-		if citizen.get("on_expedition", false):
-			continue
-		if citizen["job"] in ["Scavenger","Guard","Medic","Engineer"]:
-			members.append(int(citizen["id"]))
-	if members.is_empty():
-		sim.add_event("EXPEDITION BLOCKED", "No suitable adult survivors are available.", "warning")
-		return false
-	var food_cost := 3.0 * members.size()
-	var water_cost := 4.0 * members.size()
-	var med_cost := 1.0
-	if float(sim.stockpiles["command"].get("meals",0.0)) < food_cost or float(sim.stockpiles["command"].get("water",0.0)) < water_cost:
-		sim.add_event("EXPEDITION BLOCKED", "Insufficient expedition food or water.", "warning")
-		return false
-	sim.stockpiles["command"]["meals"] -= food_cost
-	sim.stockpiles["command"]["water"] -= water_cost
-	if float(sim.stockpiles["medical"].get("medicine",0.0)) >= med_cost:
-		sim.stockpiles["medical"]["medicine"] -= med_cost
+		members.append(int(candidate["id"]))
+	if members.size()<target_count:
+		plan["reason"]="Only %d / %d fit adults available. Lower team size." % [members.size(),target_count]
+		plan["members"]=members
+		return plan
+	var meal_per_member := 4.0 if strategy=="rapid" else 3.0
+	var water_per_member := 5.0 if strategy=="cautious" else 4.0
+	var food_cost := meal_per_member*members.size()
+	var water_cost := water_per_member*members.size()
+	var medicine_cost := 1.0 if float(sim.stockpiles["medical"].get("medicine",0.0))>=1.0 else 0.0
+	var distance := Vector2(destination["position"]).distance_to(Vector2(600,410))
+	var security := 0.0
 	for id in members:
 		var member := sim.get_citizen_by_id(id)
-		member["on_expedition"] = true
-		member["current_action"] = "Expedition"
-	var distance := Vector2(destination["position"]).distance_to(Vector2(600,410))
+		security+=float(member["skills"].get("security",20))/100.0
+	var strategy_risk := 0.72 if strategy=="cautious" else (1.3 if strategy=="rapid" else 1.0)
+	var risk := clampf(maxf(0.05,float(destination["danger"])-security*0.08)*strategy_risk,0.02,0.95)
+	plan["members"]=members
+	plan["food_cost"]=food_cost
+	plan["water_cost"]=water_cost
+	plan["medicine_cost"]=medicine_cost
+	plan["risk"]=risk
+	plan["distance"]=distance
+	plan["travel_hours"]=distance/strategy_speed(strategy)
+	plan["search_hours"]=strategy_search_hours(strategy)
+	if float(sim.stockpiles["command"].get("meals",0.0))<food_cost:
+		plan["reason"]="Need %.0f prepared meals to provision the team." % food_cost
+	elif float(sim.stockpiles["command"].get("water",0.0))<water_cost:
+		plan["reason"]="Need %.0f clean water to provision the team." % water_cost
+	else:
+		plan["ok"]=true
+		plan["reason"]="Ready for dispatch"
+	return plan
+
+func create_expedition(sim: SettlementSimulation, location_id: int, max_members: int = 3, strategy: String = "balanced") -> bool:
+	var plan := plan_expedition(sim,location_id,max_members,strategy)
+	if not bool(plan["ok"]):
+		sim.add_event("EXPEDITION BLOCKED",str(plan["reason"]),"warning")
+		return false
+	var destination := get_location_by_id(location_id)
+	var members: Array[int] = []
+	for id in plan["members"]:
+		members.append(int(id))
+	# Debit supplies only after the complete plan was accepted; a rejected
+	# dispatch never changes stockpiles or survivor assignments.
+	sim.stockpiles["command"]["meals"]-=float(plan["food_cost"])
+	sim.stockpiles["command"]["water"]-=float(plan["water_cost"])
+	if float(plan["medicine_cost"])>0.0:
+		sim.stockpiles["medical"]["medicine"]-=float(plan["medicine_cost"])
+	for id in members:
+		var member := sim.get_citizen_by_id(id)
+		if str(member.get("job",""))=="Builder":
+			for blueprint in sim.blueprints:
+				if int(blueprint.get("assigned_builder",0))==id:
+					blueprint["assigned_builder"]=0
+		member["target_blueprint_id"]=0
+		member["on_expedition"]=true
+		member["target"]=Vector2.ZERO
+		member["current_action"]="Expedition"
+	var distance := float(plan["distance"])
 	expeditions.append({
 		"id":next_expedition_id,
 		"destination_id":location_id,
@@ -109,16 +190,20 @@ func create_expedition(sim: SettlementSimulation, location_id: int, max_members:
 		"progress":0.0,
 		"elapsed_hours":0.0,
 		"cargo":{"food":0.0,"water":0.0,"medicine":0.0,"materials":0.0,"scrap":0.0},
-		"radio_contact":distance <= get_radio_range(),
-		"encounter_resolved":false
+		"radio_contact":distance<=get_radio_range(),
+		"encounter_resolved":false,
+		"strategy":strategy,
+		"estimated_risk":float(plan["risk"]),
+		"search_hours":float(plan["search_hours"]),
+		"travel_speed":strategy_speed(strategy)
 	})
-	next_expedition_id += 1
+	next_expedition_id+=1
 	sim.complete_field_objective("expedition")
-	sim.add_event("EXPEDITION DEPARTED", "%d survivors departed for %s." % [members.size(), destination["name"]], "intel")
+	sim.add_event("EXPEDITION DEPARTED","%d survivors departed for %s (%s route)." % [members.size(),str(destination["name"]),strategy],"intel")
 	return true
 
 func _update_outbound(sim: SettlementSimulation, expedition: Dictionary, sim_hours: float) -> void:
-	expedition["progress"] = float(expedition["progress"]) + 42.0 * sim_hours
+	expedition["progress"] = float(expedition["progress"]) + float(expedition.get("travel_speed",42.0)) * sim_hours
 	if float(expedition["progress"]) >= float(expedition["distance"]):
 		expedition["status"] = "searching"
 		expedition["progress"] = 0.0
@@ -129,13 +214,13 @@ func _update_searching(sim: SettlementSimulation, expedition: Dictionary, sim_ho
 	expedition["progress"] = float(expedition["progress"]) + sim_hours
 	if not expedition["encounter_resolved"]:
 		_resolve_encounter(sim, expedition)
-	if float(expedition["progress"]) >= 6.0:
+	if float(expedition["progress"]) >= float(expedition.get("search_hours",6.0)):
 		_collect_loot(sim, expedition)
 		expedition["status"] = "returning"
 		expedition["progress"] = 0.0
 
 func _update_returning(sim: SettlementSimulation, expedition: Dictionary, sim_hours: float) -> void:
-	expedition["progress"] = float(expedition["progress"]) + 42.0 * sim_hours
+	expedition["progress"] = float(expedition["progress"]) + float(expedition.get("travel_speed",42.0)) * sim_hours
 	if float(expedition["progress"]) >= float(expedition["distance"]):
 		_return_home(sim, expedition)
 
@@ -149,7 +234,7 @@ func _resolve_encounter(sim: SettlementSimulation, expedition: Dictionary) -> vo
 		if member.is_empty() or not member["alive"]:
 			continue
 		security += float(member["skills"].get("security",20)) / 100.0
-	risk = maxf(0.05, risk - security * 0.08)
+	risk = float(expedition.get("estimated_risk",maxf(0.05, risk - security * 0.08)))
 	var roll := sim.rng.randf()
 	if roll < risk * 0.18:
 		var victim := _random_live_member(sim, expedition)
@@ -171,7 +256,10 @@ func _collect_loot(sim: SettlementSimulation, expedition: Dictionary) -> void:
 	var cargo: Dictionary = expedition["cargo"]
 	for key in location["loot"].keys():
 		var amount := float(location["loot"][key])
-		var recovered := amount * sim.rng.randf_range(0.55, 1.0)
+		var strategy := str(expedition.get("strategy","balanced"))
+		var minimum := 0.70 if strategy=="cautious" else (0.40 if strategy=="rapid" else 0.55)
+		var maximum := 1.0 if strategy!="rapid" else 0.85
+		var recovered := amount * sim.rng.randf_range(minimum,maximum)
 		cargo[key] = float(cargo.get(key,0.0)) + recovered
 	location["depleted"] = true
 	if location["type"] == "relay":
