@@ -137,6 +137,24 @@ func _smoke() -> void:
 		push_error("SMOKE: Facility minimap does not actually focus the live 3D camera")
 		quit(1)
 		return
+	# Minimap home button must be a genuine clickable route back to Last Haven.
+	var home_target := SettlementUILayout.minimap_home_rect(instance.get_viewport_rect().size)
+	var home_frame := SettlementUILayout.settlement_minimap(instance.get_viewport_rect().size)
+	if not home_frame.encloses(home_target):
+		push_error("SMOKE: minimap HOME button escapes the panel")
+		quit(1)
+		return
+	instance.settlement_world.focus=Vector3(115.0,0,115.0)
+	instance.settlement_world._position_camera()
+	instance.camera_follow_citizen_id=42
+	if not instance._handle_minimap_click(home_target.get_center()):
+		push_error("SMOKE: minimap HOME control was not clickable")
+		quit(1)
+		return
+	if instance.camera_follow_citizen_id!=0 or instance.settlement_world.focus.distance_to(instance.settlement_world.world_position(Vector2(700,380)))>0.08:
+		push_error("SMOKE: minimap HOME control failed to recenter and release tracking")
+		quit(1)
+		return
 	instance.settlement_world.focus=saved_focus
 	instance.settlement_world._position_camera()
 	var toggle_map := InputEventKey.new()

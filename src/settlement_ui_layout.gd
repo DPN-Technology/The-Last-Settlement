@@ -241,6 +241,12 @@ static func workshop_entry(size: Vector2) -> Rect2:
 static func settlement_minimap(size: Vector2) -> Rect2:
 	return Rect2(16.0,size.y-BOTTOM_H-184.0,238.0,170.0)
 
+# Always-visible way to return to the playable settlement after exploring
+# the outskirts. Anchored inside the map heading, not the map plotting area.
+static func minimap_home_rect(size: Vector2) -> Rect2:
+	var frame := settlement_minimap(size)
+	return Rect2(frame.end.x-67.0,frame.position.y+4.0,57.0,25.0)
+
 static func minimap_plot(size: Vector2) -> Rect2:
 	var box := settlement_minimap(size)
 	return Rect2(box.position+Vector2(12,35),box.size-Vector2(24,49))

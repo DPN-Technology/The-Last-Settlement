@@ -1,3 +1,9 @@
+# MINIMAP HOME NAVIGATION
+
+The screenshots show testers traveling far into empty wasteland until Last Haven is nearly off screen. A small **HOME** button now sits in the minimap title, visible whenever that map is available, using the same safe cached HUD button graphics as the rest of the game. Clicking it recenters the actual 3D camera at the playable camp and releases any active survivor camera follow. The existing Home keyboard shortcut remains unchanged. A live smoke test clicks this new hitbox after placing the camera 115m into the outskirts and verifies focus and follow state reset.
+
+---
+
 # TERRAIN BIOME CONTRAST AND OUTPOST ANCHORING — OCTOBER 10
 
 Screenshot review after removing the intersecting horizon plane shows that the terrain remains too monochromatic, with scattered salvage pads inconsistent with the hill heights. This pass adds interpolated per-vertex soil/stone colors derived from actual terrain slope, elevation and slow spatial sediment noise; the standard baked albedo/normal material multiplies these colors. It also anchors the three exterior salvage-station roots to the same procedural terrain height used by the mountains and scatter. Decorative site geometry still has no collision and does not change simulation saves.

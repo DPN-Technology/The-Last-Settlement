@@ -763,7 +763,9 @@ func _draw_settlement_minimap() -> void:
 	var frame := SettlementUILayout.settlement_minimap(size)
 	var plot := SettlementUILayout.minimap_plot(size)
 	DPNUISkin.frame(self,frame,ui_animation_clock)
-	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,23),"LAST HAVEN  /  FACILITY MAP  [F5]",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-23,12,TEXT)
+	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,23),"LAST HAVEN / MAP [F5]",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-88.0,11,TEXT)
+	var home_action := SettlementUILayout.minimap_home_rect(size)
+	DPNUISkin.button(self,home_action,"HOME",home_action.has_point(get_local_mouse_position()),false,false,true,true)
 	draw_rect(plot,Color("#202823"))
 	for i in range(1,6):
 		var px := plot.position.x+plot.size.x*float(i)/6.0
@@ -807,7 +809,12 @@ func _handle_minimap_click(position: Vector2) -> bool:
 	var box := SettlementUILayout.settlement_minimap(get_viewport_rect().size)
 	if not box.has_point(position):
 		return false
-	var plot := SettlementUILayout.minimap_plot(get_viewport_rect().size)
+	var viewport := get_viewport_rect().size
+	if SettlementUILayout.minimap_home_rect(viewport).has_point(position):
+		camera_follow_citizen_id=0
+		_focus_world_position(Vector2(700.0,380.0))
+		return true
+	var plot := SettlementUILayout.minimap_plot(viewport)
 	if plot.has_point(position):
 		var normalized := (position-plot.position)/plot.size
 		_focus_world_position(Vector2(240.0+normalized.x*1200.0,135.0+normalized.y*730.0))
