@@ -22,19 +22,41 @@ const ICONS := ["build","region","govern","industry","factions","nation","save",
 # antialiased line path. This is the renderer-safe graphics path for Windows.
 # Drop malformed/stale coordinates rather than letting a line become a full-
 # screen diagonal. All existing gameplay buttons keep their hit geometry.
+# A hard UI diagnostic toggle. F10 suppresses purely cosmetic strokes but
+# keeps resource values, buttons, selection states and gameplay input intact.
+# The setting is intentionally temporary and never saved to settlements.
+static var diagnostic_minimal_strokes := false
+
+# Use ONLY filled axis-aligned rectangles for decorative strokes.
+# Godot's Windows canvas triangulation can exhibit cross-screen red streaks
+# with both draw_line() and draw_colored_polygon() on affected GPUs.
+# This implementation never submits a freeform polygon or line primitive.
 static func stroke(canvas: CanvasItem, point_a: Vector2, point_b: Vector2, tint: Color, thickness: float = 1.0) -> void:
+	if diagnostic_minimal_strokes:
+		return
 	if not is_finite(point_a.x) or not is_finite(point_a.y) or not is_finite(point_b.x) or not is_finite(point_b.y):
 		return
+	if absf(point_a.x)>4096.0 or absf(point_a.y)>4096.0 or absf(point_b.x)>4096.0 or absf(point_b.y)>4096.0:
+		return
 	var delta := point_b-point_a
-	if absf(point_a.x)>8192.0 or absf(point_a.y)>8192.0 or absf(point_b.x)>8192.0 or absf(point_b.y)>8192.0:
+	if delta.length_squared()<0.0001 or delta.length_squared()>4000000.0:
 		return
-	if delta.length_squared()<0.0001 or delta.length_squared()>67000000.0:
+	var width := clampf(thickness,1.0,6.0)
+	if absf(delta.y)<=0.8:
+		canvas.draw_rect(Rect2(minf(point_a.x,point_b.x),point_a.y-width*0.5,maxf(1.0,absf(delta.x)),width),tint,true)
 		return
-	var width := clampf(thickness,0.6,8.0)
-	var side := Vector2(-delta.y,delta.x).normalized()*width*0.5
-	var corners := PackedVector2Array([point_a+side,point_b+side,point_b-side,point_a-side])
-	canvas.draw_colored_polygon(corners,tint)
-
+	if absf(delta.x)<=0.8:
+		canvas.draw_rect(Rect2(point_a.x-width*0.5,minf(point_a.y,point_b.y),width,maxf(1.0,absf(delta.y))),tint,true)
+		return
+	# Angled icon/route strokes are rasterized into small bounded square quads,
+	# never a long polygon with unsafe GPU-indexed vertices. Cap draw calls.
+	var length := delta.length()
+	if length>1200.0:
+		return
+	var count := clampi(int(ceilf(length/3.0)),1,400)
+	for i in range(count+1):
+		var pos := point_a+delta*(float(i)/float(count))
+		canvas.draw_rect(Rect2(pos-Vector2.ONE*width*0.5,Vector2.ONE*width),tint,true)
 
 static func arc(canvas: CanvasItem, center: Vector2, radius: float, from_radians: float, to_radians: float, point_count: int, tint: Color, thickness: float = 1.0) -> void:
 	if not is_finite(radius) or radius<=0.0 or radius>1200.0:
