@@ -87,7 +87,7 @@ static func terrain(parent: Node3D, mats: Dictionary) -> Node3D:
 	ruins_noise.fractal_octaves=4
 	for at in [Vector3(-78,0,-46),Vector3(78,0,-43),Vector3(-82,0,46)]:
 		var post := Node3D.new()
-		post.name="AbandonedSalvagePoint"
+		post.name="AbandonedSalvagePoint_"+str(layer.get_child_count())
 		post.position=Vector3(at.x,WastelandDetail.terrain_height(at.x,at.z,ruins_noise),at.z)
 		layer.add_child(post)
 		box(post,"ShatteredPad",Vector3(0,0.22,0),Vector3(6.8,0.37,5.5),mats["concrete"])
