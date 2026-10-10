@@ -45,6 +45,8 @@ var governance_mode := false
 var economy_mode := false
 var faction_mode := false
 var faction_index := 0
+var civilization_tab := 0
+const CIVILIZATION_TABS := ["OVERVIEW", "COLONIES", "LOGISTICS", "RECOVERY", "POLICY", "ROSTER"]
 var civilization_mode := false
 var civilization_settlement_index := 0
 var civilization_route_index := 0
@@ -174,9 +176,18 @@ func _panel_action_items() -> Array:
 	if economy_mode:
 		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["MARKET",KEY_H],["RECIPE",KEY_N],["BUY 1",KEY_ENTER],["SELL 1",KEY_BACKSPACE],["QUEUE",KEY_C],["CLOSE",KEY_ESCAPE]]
 	if faction_mode:
+		if sim.faction_simulation.get_visible_factions(sim).is_empty():
+			return [["FIND RELAY",KEY_M],["CLOSE",KEY_ESCAPE]]
 		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["SEND AID",KEY_A],["TRADE",KEY_D],["TRUCE",KEY_Z],["CLOSE",KEY_ESCAPE]]
 	if civilization_mode:
-		return [["PREV SITE",KEY_LEFT],["NEXT SITE",KEY_RIGHT],["PREV ROUTE",KEY_UP],["NEXT ROUTE",KEY_DOWN],["CLOSE",KEY_ESCAPE]]
+		match civilization_tab:
+			0: return [["EXPLORE REGION",KEY_M],["CLOSE",KEY_ESCAPE]]
+			1: return [["PREV SITE",KEY_LEFT],["NEXT SITE",KEY_RIGHT],["NEXT MODULE",KEY_N],["QUEUE",KEY_C],["REFOCUS",KEY_E],["SEND AID",KEY_A],["CLOSE",KEY_ESCAPE]]
+			2: return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["ON/OFF",KEY_R],["FOCUS",KEY_F],["PRIORITY",KEY_P],["CLOSE",KEY_ESCAPE]]
+			3: return [["NEXT PROJECT",KEY_7],["CONTRIBUTE",KEY_8],["CLOSE",KEY_ESCAPE]]
+			4: return [["AUTONOMY",KEY_4],["FREIGHT",KEY_5],["SECURITY",KEY_6],["COUNCIL",KEY_T],["CONTRIBUTE",KEY_Y],["RIGHTS",KEY_U],["RESERVE",KEY_B],["CLOSE",KEY_ESCAPE]]
+			5: return [["NEXT",KEY_9],["ROSTER",KEY_0],["DEPLOY",KEY_D],["CLOSE",KEY_ESCAPE]]
+		return [["CLOSE",KEY_ESCAPE]]
 	if world_map_mode:
 		return [["DISPATCH",KEY_G],["CLOSE",KEY_ESCAPE]]
 	return []
@@ -184,7 +195,7 @@ func _panel_action_items() -> Array:
 func _action_panel_area() -> Rect2:
 	var vp := get_viewport_rect().size
 	if civilization_mode:
-		return SettlementUILayout.side_panel(vp,700.0)
+		return SettlementUILayout.side_panel(vp,620.0)
 	if update_mode:
 		var r := SettlementUILayout.side_panel(vp,500.0)
 		return Rect2(r.position,Vector2(r.size.x,minf(520.0,r.size.y)))
@@ -839,7 +850,7 @@ func _active_screen_label() -> String:
 func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
 	# Unified DPN war-room styling: graphite glass, electric-red identity rail,
 	# crisp technical corners and restrained illuminated command highlights.
-	draw_rect(rect,Color("#09151deF"))
+	draw_rect(rect,Color("#09151d"))
 	draw_rect(rect,Color("#49616e"),false,1)
 	draw_rect(Rect2(rect.position,Vector2(rect.size.x,3)),edge)
 	draw_rect(Rect2(rect.position+Vector2(0,3),Vector2(3,rect.size.y-3)),Color(edge,0.75))
@@ -870,7 +881,7 @@ func _draw_hud() -> void:
 		["PEOPLE", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
 		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food reserves for the settlement"],
 		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available to survivors"],
-		["POWER", "%.0f%%" % float(sim.resources["power"]), float(sim.resources["power"])/100.0, "Settlement electrical power"],
+		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Electricity produced versus needed. Low supply drains batteries."],
 		["MEALS", "%.0f" % float(sim.resources["meals"]), float(sim.resources["meals"])/maxf(1.0,float(alive)*2.0), "Prepared food ready for consumption"],
 		["MORALE", "%.0f%%" % morale, morale/100.0, "Average confidence and satisfaction"]
 	]
@@ -880,7 +891,7 @@ func _draw_hud() -> void:
 		var rect: Rect2 = resource_rects[i]
 		var item: Array = resources[i]
 		var fraction := clampf(float(item[2]),0.0,1.0)
-		var severity := BAD if fraction < 0.20 else (WARN if fraction < 0.40 else GOOD)
+		var severity := (WARN if fraction >= 0.85 else BAD) if i == 3 and fraction < 1.0 else (BAD if fraction < 0.20 else (WARN if fraction < 0.40 else GOOD))
 		var hovered_now := rect.has_point(get_local_mouse_position())
 		if hovered_now:
 			hovered = i
