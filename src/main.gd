@@ -1504,7 +1504,23 @@ func _draw_governance_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+423),"SELECTED  /  "+selected_law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-40,11,WARN)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+443),str(help_text[selected_law]),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+462),"Change law applies real citizen opinion effects.",HORIZONTAL_ALIGNMENT_LEFT,w-40,10,GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+485),"Unresolved justice cases: %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+485),"Unresolved justice cases: %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
+	# An actual council breakdown, based on survivor civic affiliations, fills
+	# the command canvas that used to be empty under the law list.
+	if area.size.y>=670.0:
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+517),"COUNCIL REPRESENTATION  /  ACTIVE RESIDENTS",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
+		var faction_names := ["Rebuilders","Common Voice","Watchkeepers","Free Settlers"]
+		var represented := 0.0
+		for faction_name in faction_names:
+			represented+=float(gov.factions[faction_name].get("support",0.0))
+		for i in range(faction_names.size()):
+			var key := str(faction_names[i])
+			var rect := Rect2(x+18.0+float(i%2)*(w-31.0)*0.5,y+533.0+float(int(i/2))*45.0,(w-45.0)*0.5,41.0)
+			DPNUISkin.list_row(self,rect,false,false)
+			var supporters := int(gov.factions[key].get("support",0.0))
+			draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,16),key,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-18.0,11,TEXT)
+			draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-10.0,rect.position.y+16.0),str(supporters),HORIZONTAL_ALIGNMENT_RIGHT,26.0,12,GOOD)
+			DPNUISkin.meter(self,Rect2(rect.position+Vector2(10.0,rect.size.y-8.0),Vector2(rect.size.x-20.0,4.0)),float(supporters)/maxf(1.0,represented),ACCENT)
 
 func _open_case_count() -> int:
 	var count := 0
