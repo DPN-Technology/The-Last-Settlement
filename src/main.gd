@@ -28,6 +28,8 @@ var incident_selected_index := 0
 var incident_acknowledged: Dictionary = {}
 var field_directives_visible := false
 var overview_visible := false
+const OVERVIEW_TABS := ["COMMAND", "UTILITIES", "INDUSTRY", "PEOPLE"]
+var overview_tab_index := 0
 var workforce_mode := false
 var workforce_page := 0
 var workforce_selected_id := 0
@@ -1700,6 +1702,153 @@ func _next_settlement_goal() -> String:
 		return "Keep your settlement alive until Day 2."
 	return "Opening goals completed. Expand your settlement at your own pace."
 
+# The four executive pages are read-only views of the same simulation,
+# never fabricated dashboard values or a separate settlement data model.
+func _overview_metrics() -> Array:
+	var people := sim.get_settlement_citizens()
+	var eco := sim.economy_simulation
+	var power := float(sim.utility_state["power_generated"])
+	var demand := float(sim.utility_state["power_demand"])
+	var stored := float(sim.utility_state["battery_charge"])
+	var capacity := maxf(1.0,float(sim.utility_state["battery_capacity"]))
+	var morale := sim.get_average_morale()
+	var live := eco.get_open_batches()
+	match overview_tab_index:
+		1:
+			return [
+				["GRID","%.0f/%.0f" % [power,demand],"GENERATION / LOAD",power<demand],
+				["BATTERY","%.0f%%" % (100.0*stored/capacity),"CHARGE",stored/capacity<0.25],
+				["WATER","%.0f" % float(sim.resources["water"]),"RESERVE",float(sim.resources["water"])<float(people.size())*4.0],
+				["SANITATION","%.0f%%" % float(sim.utility_state["sanitation"]),"SERVICE",float(sim.utility_state["sanitation"])<65.0]
+			]
+		2:
+			return [
+				["CREDITS","%.0f" % eco.credits,"LOCAL TREASURY",eco.credits<10.0],
+				["STORAGE","%.0f%%" % (100.0*eco.warehouse_used/maxf(1.0,eco.warehouse_capacity)),"WAREHOUSE",eco.warehouse_pressure>0.7],
+				["EFFICIENCY","%.0f%%" % (100.0*eco.production_efficiency),"PRODUCTION",eco.production_efficiency<0.4],
+				["ORDERS",str(live.size()),"OPEN JOBS",eco.production_paused]
+			]
+		3:
+			var active := 0
+			var sick := 0
+			var employed := 0
+			for person in people:
+				if sim.is_selected_work_enabled(person):
+					active+=1
+				if float(person.get("health",100.0))<50.0:
+					sick+=1
+				if int(person.get("age",0))>=18:
+					employed+=1
+			return [
+				["POPULATION",str(people.size()),"AT HOME",people.is_empty()],
+				["AVAILABLE",str(active),"ON DUTY",active==0],
+				["ADULTS",str(employed),"WORKFORCE",employed==0],
+				["UNWELL",str(sick),"BELOW 50% HEALTH",sick>0]
+			]
+		_:
+			return [
+				["POPULATION",str(people.size()),"RESIDENTS",people.is_empty()],
+				["POWER","%.0f/%.0f" % [power,demand],"GRID BALANCE",power<demand],
+				["MORALE","%.0f%%" % morale,"COMMUNITY",morale<45.0],
+				["PROJECTS",str(sim.blueprints.size()),"CONSTRUCTION",false]
+			]
+
+func _overview_rows() -> Array[Dictionary]:
+	var result: Array[Dictionary]=[]
+	var eco := sim.economy_simulation
+	var available := float(sim.utility_state["power_generated"])
+	var required := float(sim.utility_state["power_demand"])
+	match overview_tab_index:
+		0:
+			if available<required:
+				result.append({"label":"POWER SHORTFALL","detail":"Grid requires %.0f additional output. Inspect generators." % (required-available),"warn":true})
+			var finished := 0
+			for done in sim.field_objectives.values():
+				if bool(done):
+					finished+=1
+			result.append({"label":"FIELD DIRECTIVES   /   %d OF %d" % [finished,sim.field_objectives.size()],"detail":_next_settlement_goal(),"warn":finished<sim.field_objectives.size()})
+			result.append({"label":"SUPPLY RESERVES","detail":"Food %.0f  /  Water %.0f  /  Medicine %.0f" % [float(sim.resources["food"]),float(sim.resources["water"]),float(sim.resources["medicine"])],"warn":false})
+			result.append({"label":"ACTIVE CONSTRUCTION","detail":"%d blueprints underway  /  %.0f building materials" % [sim.blueprints.size(),float(sim.resources["materials"])],"warn":false})
+			if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM:
+				result.append({"label":"DUST STORM WARNING","detail":"%.1f hours to clear. Shelter: %s" % [sim.weather_simulation.remaining_hours(sim),"ACTIVE" if sim.weather_simulation.shelter_in_place else "OFF"],"warn":true})
+			else:
+				result.append({"label":"WEATHER INTELLIGENCE","detail":"Clear skies / next weather change in %.0f hours" % sim.weather_simulation.remaining_hours(sim),"warn":false})
+			for i in range(mini(3,sim.events.size())):
+				var record: Dictionary=sim.events[i]
+				result.append({"label":str(record.get("title","SYSTEM EVENT")),"detail":str(record.get("body","")),"warn":str(record.get("severity","")) in ["warning","critical"]})
+		1:
+			var battery_charge := float(sim.utility_state["battery_charge"])
+			var battery_cap := maxf(1.0,float(sim.utility_state["battery_capacity"]))
+			result.append({"label":"ELECTRICAL DISTRIBUTION","detail":"Output %.0f  /  Demand %.0f  /  Deficit %.0f" % [available,required,maxf(0.0,required-available)],"warn":available<required})
+			result.append({"label":"BATTERY BACKUP","detail":"%.0f / %.0f available" % [battery_charge,battery_cap],"warn":battery_charge/battery_cap<0.25})
+			result.append({"label":"CLEAN WATER SUPPLY","detail":"%.0f stored  /  %.0f sanitation" % [float(sim.resources["water"]),float(sim.utility_state["sanitation"])],"warn":float(sim.resources["water"])<float(sim.get_settlement_citizens().size())*4.0})
+			result.append({"label":"FOOD SECURITY","detail":"%.0f food  /  %.0f prepared meals" % [float(sim.resources["food"]),float(sim.resources["meals"])],"warn":float(sim.resources["meals"])<float(sim.get_settlement_citizens().size())})
+			result.append({"label":"MEDICAL STOCK","detail":"%.0f medicine  /  check clinic & staff for emergencies" % float(sim.resources["medicine"]),"warn":float(sim.resources["medicine"])<5.0})
+			result.append({"label":"ENERGY RESPONSE","detail":"Select POWER to inspect production / WATER for treatment.","warn":available<required})
+		2:
+			var batches := eco.get_open_batches()
+			result.append({"label":"WORKSHOP STATUS","detail":"%s  /  %.0f%% efficiency" % ["PAUSED" if eco.production_paused else "ACTIVE",eco.production_efficiency*100.0],"warn":eco.production_paused or eco.production_efficiency<0.4})
+			result.append({"label":"MATERIAL INPUTS","detail":"Scrap %.0f  /  Materials %.0f  /  Parts %.0f" % [float(sim.stockpiles["industry"].get("scrap",0)),float(sim.stockpiles["industry"].get("materials",0)),float(eco.industry_stock["parts"])],"warn":false})
+			if not str(eco.bottleneck_reason).is_empty():
+				result.append({"label":"PRODUCTION BOTTLENECK","detail":str(eco.bottleneck_reason),"warn":true})
+			for batch in batches:
+				var name := str(batch.get("recipe","Unknown"))
+				var recipe: Dictionary=eco.recipes.get(name,{})
+				var done := 100.0*float(batch.get("progress",0))/maxf(1.0,float(recipe.get("work",1.0)))
+				result.append({"label":"JOB #%d  /  %s" % [int(batch.get("id",0)),name],"detail":"%s  /  %.0f%% complete" % [str(batch.get("status","queued")).to_upper(),done],"warn":false})
+			if batches.is_empty():
+				result.append({"label":"NO ACTIVE ORDERS","detail":"Open Workshop to assign real production batches.","warn":false})
+			result.append({"label":"SUPPLY CHAIN","detail":"%d regional caravans active  /  %d operating vehicles" % [eco.get_inbound_caravans().size(),eco.vehicles.size()],"warn":false})
+		3:
+			var people := sim.get_settlement_citizens()
+			var jobs := {}
+			var on_shift := 0
+			for person in people:
+				var job := str(person.get("job","Unassigned"))
+				jobs[job]=int(jobs.get(job,0))+1
+				if sim.is_selected_work_enabled(person) and sim._is_shift_active(person):
+					on_shift+=1
+			result.append({"label":"ACTIVE SHIFT","detail":"%d assigned on duty now  /  %d settlement residents" % [on_shift,people.size()],"warn":on_shift==0})
+			result.append({"label":"COMMUNITY WELLBEING","detail":"%.0f%% average morale  /  %d residents" % [sim.get_average_morale(),people.size()],"warn":sim.get_average_morale()<45.0})
+			for job in ["Farmer","Engineer","Builder","Medic","Scavenger","Guard","Cook","Hauler"]:
+				result.append({"label":job.to_upper()+"  /  "+str(jobs.get(job,0)),"detail":"Actual staffing  /  open Workforce to reassign","warn":int(jobs.get(job,0))==0 and job in ["Medic","Farmer"]})
+	return result
+
+func _overview_shortcuts() -> Array:
+	match overview_tab_index:
+		1: return ["POWER","WATER","BUILD"]
+		2: return ["WORKSHOP","MARKET","REGION"]
+		3: return ["WORKFORCE","GOVERN","INCIDENTS"]
+		_: return ["GOALS","BUILD","REGION"]
+
+func _overview_quick_action(index: int) -> void:
+	var quick: Array=_overview_shortcuts()
+	if index<0 or index>=quick.size():
+		return
+	var action := str(quick[index])
+	overview_visible=false
+	match action:
+		"GOALS":
+			_open_guide_section(0)
+			overview_visible=false
+			field_directives_visible=true
+		"BUILD","REGION","GOVERN":
+			_open_guide_section(1 if action=="BUILD" else (2 if action=="REGION" else 3))
+		"MARKET":
+			_open_guide_section(4)
+			industry_workshop_visible=false
+		"WORKSHOP":
+			_open_guide_section(4)
+			industry_workshop_visible=true
+		"WORKFORCE":
+			_toggle_workforce()
+		"INCIDENTS":
+			_incident_open()
+		"POWER":
+			_open_building_from_status("generator")
+		"WATER":
+			_open_building_from_status("purifier")
+
 func _draw_overview() -> void:
 	var vp := get_viewport_rect().size
 	var area := SettlementUILayout.overview_rect(vp)
@@ -1707,42 +1856,30 @@ func _draw_overview() -> void:
 	var left := area.position.x+17.0
 	var full_width := area.size.x-34.0
 	var top := area.position.y
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+29),"YOUR SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,full_width,17,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % _display_settlement_name(),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+68),"Day %d   |   %02d:%02d   |   %s" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),"Paused" if sim.paused else "Simulation running"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,MUTED)
-	DPNUISkin.stroke(self,Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#603644"),1.0)
-	var complete := 0
-	for value in sim.field_objectives.values():
-		if bool(value):
-			complete += 1
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+100),"YOUR NEXT STEP  •  %d/4 goals completed" % complete,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+120),_next_settlement_goal(),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,TEXT)
-	DPNUISkin.stroke(self,Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#432734"),1.0)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+154),"SUPPLIES & BUILDING",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+174),"Building materials: %.0f" % float(sim.resources["materials"]),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+193),"Projects being built: %d    |    Rooms finished: %d" % [sim.blueprints.size(),sim.completed_rooms],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
-	DPNUISkin.stroke(self,Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#432734"),1.0)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+228),"ESSENTIAL SYSTEMS",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
-	var power_available := float(sim.utility_state["power_generated"])
-	var power_needed := float(sim.utility_state["power_demand"])
-	var power_ok := power_available>=power_needed
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+248),"Electricity: %.0f available / %.0f needed" % [power_available,power_needed],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD if power_ok else WARN)
-	var charge := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+268),"Battery charge: %.0f%%    |    Sanitation: %.0f%%" % [charge,float(sim.utility_state["sanitation"])],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
-	if area.size.y>350.0:
-		DPNUISkin.stroke(self,Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#432734"),1.0)
-		var weather := sim.weather_simulation
-		if weather.condition==WeatherSimulation.DUST_STORM:
-			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"DUST FRONT: %.1fh remaining  /  %.0f%% strength" % [weather.remaining_hours(sim),weather.intensity*100.0],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
-			draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Click upper-right STORM alert to toggle shelter order.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,GOOD if weather.shelter_in_place else WARN)
-		else:
-			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"Weather: clear  /  forecast front in %.0fh" % weather.remaining_hours(sim),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
-			draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Select people and structures to inspect them.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
-	var buttons := ["OPEN BUILD", "SHOW GOALS", "CLOSE"]
-	for index in range(buttons.size()):
-		var rect := SettlementUILayout.overview_button_rect(vp,index)
-		var over := rect.has_point(get_local_mouse_position())
-		DPNUISkin.button(self,rect,buttons[index],over,false,index==2,true,true)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+30),"DPN  /  LAST HAVEN COMMAND CENTER",HORIZONTAL_ALIGNMENT_LEFT,full_width,18,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+56),"%s   /   DAY %d   /   %s" % [_display_settlement_name(),sim.day,"SIMULATION PAUSED" if sim.paused else "LIVE OPERATIONS"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
+	for i in range(OVERVIEW_TABS.size()):
+		var tab := SettlementUILayout.overview_tab_rect(vp,i)
+		DPNUISkin.button(self,tab,str(OVERVIEW_TABS[i]),tab.has_point(get_local_mouse_position()),overview_tab_index==i,false,true,true)
+	var metrics: Array=_overview_metrics()
+	for i in range(metrics.size()):
+		var record: Array=metrics[i]
+		DPNUISkin.metric_card(self,SettlementUILayout.overview_metric_rect(vp,i),str(record[0]),str(record[1]),str(record[2]),bool(record[3]))
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+215),"LIVE INTELLIGENCE  /  "+str(OVERVIEW_TABS[overview_tab_index]),HORIZONTAL_ALIGNMENT_LEFT,full_width,13,ACCENT)
+	var rows := _overview_rows()
+	for i in range(mini(SettlementUILayout.overview_visible_rows(vp),rows.size())):
+		var entry: Dictionary=rows[i]
+		var box := SettlementUILayout.overview_data_row(vp,i)
+		var dangerous := bool(entry.get("warn",false))
+		DPNUISkin.list_row(self,box,false,false,dangerous)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,15),str(entry.get("label","")),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22.0,12,WARN if dangerous else TEXT)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,30),str(entry.get("detail","")),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22.0,10,MUTED)
+	for i in range(3):
+		var button := SettlementUILayout.overview_quick_rect(vp,i)
+		DPNUISkin.button(self,button,str(_overview_shortcuts()[i]),button.has_point(get_local_mouse_position()),false,false,true,true)
+	for i in range(3):
+		var footer := SettlementUILayout.overview_button_rect(vp,i)
+		DPNUISkin.button(self,footer,["OPEN BUILD","SHOW GOALS","CLOSE"][i],footer.has_point(get_local_mouse_position()),false,i==2,true,true)
 
 func _handle_overview_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -1751,31 +1888,28 @@ func _handle_overview_click(position: Vector2) -> bool:
 		return true
 	if not overview_visible:
 		return false
+	for index in range(OVERVIEW_TABS.size()):
+		if SettlementUILayout.overview_tab_rect(vp,index).has_point(position):
+			overview_tab_index=index
+			return true
+	for index in range(3):
+		if SettlementUILayout.overview_quick_rect(vp,index).has_point(position):
+			_overview_quick_action(index)
+			return true
 	for index in range(3):
 		if not SettlementUILayout.overview_button_rect(vp,index).has_point(position):
 			continue
-		overview_visible = false
-		if index == 0:
-			# Reuse toolbar semantics; never trigger Civilization's treasury B.
-			_handle_toolbar_click(SettlementUILayout.navbar_rect(vp,0).get_center())
-		elif index == 1:
-			build_mode = false
-			world_map_mode = false
-			governance_mode = false
-			economy_mode = false
-			faction_mode = false
-			civilization_mode = false
-			update_mode = false
-			help_mode = false
-			selected_citizen = {}
-			selected_building = {}
-			selected_blueprint = {}
-			field_directives_visible = true
+		overview_visible=false
+		if index==0:
+			_open_guide_section(1)
+		elif index==1:
+			_open_guide_section(0)
+			overview_visible=false
+			field_directives_visible=true
 		return true
-	# Close safely on any click outside the briefing without selecting terrain.
-	# Clicks on the briefing body never leak through to gameplay.
+	# Dismiss without letting a stray click place blueprints or select terrain.
 	if not SettlementUILayout.overview_rect(vp).has_point(position):
-		overview_visible = false
+		overview_visible=false
 	return true
 
 func _draw_directive_tab() -> void:
