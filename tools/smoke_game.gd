@@ -60,6 +60,56 @@ func _smoke() -> void:
 				push_error("SMOKE: field-intelligence site row escapes game viewport")
 				quit(1)
 				return
+	# Region MUST render a real textured fictional terrain atlas, rather
+	# than only a flat radar circle. Atlas caching is important for UI FPS.
+	var terrain_atlas := RegionAtlas.new()
+	var atlas_texture := terrain_atlas.get_texture(sim.world_simulation.get_radio_range())
+	if atlas_texture==null or atlas_texture.get_width()!=RegionAtlas.MAP_W or atlas_texture.get_height()!=RegionAtlas.MAP_H:
+		push_error("SMOKE: Actual regional topographic map texture was not generated")
+		quit(1)
+		return
+	if terrain_atlas.get_texture(sim.world_simulation.get_radio_range())!=atlas_texture:
+		push_error("SMOKE: Terrain atlas rebuilds every frame instead of caching")
+		quit(1)
+		return
+	var terrain_image := atlas_texture.get_image()
+	if terrain_image.get_pixel(30,30).is_equal_approx(terrain_image.get_pixel(300,240)):
+		push_error("SMOKE: Region atlas is a flat fill rather than terrain relief")
+		quit(1)
+		return
+	# The click-to-focus settlement minimap must derive from actual building
+	# coordinates and must not inadvertently trigger building placement.
+	var mini_plot := SettlementUILayout.minimap_plot(Vector2(1280,720))
+	var mini_frame := SettlementUILayout.settlement_minimap(Vector2(1280,720))
+	if not mini_frame.encloses(mini_plot) or mini_frame.position.y<SettlementUILayout.TOP_H or mini_frame.end.y>720.0-SettlementUILayout.BOTTOM_H:
+		push_error("SMOKE: Tactical settlement minimap conflicts with command rails")
+		quit(1)
+		return
+	if not instance._can_draw_settlement_minimap():
+		push_error("SMOKE: Starting settlement has no available live facility minimap")
+		quit(1)
+		return
+	var saved_focus: Vector3=instance.settlement_world.focus
+	var live_frame := SettlementUILayout.minimap_plot(instance.get_viewport_rect().size)
+	if not instance._handle_minimap_click(live_frame.position+live_frame.size*0.75) or instance.settlement_world.focus.is_equal_approx(saved_focus):
+		push_error("SMOKE: Facility minimap does not actually focus the live 3D camera")
+		quit(1)
+		return
+	instance.settlement_world.focus=saved_focus
+	instance.settlement_world._position_camera()
+	var toggle_map := InputEventKey.new()
+	toggle_map.keycode=KEY_F5
+	toggle_map.pressed=true
+	instance._unhandled_input(toggle_map)
+	if instance.settlement_minimap_visible or instance._can_draw_settlement_minimap():
+		push_error("SMOKE: F5 cannot hide the settlement minimap")
+		quit(1)
+		return
+	instance._unhandled_input(toggle_map)
+	if not instance.settlement_minimap_visible:
+		push_error("SMOKE: F5 cannot restore the minimap")
+		quit(1)
+		return
 	if sim.get_alive_citizens().size() < 1 or sim.buildings.size() < 5:
 		push_error("SMOKE: Starting settlement lacks survivors or buildings")
 		quit(1)
