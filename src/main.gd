@@ -62,6 +62,9 @@ var civilization_candidate_index := 0
 var economy_item_index := 0
 var economy_source_index := 0
 var economy_recipe_index := 0
+var industry_workshop_visible := false
+var industry_batch_id := 0
+var industry_queue_page := 0
 const ECONOMY_RECIPES := ["Machine Parts","Components","Tool Kit","Fuel Blend","Vehicle Repair Kit","Utility Truck"]
 const ECONOMY_ITEMS := ["food","water","medicine","materials","scrap","fuel","parts"]
 const CIV_COLONY_PROJECTS := ["Housing Block","Farm Complex","Clinic Module","Workshop Bay","Defense Perimeter","Freight Depot","Radio Tower"]
@@ -366,6 +369,8 @@ func _panel_action_items() -> Array:
 		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
 	if governance_mode:
 		return [["PREV LAW",KEY_UP],["NEXT LAW",KEY_DOWN],["CHANGE",KEY_ENTER],["CLOSE",KEY_ESCAPE]]
+	if economy_mode and industry_workshop_visible:
+		return []
 	if economy_mode:
 		return [["PREV",KEY_UP],["NEXT",KEY_DOWN],["MARKET",KEY_H],["RECIPE",KEY_N],["BUY 1",KEY_ENTER],["SELL 1",KEY_BACKSPACE],["QUEUE",KEY_C],["CLOSE",KEY_ESCAPE]]
 	if faction_mode:
@@ -504,6 +509,12 @@ func _handle_command_content_click(position: Vector2) -> bool:
 					return true
 		return area.has_point(position)
 	if economy_mode:
+		if industry_workshop_visible:
+			return _handle_workshop_click(position)
+		if SettlementUILayout.workshop_entry(vp).has_point(position):
+			industry_workshop_visible=true
+			industry_queue_page=0
+			return true
 		var area := SettlementUILayout.side_panel(vp,480.0)
 		for i in range(ECONOMY_ITEMS.size()):
 			var row := Rect2(area.position+Vector2(17.0,158.0+float(i)*22.0),Vector2(area.size.x-34.0,21.0))
@@ -763,6 +774,9 @@ func _format_recipe_items(ingredients: Dictionary) -> String:
 	return ", ".join(chunks)
 
 func _draw_economy_panel() -> void:
+	if industry_workshop_visible:
+		_draw_workshop_panel()
+		return
 	var vp := get_viewport_rect().size
 	var area := SettlementUILayout.side_panel(vp,480.0)
 	var x := area.position.x
@@ -793,7 +807,10 @@ func _draw_economy_panel() -> void:
 			draw_rect(Rect2(row.position,Vector2(3,row.size.y)),ACCENT)
 		draw_string(ThemeDB.fallback_font,row.position+Vector2(8,15),item.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,160,11,TEXT if selected else MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(row.end.x-130.0,row.position.y+15.0),"%.1f credits" % eco.get_trade_price(item,economy_source_index),HORIZONTAL_ALIGNMENT_RIGHT,124,11,GOOD if selected else MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+336),"CRAFTING  /  CHOOSE RECIPE, THEN QUEUE",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,ACCENT)
+	var workshop_link := SettlementUILayout.workshop_entry(vp)
+	draw_rect(workshop_link,Color("#583039") if workshop_link.has_point(get_local_mouse_position()) else Color("#263b44"))
+	draw_rect(workshop_link,GOOD if workshop_link.has_point(get_local_mouse_position()) else Color("#617b85"),false,1.0)
+	draw_string(ThemeDB.fallback_font,workshop_link.position+Vector2(11,19),"OPEN WORKSHOP CONTROL  /  MANAGE ORDERS  ›",HORIZONTAL_ALIGNMENT_LEFT,workshop_link.size.x-22.0,11,TEXT)
 	var recipe_name: String = str(ECONOMY_RECIPES[economy_recipe_index])
 	var recipe: Dictionary = eco.recipes.get(recipe_name,{})
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+356),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,w-36,13,TEXT)
@@ -808,6 +825,143 @@ func _draw_economy_panel() -> void:
 			break
 		draw_string(ThemeDB.fallback_font,Vector2(x+20,y_row),str(item["recipe"])+"  /  "+str(item["status"]).capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,TEXT)
 		y_row += 17.0
+
+
+func _workshop_selected_batch() -> Dictionary:
+	var eco := sim.economy_simulation
+	var active := eco.get_open_batches()
+	for batch in active:
+		if int(batch.get("id",0))==industry_batch_id:
+			return batch
+	if active.is_empty():
+		industry_batch_id=0
+		return {}
+	industry_batch_id=int(active[0]["id"])
+	return active[0]
+
+func _workshop_notice(text_value: String, succeeded: bool) -> void:
+	playtest_notice=text_value
+	playtest_notice_seconds=5.0 if succeeded else 4.0
+
+func _draw_workshop_panel() -> void:
+	var vp := get_viewport_rect().size
+	var frame := SettlementUILayout.workshop_panel(vp)
+	var x := frame.position.x
+	var y := frame.position.y
+	var w := frame.size.x
+	var h := frame.size.y
+	var eco := sim.economy_simulation
+	var crew := 0
+	for person in sim.get_settlement_citizens():
+		if str(person.get("job","")) in ["Engineer","Builder"] and sim.is_selected_work_enabled(person) and sim._is_shift_active(person) and not bool(person.get("incarcerated",false)) and float(person.get("health",0))>=30.0:
+			crew+=1
+	_draw_ui_panel(frame,ACCENT)
+	draw_rect(Rect2(x+15,y+12,4,22),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+28,y+30),"WORKSHOP CONTROL  /  INDUSTRIAL PRODUCTION",HORIZONTAL_ALIGNMENT_LEFT,w-48,15,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+52),"Active shift workers: %d   •   Line efficiency: %.0f%%   •   %s" % [crew,100.0*eco.production_efficiency,"PAUSED" if eco.production_paused else "RUNNING"],HORIZONTAL_ALIGNMENT_LEFT,w-36,11,WARN if eco.production_paused or crew==0 else GOOD)
+	var bottleneck := "Awaiting next production cycle" if str(eco.bottleneck_reason)=="" else str(eco.bottleneck_reason)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+72),"STATUS: "+bottleneck,HORIZONTAL_ALIGNMENT_LEFT,w-36,10,WARN if str(eco.bottleneck_reason)!="" else MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+90),"SELECT RECIPE  /  THEN QUEUE",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,ACCENT)
+	for i in range(ECONOMY_RECIPES.size()):
+		var recipe_name := str(ECONOMY_RECIPES[i])
+		var box := SettlementUILayout.workshop_recipe(vp,i)
+		var active := i==economy_recipe_index
+		draw_rect(box,Color("#613039") if active else (Color("#31444a") if box.has_point(get_local_mouse_position()) else Color("#1b3038")))
+		draw_rect(box,ACCENT if active else Color("#526f7b"),false,1.0)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,20),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,box.size.x-16,11,TEXT if active else MUTED)
+	var selected_recipe := str(ECONOMY_RECIPES[economy_recipe_index])
+	var recipe: Dictionary=eco.recipes[selected_recipe]
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+193),"Requires: "+_format_recipe_items(recipe["input"]),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+209),"Yields: "+_format_recipe_items(recipe["output"])+"   •   "+eco.get_recipe_readiness(sim,selected_recipe),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,GOOD if eco.get_recipe_readiness(sim,selected_recipe)=="INPUTS READY" else WARN)
+	var active_batches := eco.get_open_batches()
+	var page_rows := SettlementUILayout.workshop_visible_rows(vp)
+	var pages := maxi(1,int(ceil(float(active_batches.size())/float(page_rows))))
+	industry_queue_page=clampi(industry_queue_page,0,pages-1)
+	draw_line(Vector2(x+16,y+219),Vector2(x+w-16,y+219),Color("#49626c"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+238),"PRODUCTION ORDERS  /  %d ACTIVE  /  PAGE %d OF %d" % [active_batches.size(),industry_queue_page+1,pages],HORIZONTAL_ALIGNMENT_LEFT,w-36,11,ACCENT)
+	var selected_batch := _workshop_selected_batch()
+	for i in range(page_rows):
+		var index := industry_queue_page*page_rows+i
+		if index>=active_batches.size():
+			break
+		var batch: Dictionary=active_batches[index]
+		var rect := SettlementUILayout.workshop_queue_row(vp,i)
+		var active := int(batch["id"])==industry_batch_id
+		var status := str(batch.get("status","queued"))
+		var definition: Dictionary=eco.recipes.get(str(batch.get("recipe","")),{})
+		var total := maxf(1.0,float(definition.get("work",1.0)))
+		var progress := clampf(float(batch.get("progress",0.0))/total,0.0,1.0)
+		draw_rect(rect,Color("#56303a") if active else (Color("#304047") if rect.has_point(get_local_mouse_position()) else Color("#182931")))
+		draw_rect(Rect2(rect.position,Vector2(3.0,rect.size.y)),ACCENT if active else Color("#45626c"))
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(10,17),"#%d  %s" % [int(batch["id"]),str(batch["recipe"])],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x*0.57,11,TEXT)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(rect.size.x*0.57,17),"%s  %.0f%%" % [status.to_upper(),progress*100.0],HORIZONTAL_ALIGNMENT_RIGHT,rect.size.x*0.40,10,GOOD if status=="working" else MUTED)
+		draw_rect(Rect2(rect.position.x+9,rect.end.y-4,rect.size.x-18.0,2.0),Color("#27343b"))
+		if progress>0.0:
+			draw_rect(Rect2(rect.position.x+9,rect.end.y-4,(rect.size.x-18.0)*progress,2.0),GOOD)
+	if active_batches.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+280),"No pending jobs. Select a recipe and queue a batch.",HORIZONTAL_ALIGNMENT_LEFT,w-34,11,MUTED)
+	elif not selected_batch.is_empty() and str(selected_batch.get("status",""))=="working":
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,frame.end.y-96),"Selected order is in progress; consumed inputs cannot be recovered.",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,WARN)
+	var actions := ["QUEUE 1","QUEUE 5","MOVE UP","MOVE DOWN","CANCEL","RESUME" if eco.production_paused else "PAUSE","PREV PAGE","NEXT PAGE","TRADE","CLOSE"]
+	for i in range(actions.size()):
+		var button := SettlementUILayout.workshop_action(vp,i)
+		var hover := button.has_point(get_local_mouse_position())
+		var blocked := false
+		if i in [2,3,4]:
+			blocked=selected_batch.is_empty() or str(selected_batch.get("status",""))!="queued"
+		draw_rect(button,Color("#66303b") if hover and not blocked else (Color("#222b31") if blocked else Color("#233842")))
+		draw_rect(button,Color("#49545b") if blocked else (ACCENT if i==4 or i==9 else (GOOD if hover else Color("#5a7480"))),false,1.0)
+		draw_string(ThemeDB.fallback_font,button.position+Vector2(7,19),actions[i],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-12,10,MUTED if blocked else TEXT)
+
+func _handle_workshop_click(position: Vector2) -> bool:
+	if not industry_workshop_visible:
+		return false
+	var vp := get_viewport_rect().size
+	var frame := SettlementUILayout.workshop_panel(vp)
+	if not frame.has_point(position):
+		return true
+	var eco := sim.economy_simulation
+	for i in range(ECONOMY_RECIPES.size()):
+		if SettlementUILayout.workshop_recipe(vp,i).has_point(position):
+			economy_recipe_index=i
+			return true
+	var active := eco.get_open_batches()
+	var rows := SettlementUILayout.workshop_visible_rows(vp)
+	for i in range(rows):
+		var index := industry_queue_page*rows+i
+		if index<active.size() and SettlementUILayout.workshop_queue_row(vp,i).has_point(position):
+			industry_batch_id=int(active[index]["id"])
+			return true
+	for i in range(10):
+		if not SettlementUILayout.workshop_action(vp,i).has_point(position):
+			continue
+		var chosen := _workshop_selected_batch()
+		var ok := false
+		match i:
+			0,1:
+				ok=eco.queue_recipe(sim,str(ECONOMY_RECIPES[economy_recipe_index]),1 if i==0 else 5)
+				_workshop_notice("PRODUCTION JOBS QUEUED" if ok else "QUEUE LIMIT REACHED",ok)
+			2,3:
+				ok=eco.move_queued_batch(sim,int(chosen.get("id",0)),-1 if i==2 else 1)
+				_workshop_notice("ORDER PRIORITY UPDATED" if ok else "CANNOT MOVE THIS ORDER",ok)
+			4:
+				ok=eco.cancel_queued_batch(sim,int(chosen.get("id",0)))
+				if ok:
+					industry_batch_id=0
+				_workshop_notice("UNSTARTED JOB CANCELLED" if ok else "WORKING ORDERS CANNOT BE CANCELLED",ok)
+			5:
+				eco.set_production_paused(sim,not eco.production_paused)
+				_workshop_notice("WORKSHOP ON HOLD" if eco.production_paused else "WORKSHOP RESUMED",true)
+			6,7:
+				var pages := maxi(1,int(ceil(float(active.size())/float(rows))))
+				industry_queue_page=posmod(industry_queue_page+(-1 if i==6 else 1),pages)
+			8:
+				industry_workshop_visible=false
+			9:
+				industry_workshop_visible=false
+				economy_mode=false
+		return true
+	return true
 
 func _draw_civilization_panel() -> void:
 	var vp := get_viewport_rect().size
@@ -2329,6 +2483,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					world_map_mode = false
 				elif governance_mode:
 					governance_mode = false
+				elif economy_mode and industry_workshop_visible:
+					industry_workshop_visible = false
 				elif economy_mode:
 					economy_mode = false
 				elif faction_mode:
