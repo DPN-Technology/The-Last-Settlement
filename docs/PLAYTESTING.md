@@ -1,3 +1,13 @@
+# DPN QUICK COMMAND — CTRL+P LIVE SYSTEM FINDER
+
+**New on PR #6:** Press **Ctrl+P** from gameplay to open the session-only DPN Quick Command. Search for a real management screen, workshop, incident console or specific recovery blueprint. Use Up/Down, Enter, Escape, mouse row selection or scroll wheel. The compact panel overlays the world; input never passes through to construction placement or camera movement until it closes. Click the close X or dimmed backdrop to dismiss without changing the underlying game.
+
+**Working destinations:** Settlement Command, Construction Planner, Region & Expeditions, Governance, Industry, Production Workshop, Workforce, Incident Command, Factions, Civilization Network, the Interactive Field Guide, and direct Farm / Water Purifier / Generator / Medical blueprints. These destinations call existing gameplay handlers—there is no simulated placeholder screen. Finding/filtering commands reads game data without changing resources or saves. Ctrl+P is disabled while the Incident Command modal is open, avoiding two stacked command modals.
+
+**Playtest acceptance:** At 960×720, 1024×600, 1366×768 and native resolution, check the search area, scrollable results, highlighted row, keyboard search/backspace, Enter routing, close X, Escape and outside click. Search "workshop" and confirm the working production queue opens; search "medical" and confirm Build opens with the medical blueprint selected. A backdrop click must not place a blueprint. Verify incident console remains independent, Ctrl+P remains reversible, and no resource or treasury values change merely by searching or opening destinations.
+
+---
+
 # DPN SETTLEMENT COMMAND CENTER — FOUR-PAGE TACTICAL BRIEFING
 
 The upper-left DPN identity is now an entry point to a **functional four-page command center** (not the old narrow textual "Your Settlement" popup). This upgrade retains the existing player's real 3D world view and red/black DPN identity while replacing flat prose with actual simulation readings and useful navigation.

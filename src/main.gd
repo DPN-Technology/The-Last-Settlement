@@ -30,6 +30,9 @@ var field_directives_visible := false
 var overview_visible := false
 const OVERVIEW_TABS := ["COMMAND", "UTILITIES", "INDUSTRY", "PEOPLE"]
 var overview_tab_index := 0
+var palette_visible := false
+var palette_query := ""
+var palette_selected_index := 0
 var workforce_mode := false
 var workforce_page := 0
 var workforce_selected_id := 0
@@ -267,6 +270,8 @@ func _draw() -> void:
 	# F2 no longer creates an invisible/persistent panel underneath other modes.
 	if incident_panel_visible:
 		_draw_event_panel()
+	if palette_visible:
+		_draw_palette()
 
 
 # The F6 / PEOPLE command gives players direct, saved staffing control.
@@ -1871,6 +1876,136 @@ func _overview_quick_action(index: int) -> void:
 		"WATER":
 			_open_building_from_status("purifier")
 
+# CTRL+P is a session-only, mouse/keyboard-accessible command finder.
+# Search does not issue a construction order, change resources, or touch saves.
+func _palette_results() -> Array[Dictionary]:
+	return SettlementCommandPalette.results(palette_query)
+
+func _palette_open() -> void:
+	if incident_panel_visible:
+		return
+	palette_visible=true
+	palette_query=""
+	palette_selected_index=0
+	dragging=false
+
+func _palette_move(direction: int) -> void:
+	var matches := _palette_results()
+	palette_selected_index=clampi(palette_selected_index+direction,0,maxi(0,matches.size()-1))
+
+func _palette_execute(command_id: String) -> void:
+	palette_visible=false
+	palette_query=""
+	palette_selected_index=0
+	if command_id=="WORKFORCE":
+		if not workforce_mode:
+			_toggle_workforce()
+		return
+	workforce_mode=false
+	match command_id:
+		"COMMAND":
+			_open_guide_section(0)
+		"BUILD":
+			_open_guide_section(1)
+		"REGION":
+			_open_guide_section(2)
+		"GOVERN":
+			_open_guide_section(3)
+		"INDUSTRY":
+			_open_guide_section(4)
+		"WORKSHOP":
+			_open_guide_section(4)
+			industry_workshop_visible=true
+		"FACTIONS":
+			_incident_navigate("FACTIONS")
+		"NATION":
+			_open_guide_section(5)
+		"GUIDE":
+			_open_guide_section(0)
+			overview_visible=false
+			help_mode=true
+			playtest_notice="OPENED INTERACTIVE FIELD GUIDE"
+		"INCIDENTS":
+			_incident_open()
+		"BUILD_FARM":
+			_open_building_from_status("farm")
+		"BUILD_WATER":
+			_open_building_from_status("purifier")
+		"BUILD_POWER":
+			_open_building_from_status("generator")
+		"BUILD_MEDICAL":
+			_open_building_from_status("medical")
+
+func _palette_key(event: InputEventKey) -> void:
+	if event.keycode==KEY_ESCAPE or (event.ctrl_pressed and event.keycode==KEY_P):
+		palette_visible=false
+		return
+	if event.keycode==KEY_UP:
+		_palette_move(-1)
+	elif event.keycode==KEY_DOWN:
+		_palette_move(1)
+	elif event.keycode in [KEY_ENTER,KEY_KP_ENTER]:
+		var matches := _palette_results()
+		if not matches.is_empty():
+			palette_selected_index=clampi(palette_selected_index,0,matches.size()-1)
+			_palette_execute(str(matches[palette_selected_index]["id"]))
+	elif event.keycode==KEY_BACKSPACE:
+		if not palette_query.is_empty():
+			palette_query=palette_query.substr(0,palette_query.length()-1)
+			palette_selected_index=0
+	elif not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed and event.unicode>=32:
+		palette_query+=char(event.unicode)
+		palette_selected_index=0
+
+func _palette_click(position: Vector2) -> bool:
+	if not palette_visible:
+		return false
+	var size := get_viewport_rect().size
+	var panel := SettlementCommandPalette.panel_rect(size)
+	if not panel.has_point(position) or SettlementCommandPalette.close_rect(size).has_point(position):
+		palette_visible=false
+		return true
+	var matches := _palette_results()
+	var capacity := SettlementCommandPalette.visible_rows(size)
+	var offset := SettlementCommandPalette.first_visible(palette_selected_index,matches.size(),capacity)
+	for index in range(mini(capacity,matches.size()-offset)):
+		if SettlementCommandPalette.row_rect(size,index).has_point(position):
+			_palette_execute(str(matches[offset+index]["id"]))
+			return true
+	# Always consume clicks inside the palette, including blank space.
+	return true
+
+func _draw_palette() -> void:
+	var size := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO,size),Color(0.015,0.012,0.02,0.84))
+	var panel := SettlementCommandPalette.panel_rect(size)
+	_draw_ui_panel(panel,ACCENT)
+	var left := panel.position.x+17.0
+	var usable_width := panel.size.x-34.0
+	draw_string(ThemeDB.fallback_font,Vector2(left,panel.position.y+29.0),"DPN  /  QUICK COMMAND",HORIZONTAL_ALIGNMENT_LEFT,usable_width-45.0,18,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(left,panel.position.y+49.0),"DAY %d  /  %d SURVIVORS  /  %s" % [sim.day,sim.get_alive_citizens().size(),"PAUSED" if sim.paused else "LIVE NETWORK"],HORIZONTAL_ALIGNMENT_LEFT,usable_width-45.0,11,GOOD)
+	var close := SettlementCommandPalette.close_rect(size)
+	DPNUISkin.button(self,close,"X",close.has_point(get_local_mouse_position()),false,true,true,true)
+	var search := SettlementCommandPalette.search_rect(size)
+	DPNUISkin.list_row(self,search,true,false,false)
+	var prompt := palette_query if not palette_query.is_empty() else "Type to find systems, supplies or emergencies..."
+	draw_string(ThemeDB.fallback_font,search.position+Vector2(13.0,26.0),">  "+prompt,HORIZONTAL_ALIGNMENT_LEFT,search.size.x-26.0,13,TEXT if not palette_query.is_empty() else MUTED)
+	var matches := _palette_results()
+	var capacity := SettlementCommandPalette.visible_rows(size)
+	var offset := SettlementCommandPalette.first_visible(palette_selected_index,matches.size(),capacity)
+	draw_string(ThemeDB.fallback_font,Vector2(left,panel.position.y+119.0),"%d MATCHING COMMANDS" % matches.size(),HORIZONTAL_ALIGNMENT_LEFT,usable_width,10,ACCENT)
+	for index in range(mini(capacity,matches.size()-offset)):
+		var command: Dictionary=matches[offset+index]
+		var target := SettlementCommandPalette.row_rect(size,index)
+		var chosen := offset+index==palette_selected_index
+		DPNUISkin.list_row(self,target,chosen,target.has_point(get_local_mouse_position()),false)
+		draw_string(ThemeDB.fallback_font,target.position+Vector2(13.0,17.0),str(command["title"]),HORIZONTAL_ALIGNMENT_LEFT,target.size.x-50.0,14,TEXT)
+		draw_string(ThemeDB.fallback_font,target.position+Vector2(13.0,34.0),str(command["detail"]),HORIZONTAL_ALIGNMENT_LEFT,target.size.x-50.0,11,MUTED)
+		draw_string(ThemeDB.fallback_font,target.position+Vector2(target.size.x-23.0,26.0),">",HORIZONTAL_ALIGNMENT_LEFT,17.0,14,ACCENT)
+	if matches.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(left,panel.position.y+170.0),"NO MATCH. TRY 'FARM', 'POWER', 'STAFF' OR 'REGION'.",HORIZONTAL_ALIGNMENT_LEFT,usable_width,12,WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(left,panel.end.y-18.0),"CTRL+P OPEN/CLOSE    /    ARROWS SCROLL    /    ENTER OPEN    /    ESC DISMISS",HORIZONTAL_ALIGNMENT_LEFT,usable_width,11,MUTED)
+
 func _draw_overview() -> void:
 	var vp := get_viewport_rect().size
 	var area := SettlementUILayout.overview_rect(vp)
@@ -2787,6 +2922,16 @@ func _capture_ui_pass_suite() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		# Palette is a modal: no world/save/game hotkeys while searching.
+		if event.ctrl_pressed and event.keycode==KEY_P:
+			if palette_visible:
+				palette_visible=false
+			else:
+				_palette_open()
+			return
+		if palette_visible:
+			_palette_key(event)
+			return
 		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
 		if event.keycode==KEY_F12 and event.ctrl_pressed:
 			_capture_ui_pass_suite()
@@ -3162,6 +3307,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					selected_building = {}
 					selected_blueprint = {}
 	elif event is InputEventMouseButton:
+		if palette_visible:
+			if event.button_index==MOUSE_BUTTON_LEFT and event.pressed:
+				_palette_click(event.position)
+			elif event.button_index==MOUSE_BUTTON_WHEEL_UP and event.pressed:
+				_palette_move(-1)
+			elif event.button_index==MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+				_palette_move(1)
+			return
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_incident_click(event.position):
 				return
@@ -3240,6 +3393,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			dragging = event.pressed
 			drag_origin = event.position
 	elif event is InputEventMouseMotion:
+		if palette_visible:
+			return
 		mouse_world = _screen_to_world(event.position)
 		if dragging and not incident_panel_visible:
 			var drag_delta: Vector2 = event.position - drag_origin

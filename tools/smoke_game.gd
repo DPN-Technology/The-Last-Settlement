@@ -1076,6 +1076,78 @@ func _smoke() -> void:
 	sim.resources["water"]=remembered_water
 	instance.build_mode=false
 
+	# Quick Command overlays are read-only until a real destination is chosen.
+	# Their layout must remain clickable at common laptop/desktop resolutions.
+	for target_size in [Vector2(960,720),Vector2(1024,600),Vector2(1366,768),Vector2(1920,1080)]:
+		var palette := SettlementCommandPalette.panel_rect(target_size)
+		if palette.position.x<0.0 or palette.end.x>target_size.x or palette.position.y<SettlementUILayout.TOP_H or palette.end.y>target_size.y-SettlementUILayout.BOTTOM_H:
+			push_error("SMOKE: command search panel escapes viewport")
+			quit(1)
+			return
+		if not palette.encloses(SettlementCommandPalette.search_rect(target_size)) or not palette.encloses(SettlementCommandPalette.close_rect(target_size)):
+			push_error("SMOKE: command search field/close control outside panel")
+			quit(1)
+			return
+		for row_index in range(SettlementCommandPalette.visible_rows(target_size)):
+			var row := SettlementCommandPalette.row_rect(target_size,row_index)
+			if not palette.encloses(row) or row.end.y>=palette.end.y-39.0:
+				push_error("SMOKE: command search rows collide with footer")
+				quit(1)
+				return
+	var food_commands := SettlementCommandPalette.results("farm")
+	if food_commands.is_empty() or str(food_commands[0]["id"])!="BUILD_FARM" or not SettlementCommandPalette.results("qzx-no-such-system").is_empty():
+		push_error("SMOKE: command finder search does not filter real systems")
+		quit(1)
+		return
+	var palette_resource_snapshot := sim.resources.duplicate(true)
+	var palette_treasury_before := sim.federal_governance_simulation.federal_treasury
+	var open_command := InputEventKey.new()
+	open_command.keycode=KEY_P
+	open_command.ctrl_pressed=true
+	open_command.pressed=true
+	instance._unhandled_input(open_command)
+	if not instance.palette_visible or instance.palette_query!="":
+		push_error("SMOKE: CTRL+P did not open a clean command finder")
+		quit(1)
+		return
+	instance.palette_query="workshop"
+	instance.palette_selected_index=0
+	var submit_command := InputEventKey.new()
+	submit_command.keycode=KEY_ENTER
+	submit_command.pressed=true
+	instance._unhandled_input(submit_command)
+	if instance.palette_visible or not instance.economy_mode or not instance.industry_workshop_visible:
+		push_error("SMOKE: palette Enter did not open real workshop queue")
+		quit(1)
+		return
+	instance._palette_open()
+	instance.palette_query="medical"
+	if not instance._palette_click(SettlementCommandPalette.row_rect(screen,0).get_center()) or not instance.build_mode or str(sim.get_build_catalog()[instance.build_catalog_index]["type"])!="medical":
+		push_error("SMOKE: palette click failed to select playable medical blueprint")
+		quit(1)
+		return
+	instance._palette_open()
+	var outside_palette := Vector2(2.0,screen.y*0.5)
+	if not instance._palette_click(outside_palette) or instance.palette_visible:
+		push_error("SMOKE: command finder backdrop did not consume/dismiss click")
+		quit(1)
+		return
+	instance._palette_open()
+	var dismiss_command := InputEventKey.new()
+	dismiss_command.keycode=KEY_ESCAPE
+	dismiss_command.pressed=true
+	instance._unhandled_input(dismiss_command)
+	if instance.palette_visible:
+		push_error("SMOKE: ESC failed to dismiss command finder")
+		quit(1)
+		return
+	if sim.resources!=palette_resource_snapshot or sim.federal_governance_simulation.federal_treasury!=palette_treasury_before:
+		push_error("SMOKE: opening/searching quick commands changed game resources")
+		quit(1)
+		return
+	instance.build_mode=false
+	instance.economy_mode=false
+	instance.industry_workshop_visible=false
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
 	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
