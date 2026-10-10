@@ -669,56 +669,64 @@ func _draw_civilization_panel() -> void:
 
 func _draw_faction_panel() -> void:
 	var vp := get_viewport_rect().size
-	var bounds := SettlementUILayout.side_panel(vp,480.0)
-	var x := bounds.position.x
-	var y := bounds.position.y
-	var w := bounds.size.x
-	var h := bounds.size.y
-	var fs := sim.faction_simulation
-	var visible := fs.get_visible_factions(sim)
-	if faction_index >= visible.size():
-		faction_index = 0
-
-	_draw_ui_panel(bounds,BAD)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+30),"FACTION COMMAND // REGIONAL INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,-1,14,BAD)
-
+	var panel := SettlementUILayout.side_panel(vp,480.0)
+	var x := panel.position.x
+	var y := panel.position.y
+	var w := panel.size.x
+	var factions := sim.faction_simulation
+	var visible := factions.get_visible_factions(sim)
+	faction_index = clampi(faction_index,0,maxi(0,visible.size()-1))
+	_draw_ui_panel(panel,ACCENT)
+	draw_rect(Rect2(x+14,y+12,4,22),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+26,y+30),"FACTIONS   /   REGIONAL DIPLOMACY",HORIZONTAL_ALIGNMENT_LEFT,w-39,15,TEXT)
 	if visible.is_empty():
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+70),"NO EXTERNAL SETTLEMENTS IN ACTIVE INTELLIGENCE RANGE.",HORIZONTAL_ALIGNMENT_LEFT,w-44,11,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+98),"Restore radio infrastructure and expand regional discovery.",HORIZONTAL_ALIGNMENT_LEFT,w-44,10,RUST)
+		var relay := sim.world_simulation.get_location_by_id(3)
+		var restored := bool(relay.get("restored",false))
+		var known := sim.world_simulation.get_discovered_locations().size()
+		draw_rect(Rect2(x+17,y+54,w-34,94),Color("#182c35"))
+		draw_rect(Rect2(x+17,y+54,4,94),WARN)
+		draw_string(ThemeDB.fallback_font,Vector2(x+30,y+79),"NO NEIGHBORS IN RADIO RANGE",HORIZONTAL_ALIGNMENT_LEFT,w-60,14,WARN)
+		draw_string(ThemeDB.fallback_font,Vector2(x+30,y+103),"Diplomacy begins after contact with other communities.",HORIZONTAL_ALIGNMENT_LEFT,w-62,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+30,y+125),"%d sites discovered  •  Radio range %.0f" % [known,sim.world_simulation.get_radio_range()],HORIZONTAL_ALIGNMENT_LEFT,w-60,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+188),"HOW TO MAKE CONTACT",HORIZONTAL_ALIGNMENT_LEFT,w-40,13,ACCENT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+224),"01    Open Region and select North Ridge Relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+255),"02    Dispatch a salvage team to restore the relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+286),"03    Wait for the team to finish its mission.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
+		draw_line(Vector2(x+20,y+313),Vector2(panel.end.x-18,y+313),Color("#52717b"),1.0)
+		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+344),"RELAY STATUS",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
+		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+370),"North Ridge Relay: "+("ONLINE" if restored else "AWAITING REPAIRS"),HORIZONTAL_ALIGNMENT_LEFT,w-40,13,GOOD if restored else WARN)
+		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+393),"The restored relay extends radio coverage by 140 units.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
+		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+432),"Use FIND RELAY below to select the actual site.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,GOOD)
 		return
-
-	var faction_name:String = visible[faction_index]
-	var faction:Dictionary = fs.factions[faction_name]
-	var location := sim.world_simulation.get_location_by_id(int(faction["location_id"]))
-	var disposition := str(faction["disposition"])
-	var disposition_color := GOOD if disposition in ["FRIENDLY","ALLIED"] else (BAD if disposition == "HOSTILE" else WARN)
-
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+66),faction_name,HORIZONTAL_ALIGNMENT_LEFT,-1,23,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+92),"%s // %s" % [location["name"],disposition],HORIZONTAL_ALIGNMENT_LEFT,-1,11,disposition_color)
-	_draw_meter(Vector2(x+22,y+126),w-44.0,"REPUTATION",clampf((float(faction["reputation"])+100.0)*0.5,0.0,100.0))
-	_draw_meter(Vector2(x+22,y+162),w-44.0,"STRENGTH",float(faction["strength"]))
-	_draw_meter(Vector2(x+22,y+198),w-44.0,"WEALTH",float(faction["wealth"]))
-	_draw_meter(Vector2(x+22,y+234),w-44.0,"INTELLIGENCE",float(faction["intel"]))
-
-	var agreement := "ACTIVE" if bool(faction["trade_agreement"]) else "NONE"
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+286),"TRADE AGREEMENT // %s" % agreement,HORIZONTAL_ALIGNMENT_LEFT,-1,11,GOOD if agreement=="ACTIVE" else MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+314),"[↑/↓] FACTION   [A] SEND AID   [D] TRADE AGREEMENT   [Z] TRUCE",HORIZONTAL_ALIGNMENT_LEFT,-1,10,RUST)
-
-	if not fs.active_raid.is_empty():
-		var attacker := str(fs.active_raid["faction"])
-		var eta := float(fs.active_raid["eta_hours"])
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+356),"ACTIVE THREAT // %s // ETA %.1f HOURS" % [attacker,eta],HORIZONTAL_ALIGNMENT_LEFT,-1,12,BAD)
+	var count := visible.size()
+	var gap := 5.0
+	var tab_width := (w-35.0-gap*float(count-1))/float(count)
+	for idx in range(count):
+		var box := Rect2(x+17.0+float(idx)*(tab_width+gap),y+48.0,tab_width,34.0)
+		var active := idx==faction_index
+		draw_rect(box,Color("#5a2c32") if active else (Color("#2b4147") if box.has_point(get_local_mouse_position()) else Color("#172b33")))
+		draw_rect(box,ACCENT if active else Color("#4d656f"),false,1)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(7,20),str(visible[idx]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-14,10,TEXT if active else MUTED)
+	var faction_name := str(visible[faction_index])
+	var info: Dictionary = factions.factions[faction_name]
+	var location: Dictionary = sim.world_simulation.get_location_by_id(int(info["location_id"]))
+	var disposition := str(info["disposition"])
+	var friendly := disposition in ["FRIENDLY","ALLIED"]
+	var attitude := GOOD if friendly else (BAD if disposition=="HOSTILE" else WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+112),faction_name,HORIZONTAL_ALIGNMENT_LEFT,w-42,19,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+135),str(location.get("name","Regional community"))+"  •  "+disposition.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-43,12,attitude)
+	_draw_meter(Vector2(x+20,y+161),w-40.0,"REPUTATION",clampf((float(info["reputation"])+100.0)*0.5,0.0,100.0))
+	_draw_meter(Vector2(x+20,y+202),w-40.0,"STRENGTH",float(info["strength"]))
+	_draw_meter(Vector2(x+20,y+243),w-40.0,"INFLUENCE / WEALTH",float(info["wealth"]))
+	draw_line(Vector2(x+20,y+282),Vector2(panel.end.x-18,y+282),Color("#52717b"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+307),"TRADE AGREEMENT: "+("ACTIVE" if bool(info["trade_agreement"]) else "NOT SIGNED"),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,GOOD if bool(info["trade_agreement"]) else MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+333),"SEND AID: 8 food + 2 medicine  •  +9 reputation",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+354),"TRADE: needs reputation 30 or higher.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+375),"TRUCE: hostile factions only, costs 25 credits.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
+	if not factions.active_raid.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+413),"ACTIVE RAID: "+str(factions.active_raid.get("faction","Unknown")),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,BAD)
 	else:
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+356),"ACTIVE THREAT // NONE",HORIZONTAL_ALIGNMENT_LEFT,-1,11,MUTED)
-
-	draw_string(ThemeDB.fallback_font,Vector2(x+22,y+398),"RECENT CONFLICT",HORIZONTAL_ALIGNMENT_LEFT,-1,12,ACCENT)
-	var ry := y + 424.0
-	for record in fs.raid_log:
-		var result := "REPELLED" if bool(record["victory"]) else "BREACHED"
-		draw_string(ThemeDB.fallback_font,Vector2(x+22,ry),"D%d // %s // %s // DEF %.0f / ATK %.0f" % [int(record["day"]),record["faction"],result,float(record["defense"]),float(record["attack"])],HORIZONTAL_ALIGNMENT_LEFT,w-44,10,TEXT)
-		ry += 22.0
-		if ry > y+h-35:
-			break
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y+413),"NO CURRENT RAID ALERT",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,GOOD)
 
 func _draw_help_panel() -> void:
 	var vp := get_viewport_rect().size
