@@ -52,7 +52,7 @@ static func resolve_walkable(point: Vector2, buildings: Array[Dictionary]) -> Ve
 				Vector2(position.x,obstacle.position.y-CORNER_MARGIN),
 				Vector2(position.x,obstacle.end.y+CORNER_MARGIN)
 			]
-			var nearest := options[0]
+			var nearest: Vector2 = options[0]
 			for candidate in options:
 				if candidate.distance_squared_to(position)<nearest.distance_squared_to(position):
 					nearest = candidate
@@ -63,11 +63,32 @@ static func resolve_walkable(point: Vector2, buildings: Array[Dictionary]) -> Ve
 			break
 	return position
 
+static func _segment_intersects_rect(a: Vector2, b: Vector2, rect: Rect2) -> bool:
+	# Godot's Rect2 has no intersects_segment API; clip the segment to its
+	# bounds using the slab interval rather than a nonexistent engine method.
+	var delta := b-a
+	var enter := 0.0
+	var leave := 1.0
+	for axis in range(2):
+		var start := a.x if axis==0 else a.y
+		var speed := delta.x if axis==0 else delta.y
+		var lo := rect.position.x if axis==0 else rect.position.y
+		var hi := rect.end.x if axis==0 else rect.end.y
+		if absf(speed)<0.00001:
+			if start>=lo and start<=hi:
+				continue
+			return false
+		var first := (lo-start)/speed
+		var second := (hi-start)/speed
+		enter=maxf(enter,minf(first,second))
+		leave=minf(leave,maxf(first,second))
+		if enter>leave:
+			return false
+	return true
+
 static func _visible(a: Vector2, b: Vector2, rectangles: Array[Rect2]) -> bool:
 	for rect in rectangles:
-		if rect.has_point(a) or rect.has_point(b):
-			return false
-		if rect.intersects_segment(a,b) != null:
+		if _segment_intersects_rect(a,b,rect):
 			return false
 	return true
 
