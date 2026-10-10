@@ -2302,6 +2302,7 @@ func _capture_game_screenshot() -> void:
 				"Default rendering method: "+str(ProjectSettings.get_setting("rendering/renderer/rendering_method","unknown"))+"\n"+
 				"OS: "+OS.get_name()+"\n"+
 				"Game frame: "+str(screenshot.get_size())+"\n"+
+				"UI decorative stroke mode: "+("DISABLED (Ctrl+F10)" if DPNUISkin.diagnostic_minimal_strokes else "SAFE FILLED RECTS")+"\n"+
 				"3D pass separately captured: "+str(world_saved)+"\n"+
 				"FULL=3D+UI. 3D=scene-only. Check whether streaks exist in either PNG.\n")
 		playtest_notice = "2 GRAPHICS CAPTURES SAVED [F8]" if world_saved else "GRAPHICS CAPTURE SAVED [F8]"
@@ -2330,6 +2331,12 @@ func _cycle_ui_scale() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
+		if event.keycode==KEY_F10 and event.ctrl_pressed:
+			DPNUISkin.diagnostic_minimal_strokes=not DPNUISkin.diagnostic_minimal_strokes
+			playtest_notice="UI DECORATION DISABLED  /  CTRL+F10 RESTORE" if DPNUISkin.diagnostic_minimal_strokes else "UI DECORATION RESTORED  /  CTRL+F10 DISABLE"
+			playtest_notice_seconds=7.0
+			queue_redraw()
+			return
 		if workforce_mode and event.keycode not in [KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
 		match event.keycode:
