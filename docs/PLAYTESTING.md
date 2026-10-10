@@ -1,3 +1,32 @@
+# New playtest: Geographic Atlas, Settlement Minimap, Real Operations Dashboard
+
+This PR build responds to the latest player screenshots showing a plain circular radar, no settlement minimap, large unused menu regions, and long red/white diagonal streaks across the monitor.
+
+## Two actual map systems
+
+**Region (M):** The old flat radar backdrop is replaced with a cached fictional topographic atlas generated using Godot FastNoiseLite. The terrain layer includes rolling relief, a winding river, scrubland, wooded lowlands and faded pre-collapse road traces. This is **in-universe procedural cartography**, not a real-world/satellite dataset, and the roads are illustrative rather than playable pathfinding. Every actual site marker is positioned directly from `WorldSimulation.locations`; undiscovered locations no longer leak through as gray dots. The player's radio coverage is a thin ring, not a giant red opaque map disk. Clicking a real mapped site still selects it for the existing team/strategy/provision/recall controls. Missions display live dashed route traces. The map is cached until radio coverage changes to avoid FPS spikes per draw frame.
+
+**Last Haven plan map (F5):** The 3D scene now has a small top-down **facility minimap** in the lower left, showing the actual positions and relative sizes of buildings, resident workers, construction plans and the current camera target. Click any point in the minimap to shift the real 3D camera there. Press F5 to hide/show it. It automatically stays out of the way while full-size menus, inspectors and Build mode are open.
+
+## Deeper real menu data
+
+**Industry** now summarizes actual warehouse occupancy, line efficiency, running vs pending batch counts and real active-order progress in individual row cards (when viewport height permits). Full queue control, cancel, reorder, recipe selection and pause are still inside Workshop Control.
+
+**Govern** now includes council representation for the four genuine resident civic affiliations with member counts and percentages based on the simulation's real support figures. It only uses the additional space when the panel is tall enough to avoid covering the existing law actions.
+
+## Red diagonal streak diagnosis
+
+The user photos show diagonal red/white lines crossing the 3D map, opaque UI panels and Windows window furniture. A search of this game's UI and world renderers found no full-screen diagonal-stripe rendering command. The effects may come from the monitor, camera/moiré, GPU display output, or some unlocated rendering issue. We do **not** claim they were fixed in code without a direct frame capture.
+
+1. Launch this **new** Windows playtest and press **F8**. The game will open its `playtest-screenshots` folder; attach that original PNG. Do not photograph the display for this specific test.
+2. If the streaks are visible in the PNG, they are present in the captured graphics pipeline and require further game/GPU diagnosis.
+3. If they are missing from the PNG but still on the screen or phone photo, compare with Windows desktop and another application to distinguish camera interference from monitor/cable/panel problems.
+4. Report whether the streaks appear on the Windows taskbar with the game minimized. The taskbar cannot be painted by Godot's own CanvasItem commands.
+
+**Acceptance:** in Region, verify real geographical texture, legible terrain and correct selected-site/expedition markers; in 3D view, click the minimap to focus different buildings and test F5; in Industry, look for warehouse/production live cards; in Govern, see live council representation. The PR remains unmerged pending visual approval and verified final-head CI.
+
+---
+
 # October 9 player screenshot feedback — UI readability & density pass
 
 Eight photographed Windows playtest screenshots identified the specific problems this patch addresses: HUD labels small at 1280×720, cramped bottom dock / speed row, miniature build/region list entries, wide nearly-empty Nation and Factions panels, and weak hierarchy between commands and live values.
