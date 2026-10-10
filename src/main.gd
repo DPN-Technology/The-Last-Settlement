@@ -1,16 +1,16 @@
 extends Node2D
 
-const BG := Color("#090b0e")
-const GRID := Color("#231b1b")
-const PANEL := Color("#12161bcc")
-const PANEL_SOLID := Color("#12161b")
-const PANEL_EDGE := Color("#4c3030")
-const TEXT := Color("#e8e2db")
-const MUTED := Color("#9b9188")
-const GOOD := Color("#73c991")
-const WARN := Color("#e6b566")
-const BAD := Color("#e05252")
-const ACCENT := Color("#c64242")
+const BG := Color("#06070a")
+const GRID := Color("#2c1720")
+const PANEL := Color("#111015ed")
+const PANEL_SOLID := Color("#0c0b10")
+const PANEL_EDGE := Color("#612932")
+const TEXT := Color("#f3e9e6")
+const MUTED := Color("#af9da2")
+const GOOD := Color("#80cfa0")
+const WARN := Color("#efb974")
+const BAD := Color("#f05463")
+const ACCENT := Color("#ea354d")
 const RUST := Color("#a46d45")
 
 var sim := SettlementSimulation.new()
@@ -29,6 +29,7 @@ var workforce_page := 0
 var workforce_selected_id := 0
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
+var ui_animation_clock := 0.0
 var camera_offset := Vector2(-75, -34)
 var zoom := 1.04
 var dragging := false
@@ -95,6 +96,7 @@ func _ready() -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
+	ui_animation_clock+=delta
 	var screen_size := Vector2i(get_viewport_rect().size)
 	if settlement_viewport.size != screen_size and screen_size.x > 0 and screen_size.y > 0:
 		settlement_viewport.size = screen_size
@@ -196,6 +198,7 @@ func _draw() -> void:
 	else:
 		_draw_world()
 		_draw_utility_overlay()
+	DPNUISkin.backdrop(self,get_viewport_rect().size,ui_animation_clock)
 	_draw_hud()
 	if not help_mode and not update_mode:
 		if build_mode:
@@ -295,8 +298,7 @@ func _draw_workforce_panel() -> void:
 		var box := SettlementUILayout.workforce_row(vp,i)
 		var active := int(p["id"])==workforce_selected_id
 		var hovered := box.has_point(get_local_mouse_position())
-		draw_rect(box,Color("#51282e") if active else (Color("#2b3d45") if hovered else Color("#14242c")))
-		draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT if active else Color("#304b59"))
+		DPNUISkin.list_row(self,box,active,hovered)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(p["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x*0.43,12,TEXT)
 		var info := "%s  /  %s  /  %s" % [str(p["job"]),str(p["shift"]), "ON" if sim.is_selected_work_enabled(p) else "OFF"]
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x*0.45,18),info,HORIZONTAL_ALIGNMENT_RIGHT,box.size.x*0.52,10,GOOD if sim.is_selected_work_enabled(p) else WARN)
@@ -311,18 +313,14 @@ func _draw_workforce_panel() -> void:
 		var role := str(CitizenFactory.JOBS[j])
 		var rect := SettlementUILayout.workforce_job(vp,j)
 		var selected := not chosen.is_empty() and role==str(chosen.get("job",""))
-		draw_rect(rect,Color("#713038") if selected else (Color("#34434a") if rect.has_point(get_local_mouse_position()) else Color("#1a3039")))
-		draw_rect(rect,ACCENT if selected else Color("#506b74"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,20),role.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-15,11,TEXT if not chosen.is_empty() else MUTED)
+		DPNUISkin.button(self,rect,role.to_upper(),rect.has_point(get_local_mouse_position()),selected,false,not chosen.is_empty())
 	if not chosen.is_empty():
 		var skill := CitizenFactory.best_skill_for_job(chosen)
 		draw_string(ThemeDB.fallback_font,Vector2(x+17,y+h-54),"Current skill: %s %d  •  role changes take effect in simulation" % [skill.capitalize(),int(chosen["skills"].get(skill,0))],HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
 	var labels := ["PREVIOUS PAGE","NEXT PAGE","CLOSE [F6]"]
 	for j in range(3):
 		var button := SettlementUILayout.workforce_action(vp,j)
-		draw_rect(button,Color("#4d2b31") if j==2 else (Color("#30454b") if button.has_point(get_local_mouse_position()) else Color("#1c3038")))
-		draw_rect(button,ACCENT if j==2 else Color("#69838b"),false,1.0)
-		draw_string(ThemeDB.fallback_font,button.position+Vector2(9,20),labels[j],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-17,11,TEXT)
+		DPNUISkin.button(self,button,labels[j],button.has_point(get_local_mouse_position()),false,j==2)
 
 func _handle_workforce_click(position: Vector2) -> bool:
 	if not workforce_mode:
@@ -418,15 +416,13 @@ func _draw_panel_actions() -> void:
 		return
 	var area := _action_panel_area()
 	var tall := actions.size()>5
-	draw_rect(Rect2(area.position.x+5,area.end.y-(80.0 if tall else 47.0),area.size.x-10,77.0 if tall else 44.0),Color("#0b161def"))
+	draw_rect(Rect2(area.position.x+5,area.end.y-(80.0 if tall else 47.0),area.size.x-10,77.0 if tall else 44.0),Color("#100c13ef"))
 	draw_line(Vector2(area.position.x+12,area.end.y-(80.0 if tall else 47.0)),Vector2(area.end.x-12,area.end.y-(80.0 if tall else 47.0)),ACCENT,1.0)
 	for i in range(actions.size()):
 		var row: Array = actions[i]
 		var rect := _panel_action_rect(i,actions.size())
 		var hover := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#603037") if hover else Color("#213039"))
-		draw_rect(rect,ACCENT if hover else Color("#48636b"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(6,18),str(row[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-10,10,TEXT)
+		DPNUISkin.button(self,rect,str(row[0]),hover,false,str(row[0])=="CLOSE",true,actions.size()>5)
 
 func _handle_panel_action_click(position: Vector2) -> bool:
 	var actions := _panel_action_items()
@@ -585,13 +581,13 @@ func _dispatch_region() -> bool:
 
 func _draw_world_map() -> void:
 	var vp := get_viewport_rect().size
-	draw_rect(Rect2(0,SettlementUILayout.TOP_H,vp.x,vp.y-SettlementUILayout.TOP_H),Color("#090f14"))
+	draw_rect(Rect2(0,SettlementUILayout.TOP_H,vp.x,vp.y-SettlementUILayout.TOP_H),Color("#08070b"))
 	var side := SettlementUILayout.side_panel(vp,372.0)
 	var map := SettlementUILayout.region_map_rect(vp)
 	draw_string(ThemeDB.fallback_font,Vector2(17,SettlementUILayout.TOP_H+27.0),"REGION  /  EXPLORE & SALVAGE",HORIZONTAL_ALIGNMENT_LEFT,440,17,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(17,SettlementUILayout.TOP_H+45.0),"Select a discovered location to inspect it.",HORIZONTAL_ALIGNMENT_LEFT,320,11,MUTED)
-	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#111e26ee"))
-	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#3b5662"),false,1)
+	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#100d12ee"))
+	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#613541"),false,1)
 	var discovered := sim.world_simulation.get_discovered_locations()
 	var site_rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/29.0)))
 	for i in range(site_rows):
@@ -599,7 +595,7 @@ func _draw_world_map() -> void:
 		var r := SettlementUILayout.region_site_row(vp,i)
 		var selected := int(entry["id"]) == selected_world_location_id
 		var risk := float(entry.get("danger",0.0))
-		draw_rect(r,Color("#48252d") if selected else (Color("#22363e") if r.has_point(get_local_mouse_position()) else Color("#182931")))
+		draw_rect(r,Color("#48252d") if selected else (Color("#261923") if r.has_point(get_local_mouse_position()) else Color("#131016")))
 		draw_rect(Rect2(r.position,Vector2(3,r.size.y)),ACCENT if selected else (BAD if risk>0.50 else GOOD))
 		draw_string(ThemeDB.fallback_font,r.position+Vector2(8,17),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,r.size.x-44,10,TEXT if selected else MUTED)
 		draw_string(ThemeDB.fallback_font,r.position+Vector2(r.size.x-34,17),"%d%%" % int(risk*100.0),HORIZONTAL_ALIGNMENT_RIGHT,28,9,WARN if risk<0.5 else BAD)
@@ -607,17 +603,17 @@ func _draw_world_map() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(22,vp.y-SettlementUILayout.BOTTOM_H-15),"%d sites visible  /  %d discovered" % [site_rows,discovered.size()],HORIZONTAL_ALIGNMENT_LEFT,200,10,WARN)
 	# Normalized projection shared with _world_map_select; all nodes remain
 	# within the map canvas, regardless of normal or fullscreen resolution.
-	draw_rect(map,Color("#141f24"))
+	draw_rect(map,Color("#0d0c13"))
 	for line in range(1,7):
 		var gx := map.position.x+map.size.x*float(line)/7.0
 		var gy := map.position.y+map.size.y*float(line)/7.0
-		draw_line(Vector2(gx,map.position.y),Vector2(gx,map.end.y),Color("#263b446e"),1)
-		draw_line(Vector2(map.position.x,gy),Vector2(map.end.x,gy),Color("#263b446e"),1)
-	draw_rect(map,Color("#617880"),false,1)
+		draw_line(Vector2(gx,map.position.y),Vector2(gx,map.end.y),Color("#5729386e"),1)
+		draw_line(Vector2(map.position.x,gy),Vector2(map.end.x,gy),Color("#5729386e"),1)
+	draw_rect(map,Color("#6d3845"),false,1)
 	var home := SettlementUILayout.region_point(vp,Vector2(600,410))
 	var scale_range := minf(map.size.x/1200.0,map.size.y/820.0)*sim.world_simulation.get_radio_range()
-	draw_circle(home,scale_range,Color("#743a35",0.13))
-	draw_arc(home,scale_range,0.0,TAU,64,Color("#ca5758",0.66),1.0)
+	draw_circle(home,scale_range,Color("#ab2636",0.13))
+	draw_arc(home,scale_range,0.0,TAU,64,Color("#e44859",0.66),1.0)
 	for location in sim.world_simulation.locations:
 		var location_pos := SettlementUILayout.region_point(vp,Vector2(location["position"]))
 		var discovered_site := bool(location.get("discovered",false))
@@ -647,7 +643,7 @@ func _draw_world_map() -> void:
 		var route_end := home.lerp(end,clampf(return_distance/distance,0.0,1.0)) if recalled else end
 		var fraction := clampf(traveled/distance,0.0,1.0)
 		var exp_pos := home.lerp(end,fraction) if phase=="outbound" else (route_end.lerp(home,clampf(traveled/maxf(0.01,return_distance),0.0,1.0)) if phase=="returning" else end)
-		draw_line(home,route_end,Color("#ca57586f"),1.4)
+		draw_line(home,route_end,Color("#e448596f"),1.4)
 		draw_circle(exp_pos,5.0,ACCENT)
 		draw_string(ThemeDB.fallback_font,exp_pos+Vector2(7,-7),"EXP %d" % int(expedition["id"]),HORIZONTAL_ALIGNMENT_LEFT,70,9,TEXT)
 	_draw_ui_panel(side,ACCENT)
@@ -679,7 +675,7 @@ func _draw_world_map() -> void:
 	for index in range(3):
 		var rect := SettlementUILayout.region_team_control(vp,index)
 		var hovered := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#553238") if hovered else Color("#1c3038"))
+		draw_rect(rect,Color("#553238") if hovered else Color("#16111b"))
 		draw_rect(rect,ACCENT if hovered else Color("#526c79"),false,1.0)
 		draw_string(ThemeDB.fallback_font,rect.position+Vector2(7,19),controls[index],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-13,10,TEXT)
 	var roster_names := PackedStringArray()
@@ -712,10 +708,10 @@ func _draw_world_map() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(px,ey+15),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-130,10,MUTED)
 		var recall := SettlementUILayout.region_recall_rect(vp,row)
 		var can_recall := stage in ["outbound","searching"]
-		draw_rect(recall,Color("#623035") if can_recall and recall.has_point(get_local_mouse_position()) else (Color("#3b2a30") if can_recall else Color("#1b2930")))
+		draw_rect(recall,Color("#623035") if can_recall and recall.has_point(get_local_mouse_position()) else (Color("#3b2a30") if can_recall else Color("#15121b")))
 		draw_rect(recall,ACCENT if can_recall else Color("#435a62"),false,1)
 		draw_string(ThemeDB.fallback_font,recall.position+Vector2(9,17),"RECALL TEAM" if can_recall else "RETURNING",HORIZONTAL_ALIGNMENT_LEFT,recall.size.x-12,10,TEXT if can_recall else MUTED)
-		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#293d43"))
+		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#251721"))
 		draw_rect(Rect2(px,ey+20,(side.size.x-36.0)*completion,3.0),GOOD)
 		ey+=48.0
 
@@ -802,21 +798,17 @@ func _draw_economy_panel() -> void:
 		var item := str(ECONOMY_ITEMS[i])
 		var row := Rect2(x+17.0,y+158.0+float(i)*22.0,w-34.0,21.0)
 		var selected := i == economy_item_index
-		draw_rect(row,Color("#512a32") if selected else (Color("#273942") if row.has_point(get_local_mouse_position()) else Color("#14242e")))
-		if selected:
-			draw_rect(Rect2(row.position,Vector2(3,row.size.y)),ACCENT)
+		DPNUISkin.list_row(self,row,selected,row.has_point(get_local_mouse_position()))
 		draw_string(ThemeDB.fallback_font,row.position+Vector2(8,15),item.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,160,11,TEXT if selected else MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(row.end.x-130.0,row.position.y+15.0),"%.1f credits" % eco.get_trade_price(item,economy_source_index),HORIZONTAL_ALIGNMENT_RIGHT,124,11,GOOD if selected else MUTED)
 	var workshop_link := SettlementUILayout.workshop_entry(vp)
-	draw_rect(workshop_link,Color("#583039") if workshop_link.has_point(get_local_mouse_position()) else Color("#263b44"))
-	draw_rect(workshop_link,GOOD if workshop_link.has_point(get_local_mouse_position()) else Color("#617b85"),false,1.0)
-	draw_string(ThemeDB.fallback_font,workshop_link.position+Vector2(11,19),"OPEN WORKSHOP CONTROL  /  MANAGE ORDERS  ›",HORIZONTAL_ALIGNMENT_LEFT,workshop_link.size.x-22.0,11,TEXT)
+	DPNUISkin.button(self,workshop_link,"OPEN WORKSHOP CONTROL   /   MANAGE ORDERS  >",workshop_link.has_point(get_local_mouse_position()),true)
 	var recipe_name: String = str(ECONOMY_RECIPES[economy_recipe_index])
 	var recipe: Dictionary = eco.recipes.get(recipe_name,{})
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+356),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,w-36,13,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+376),"Requires: "+_format_recipe_items(recipe.get("input",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+394),"Produces: "+_format_recipe_items(recipe.get("output",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,GOOD)
-	draw_line(Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#49646b"),1)
+	draw_line(Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#613641"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+424),"PRODUCTION QUEUE  /  %d BATCHES" % eco.production_queue.size(),HORIZONTAL_ALIGNMENT_LEFT,w-34,11,ACCENT)
 	var last_y := area.end.y - 94.0
 	var y_row := y+444.0
@@ -866,9 +858,7 @@ func _draw_workshop_panel() -> void:
 		var recipe_name := str(ECONOMY_RECIPES[i])
 		var box := SettlementUILayout.workshop_recipe(vp,i)
 		var active := i==economy_recipe_index
-		draw_rect(box,Color("#613039") if active else (Color("#31444a") if box.has_point(get_local_mouse_position()) else Color("#1b3038")))
-		draw_rect(box,ACCENT if active else Color("#526f7b"),false,1.0)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,20),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,box.size.x-16,11,TEXT if active else MUTED)
+		DPNUISkin.button(self,box,recipe_name,box.has_point(get_local_mouse_position()),active,false,true,true)
 	var selected_recipe := str(ECONOMY_RECIPES[economy_recipe_index])
 	var recipe: Dictionary=eco.recipes[selected_recipe]
 	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+193),"Requires: "+_format_recipe_items(recipe["input"]),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
@@ -891,11 +881,10 @@ func _draw_workshop_panel() -> void:
 		var definition: Dictionary=eco.recipes.get(str(batch.get("recipe","")),{})
 		var total := maxf(1.0,float(definition.get("work",1.0)))
 		var progress := clampf(float(batch.get("progress",0.0))/total,0.0,1.0)
-		draw_rect(rect,Color("#56303a") if active else (Color("#304047") if rect.has_point(get_local_mouse_position()) else Color("#182931")))
-		draw_rect(Rect2(rect.position,Vector2(3.0,rect.size.y)),ACCENT if active else Color("#45626c"))
+		DPNUISkin.list_row(self,rect,active,rect.has_point(get_local_mouse_position()))
 		draw_string(ThemeDB.fallback_font,rect.position+Vector2(10,17),"#%d  %s" % [int(batch["id"]),str(batch["recipe"])],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x*0.57,11,TEXT)
 		draw_string(ThemeDB.fallback_font,rect.position+Vector2(rect.size.x*0.57,17),"%s  %.0f%%" % [status.to_upper(),progress*100.0],HORIZONTAL_ALIGNMENT_RIGHT,rect.size.x*0.40,10,GOOD if status=="working" else MUTED)
-		draw_rect(Rect2(rect.position.x+9,rect.end.y-4,rect.size.x-18.0,2.0),Color("#27343b"))
+		draw_rect(Rect2(rect.position.x+9,rect.end.y-4,rect.size.x-18.0,2.0),Color("#281e26"))
 		if progress>0.0:
 			draw_rect(Rect2(rect.position.x+9,rect.end.y-4,(rect.size.x-18.0)*progress,2.0),GOOD)
 	if active_batches.is_empty():
@@ -909,9 +898,7 @@ func _draw_workshop_panel() -> void:
 		var blocked := false
 		if i in [2,3,4]:
 			blocked=selected_batch.is_empty() or str(selected_batch.get("status",""))!="queued"
-		draw_rect(button,Color("#66303b") if hover and not blocked else (Color("#222b31") if blocked else Color("#233842")))
-		draw_rect(button,Color("#49545b") if blocked else (ACCENT if i==4 or i==9 else (GOOD if hover else Color("#5a7480"))),false,1.0)
-		draw_string(ThemeDB.fallback_font,button.position+Vector2(7,19),actions[i],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-12,10,MUTED if blocked else TEXT)
+		DPNUISkin.button(self,button,actions[i],hover,false,i==4 or i==9,not blocked,true)
 
 func _handle_workshop_click(position: Vector2) -> bool:
 	if not industry_workshop_visible:
@@ -1329,9 +1316,7 @@ func _draw_governance_panel() -> void:
 		var law := str(GOVERNANCE_LAWS[i])
 		var row := Rect2(x+18.0,y+263.0+float(i)*28.0,w-36.0,26.0)
 		var active := i == governance_law_index
-		draw_rect(row,Color("#512c33") if active else (Color("#2c3d44") if row.has_point(get_local_mouse_position()) else Color("#14242b")))
-		if active:
-			draw_rect(Rect2(row.position,Vector2(3,row.size.y)),ACCENT)
+		DPNUISkin.list_row(self,row,active,row.has_point(get_local_mouse_position()))
 		draw_string(ThemeDB.fallback_font,row.position+Vector2(10,18),law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,146,11,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(row.position.x+150,row.position.y+18),str(gov.laws[law]),HORIZONTAL_ALIGNMENT_RIGHT,row.size.x-164,11,GOOD if active else MUTED)
 	var selected_law := str(GOVERNANCE_LAWS[governance_law_index])
@@ -1374,14 +1359,8 @@ func _active_screen_label() -> String:
 	return "WORLD VIEW"
 
 func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
-	# Unified DPN war-room styling: graphite glass, electric-red identity rail,
-	# crisp technical corners and restrained illuminated command highlights.
-	draw_rect(rect,Color("#09151d"))
-	draw_rect(rect,Color("#49616e"),false,1)
-	draw_rect(Rect2(rect.position,Vector2(rect.size.x,3)),edge)
-	draw_rect(Rect2(rect.position+Vector2(0,3),Vector2(3,rect.size.y-3)),Color(edge,0.75))
-	draw_line(rect.position+Vector2(8,10),rect.position+Vector2(22,10),Color("#da5756",0.76),2)
-	draw_rect(Rect2(rect.end-Vector2(10,10),Vector2(5,5)),Color(edge,0.85))
+	# Every gameplay menu is built on this shared real DPN panel surface.
+	DPNUISkin.frame(self,rect,ui_animation_clock,edge==ACCENT)
 
 func _display_settlement_name() -> String:
 	# Old saves may contain internal SITE-01 tags. Only present the readable
@@ -1391,20 +1370,22 @@ func _display_settlement_name() -> String:
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
 	var top_h := SettlementUILayout.TOP_H
-	draw_rect(Rect2(0, 0, vp.x, top_h), Color("#080d12f3"))
-	draw_line(Vector2(0,top_h-1), Vector2(vp.x,top_h-1), ACCENT, 1.5)
-	# Human-readable identity: the corporate badge stays visible, but a player
-	# sees the actual game and settlement name, not internal network/site IDs.
+	draw_rect(Rect2(0,0,vp.x,top_h),Color("#07070cf5"))
+	draw_rect(Rect2(0,0,vp.x,3),Color("#771927"))
+	draw_line(Vector2(0,top_h-1),Vector2(vp.x,top_h-1),ACCENT,1.5)
+	draw_line(Vector2(0,top_h-4),Vector2(vp.x,top_h-4),Color("#4b1b2a",0.8),1.0)
 	var identity := SettlementUILayout.identity_rect(vp)
 	var is_hovered := identity.has_point(get_local_mouse_position())
-	var badge := Rect2(identity.position+Vector2(5,7),Vector2(32,32))
-	draw_rect(badge,Color("#662628") if is_hovered else Color("#3d2024"))
-	draw_rect(badge,ACCENT,false,1.0)
-	draw_string(ThemeDB.fallback_font,badge.position+Vector2(5,21),"DPN",HORIZONTAL_ALIGNMENT_LEFT,27,10,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,21),"THE LAST SETTLEMENT" if vp.x>=1000 else "LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,16 if vp.x>=1000 else 12,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % _display_settlement_name() if vp.x>=1000 else "Overview ›",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
+	var badge := Rect2(identity.position+Vector2(3,6),Vector2(37,38))
+	DPNUISkin.button(self,badge,"",is_hovered,false,false,true,true)
+	# Red-lightning signature is real vector art, not an emoji or stock icon.
+	var bolt := PackedVector2Array([badge.position+Vector2(24,4),badge.position+Vector2(14,17),badge.position+Vector2(23,17),badge.position+Vector2(12,33),badge.position+Vector2(16,21),badge.position+Vector2(10,21)])
+	draw_polyline(bolt,ACCENT,2.0,true)
+	draw_string(ThemeDB.fallback_font,badge.position+Vector2(4,35),"01",HORIZONTAL_ALIGNMENT_LEFT,16,8,MUTED)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,22),"DPN // THE LAST SETTLEMENT" if vp.x>=1100 else "DPN // LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,14 if vp.x>=1100 else 11,TEXT)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,39),"LAST HAVEN   /   COMMAND" if vp.x>=1000 else "RECOVERY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,10,ACCENT if is_hovered else MUTED)
 	if is_hovered:
-		draw_line(Vector2(identity.position.x+44,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),GOOD,1.0)
+		draw_line(Vector2(identity.position.x+45,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),ACCENT,1.0)
 
 	var alive := sim.get_alive_citizens().size()
 	var morale := sim.get_average_morale()
@@ -1425,16 +1406,8 @@ func _draw_hud() -> void:
 		var severity := (WARN if fraction >= 0.85 else BAD) if i == 3 and fraction < 1.0 else (BAD if fraction < 0.20 else (WARN if fraction < 0.40 else GOOD))
 		var hovered_now := rect.has_point(get_local_mouse_position())
 		if hovered_now:
-			hovered = i
-		draw_rect(rect,Color("#29353e") if hovered_now else Color("#14232d"))
-		draw_rect(rect,Color("#82939e") if hovered_now else Color("#476272"),false,1)
-		draw_rect(Rect2(rect.position+Vector2(0,0),Vector2(3,rect.size.y)),severity)
-		draw_line(rect.position+Vector2(6,3),rect.position+Vector2(rect.size.x-5,3),Color("#ae4448",0.53),1)
-		draw_circle(rect.position+Vector2(rect.size.x-10,10),2.0,severity)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,16),str(item[0]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-18,10,MUTED)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,36),str(item[1]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-18,17,TEXT)
-		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,rect.size.x-14),2)),Color("#2d383b"))
-		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,(rect.size.x-14)*fraction),2)),severity)
+			hovered=i
+		DPNUISkin.resource(self,rect,str(item[0]),str(item[1]),fraction,severity,hovered_now)
 	var battery_percent := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
 	var weather_name := sim.weather_simulation.condition
 	var summary := "Day %d  •  %02d:%02d  |  Weather: %s  |  Materials: %.0f  |  Projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
@@ -1461,8 +1434,8 @@ func _draw_hud() -> void:
 	if build_mode and not SettlementUILayout.navbar_rect(vp,0).has_point(get_local_mouse_position()):
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
-	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#081015f0"))
-	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),Color("#54646b"),1)
+	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#08080deb"))
+	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),ACCENT,1.4)
 	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-46),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-255,10,MUTED)
 	_draw_time_controls()
 	_draw_toolbar()
@@ -1675,9 +1648,7 @@ func _draw_build_palette() -> void:
 		var category := str(SettlementCommandCatalog.CATEGORIES[j])
 		var active := category == build_category
 		var hover := box.has_point(get_local_mouse_position())
-		draw_rect(box,Color("#753034") if active else (Color("#293c43") if hover else Color("#18272f")))
-		draw_rect(box,ACCENT if active else Color("#4c616c"),false,1.0)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(7,17),category,HORIZONTAL_ALIGNMENT_LEFT,box.size.x-12,10,TEXT if active else MUTED)
+		DPNUISkin.button(self,box,category,hover,active,false,true,true)
 	var total := indices.size()
 	draw_string(ThemeDB.fallback_font,rect.position+Vector2(13,127),"%d BUILDINGS  /  Q-E OR WHEEL TO BROWSE" % total,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-24,10,GOOD)
 	for row in range(rows):
@@ -1688,9 +1659,7 @@ func _draw_build_palette() -> void:
 		var box := SettlementUILayout.build_row_rect(vp,row)
 		var active := indices[idx] == build_catalog_index
 		var affordable := SettlementCommandCatalog.can_afford(entry,float(sim.stockpiles["industry"].get("materials",0.0)))
-		draw_rect(box,Color("#392429") if active else (Color("#27353a") if box.has_point(get_local_mouse_position()) else Color("#121f26")))
-		if active:
-			draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT)
+		DPNUISkin.list_row(self,box,active,box.has_point(get_local_mouse_position()))
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-94,12,TEXT if affordable else MUTED)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x-85,18),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,80,10,GOOD if affordable else BAD)
 	var selected: Dictionary = catalog[build_catalog_index]
@@ -1704,9 +1673,7 @@ func _draw_build_palette() -> void:
 		var can_rotate := SettlementCommandCatalog.rotate_allowed(str(selected["type"]))
 		var action_name := ("ROTATE [F]" if can_rotate else "FIXED SHAPE") if idx == 0 else "DONE [ESC]"
 		var usable := idx != 0 or can_rotate
-		draw_rect(action_rect,Color("#5e272e") if idx==1 else Color("#21353b"))
-		draw_rect(action_rect,ACCENT if idx==1 else Color("#536a73"),false,1)
-		draw_string(ThemeDB.fallback_font,action_rect.position+Vector2(9,18),action_name,HORIZONTAL_ALIGNMENT_LEFT,action_rect.size.x-18,10,TEXT if usable else MUTED)
+		DPNUISkin.button(self,action_rect,action_name,action_rect.has_point(get_local_mouse_position()),false,idx==1,usable,true)
 
 func _handle_build_palette_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -1799,9 +1766,7 @@ func _draw_time_controls() -> void:
 		var rect := SettlementUILayout.time_control(vp,i)
 		var active := (i==0 and sim.paused) or (i>0 and not sim.paused and is_equal_approx(sim.speed,[0.0,1.0,4.0,12.0][i]))
 		var hover := rect.has_point(get_local_mouse_position())
-		draw_rect(rect,Color("#6b2b34") if active else (Color("#33474d") if hover else Color("#1a2d34")))
-		draw_rect(rect,ACCENT if active else Color("#59717c"),false,1.0)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(5,11),str(labels[i]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-7,9,GOOD if active else TEXT)
+		DPNUISkin.button(self,rect,str(labels[i]),hover,active,false,true,true)
 
 func _handle_time_control_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -1818,33 +1783,18 @@ func _handle_time_control_click(position: Vector2) -> bool:
 
 func _draw_toolbar() -> void:
 	var vp := get_viewport_rect().size
-	var descriptions := ["Construct and manage new buildings","Scout sites and dispatch salvage teams","Choose laws that affect survivors","Trade supplies and queue real production","Manage neighboring groups","Expand regional recovery","Save this settlement","Load your saved settlement","Learn the controls"]
-	var current := -1
 	for i in range(TOOLBAR_NAMES.size()):
 		var rect := SettlementUILayout.navbar_rect(vp,i)
 		var active := false
 		match i:
-			0: active = build_mode
-			1: active = world_map_mode
-			2: active = governance_mode
-			3: active = economy_mode
-			4: active = faction_mode
-			5: active = civilization_mode
-			8: active = help_mode
-		var hovered := rect.has_point(get_local_mouse_position())
-		if hovered:
-			current = i
-		draw_rect(rect,Color("#583138") if active else (Color("#2d444c") if hovered else Color("#142631")))
-		draw_rect(rect,ACCENT if active else (Color("#71929c") if hovered else Color("#3d626d")),false,1)
-		draw_rect(Rect2(rect.position,Vector2(3,rect.size.y)),ACCENT if active else Color("#334956"))
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,12),"%02d" % (i+1),HORIZONTAL_ALIGNMENT_LEFT,20,9,ACCENT if active else MUTED)
-		draw_string(ThemeDB.fallback_font,rect.position+Vector2(8,24),TOOLBAR_NAMES[i],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-27,11,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-7,rect.position.y+12),TOOLBAR_HINTS[i],HORIZONTAL_ALIGNMENT_RIGHT,24,9,GOOD if active else MUTED)
-		if active:
-			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-3),Vector2(rect.size.x-6,3)),ACCENT)
-		elif hovered:
-			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-2),Vector2(rect.size.x-6,2)),GOOD)
-	# Tooltips live inside the dock status rail, never over the 3D world.
+			0: active=build_mode
+			1: active=world_map_mode
+			2: active=governance_mode
+			3: active=economy_mode
+			4: active=faction_mode
+			5: active=civilization_mode
+			8: active=help_mode
+		DPNUISkin.nav_station(self,rect,i,TOOLBAR_NAMES[i],TOOLBAR_HINTS[i],active,rect.has_point(get_local_mouse_position()))
 
 func _handle_toolbar_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
