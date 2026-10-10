@@ -1,3 +1,13 @@
+# PLAYTEST FEEDBACK — TIME CONTROL AND VISIBLE WORLD UPGRADE (OCTOBER 10)
+
+**Time bug confirmed:** the former world clock ran at 19.2 in-game minutes per real second on 1x. It is now calibrated at 1 game minute/second on 1x (24-minute day), 4 minutes/second on 4x, and 12 minutes/second on 12x. 1x survivor walking is reduced to about 1.2 meters/second. The Day-2 objective no longer silently forces 4x, keyboard and mouse speed presets share one handler, and exceptional >250ms stalled frames are capped to prevent unintended jumps. Headless gameplay smoke tests advance full simulation fixtures using 5fps and 20fps update intervals and verify pause stops time.
+
+**Screenshot-driven visual upgrade:** the player supplied new FULL and 3D screenshots that remained too similar to the prior prototype. This pass intentionally changes normal-zoom scene readability: closer default camera, higher physical daylight illumination in clear weather, reduced over-tiling on the rough concrete façade material, and a real 3D compound perimeter with supply depots, lamp posts and service aprons outside the existing traversable building layouts. This is geometry only—no path collisions, fake residents, changed inventory or save migration. Rooftop cutaway and safe UI rasterizer remain intact.
+
+**Windows acceptance:** at 08:21 in clear weather, capture fresh FULL/3D images. The camp boundary, roadside lighting posts, supply yards and less-speckled walls should be clearly visible. Verify F8 capture/Tab cutaways still work and no red streaks reappear. Stopwatch 60 real seconds at 1x: exactly one game hour should elapse (clock time is displayed as HH:MM). Check 4x and 12x against the advertised rates, pause and reset to 1x. The final high-fidelity models, true civilian activity animations and room physics remain future roadmap work.
+
+---
+
 # WORLD READABILITY AND CAMERA FOLLOW — OCTOBER 10 PLAYTEST
 
 The screenshots show a working 3D roof cutaway but very dark mornings, repetitive rooms and hard-to-locate survivors. This focused pass brightens genuine clear-weather daylight (storms and darkness still apply), stages distinct color-coded working zones and shelves/equipment inside existing real rooms, and adds facility name signage and low-cost powered door lamps in the 3D world. The exterior models, normal collision routes, save format and safe red-line-free HUD renderer remain unchanged.

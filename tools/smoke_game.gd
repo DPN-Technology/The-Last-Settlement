@@ -1245,6 +1245,27 @@ func _smoke() -> void:
 	instance.build_mode=false
 	instance.economy_mode=false
 	instance.industry_workshop_visible=false
+	# The district dressing is actual 3D settlement infrastructure, not a UI
+	# graphic. Its landmarks must be present in a headless playable world.
+	var compound := instance.settlement_world.terrain_layer.get_node_or_null("LastHavenPerimeterDressing")
+	if compound==null:
+		push_error("SMOKE: camp perimeter scene is missing")
+		quit(1)
+		return
+	var rails := 0
+	var lamps := 0
+	var stores := 0
+	for feature in compound.get_children():
+		if feature.name=="PerimeterRail":
+			rails+=1
+		elif feature.name=="CampLanternPost":
+			lamps+=1
+		elif feature.name=="SupplyDepot":
+			stores+=1
+	if rails<35 or lamps<8 or stores<4:
+		push_error("SMOKE: physical compound fence/lamps/supply area missing")
+		quit(1)
+		return
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
 	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
