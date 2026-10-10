@@ -966,9 +966,9 @@ func _draw_hud() -> void:
 	var morale := sim.get_average_morale()
 	var resources := [
 		["PEOPLE", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
-		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food reserves for the settlement"],
-		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available to survivors"],
-		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Electricity produced versus needed. Low supply drains batteries."],
+		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food. Click to build a crop field."],
+		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available. Click to build a purifier."],
+		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Actual power supply vs demand. Click to build a generator."],
 		["MEALS", "%.0f" % float(sim.resources["meals"]), float(sim.resources["meals"])/maxf(1.0,float(alive)*2.0), "Prepared food ready for consumption"],
 		["MORALE", "%.0f%%" % morale, morale/100.0, "Average confidence and satisfaction"]
 	]
@@ -1283,6 +1283,44 @@ func _handle_build_palette_click(position: Vector2) -> bool:
 			build_rotated = false
 			return true
 	return true
+
+func _open_building_from_status(build_type: String) -> void:
+	if not build_mode:
+		_handle_toolbar_click(SettlementUILayout.navbar_rect(get_viewport_rect().size,0).get_center())
+	var catalog := sim.get_build_catalog()
+	for i in range(catalog.size()):
+		if str(catalog[i]["type"])==build_type:
+			_set_build_category(SettlementCommandCatalog.category_for(build_type))
+			build_catalog_index = i
+			break
+	playtest_notice = "BUILD MENU OPEN  /  SELECT TERRAIN TO PLACE "+str(catalog[build_catalog_index]["name"]).to_upper()
+	playtest_notice_seconds = 5.0
+
+func _handle_resource_chip_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	# The actual warning strip is also interactive: power shortage opens a
+	# generator blueprint; the player never has to guess which menu to use.
+	if Rect2(vp.x-158,54.0,154.0,24.0).has_point(position) and str(_settlement_attention()[0])=="POWER SHORTFALL":
+		_open_building_from_status("generator")
+		return true
+	var cards := SettlementUILayout.resource_rects(vp)
+	for i in range(cards.size()):
+		if not cards[i].has_point(position):
+			continue
+		match i:
+			0,4:
+				overview_visible = true
+			1:
+				_open_building_from_status("farm")
+			2:
+				_open_building_from_status("purifier")
+			3:
+				_open_building_from_status("generator")
+			5:
+				if not governance_mode:
+					_handle_toolbar_click(SettlementUILayout.navbar_rect(vp,2).get_center())
+		return true
+	return false
 
 func _draw_toolbar() -> void:
 	var vp := get_viewport_rect().size
@@ -1904,6 +1942,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _handle_overview_click(event.position):
 				return
 			if help_mode or update_mode:
+				return
+			if _handle_resource_chip_click(event.position):
 				return
 			if event.position.y < SettlementUILayout.TOP_H:
 				return
