@@ -1814,6 +1814,28 @@ func _overview_rows() -> Array[Dictionary]:
 				result.append({"label":job.to_upper()+"  /  "+str(jobs.get(job,0)),"detail":"Actual staffing  /  open Workforce to reassign","warn":int(jobs.get(job,0))==0 and job in ["Medic","Farmer"]})
 	return result
 
+# Rows are not dead-end telemetry: clicking any row opens the owning
+# gameplay system, using the same actions exposed in the three quick cards.
+func _overview_row_quick_index(row_index: int, rows: Array[Dictionary]) -> int:
+	if row_index<0 or row_index>=rows.size():
+		return -1
+	match overview_tab_index:
+		1:
+			return 0 if row_index in [0,1] else (1 if row_index==2 else 2)
+		2:
+			return 2 if str(rows[row_index].get("label","")).contains("SUPPLY CHAIN") else 0
+		3:
+			return 0
+		_:
+			var title := str(rows[row_index].get("label","")).to_upper()
+			if title.contains("DIRECTIVE"):
+				return 0
+			if title.contains("STORM"):
+				return 0
+			if title.contains("POWER") or title.contains("CONSTRUCTION") or title.contains("SUPPLY"):
+				return 1
+			return 2
+
 func _overview_shortcuts() -> Array:
 	match overview_tab_index:
 		1: return ["POWER","WATER","BUILD"]
@@ -1871,8 +1893,10 @@ func _draw_overview() -> void:
 		var entry: Dictionary=rows[i]
 		var box := SettlementUILayout.overview_data_row(vp,i)
 		var dangerous := bool(entry.get("warn",false))
-		DPNUISkin.list_row(self,box,false,false,dangerous)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,15),str(entry.get("label","")),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22.0,12,WARN if dangerous else TEXT)
+		var hovered := box.has_point(get_local_mouse_position())
+		DPNUISkin.list_row(self,box,false,hovered,dangerous)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,15),str(entry.get("label","")),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-35.0,12,WARN if dangerous else TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(box.end.x-13,box.position.y+22),">",HORIZONTAL_ALIGNMENT_RIGHT,10,12,ACCENT if hovered else MUTED)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,30),str(entry.get("detail","")),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22.0,10,MUTED)
 	for i in range(3):
 		var button := SettlementUILayout.overview_quick_rect(vp,i)
@@ -1891,6 +1915,13 @@ func _handle_overview_click(position: Vector2) -> bool:
 	for index in range(OVERVIEW_TABS.size()):
 		if SettlementUILayout.overview_tab_rect(vp,index).has_point(position):
 			overview_tab_index=index
+			return true
+	var entries := _overview_rows()
+	for index in range(mini(entries.size(),SettlementUILayout.overview_visible_rows(vp))):
+		if SettlementUILayout.overview_data_row(vp,index).has_point(position):
+			var quick := _overview_row_quick_index(index,entries)
+			if quick>=0:
+				_overview_quick_action(quick)
 			return true
 	for index in range(3):
 		if SettlementUILayout.overview_quick_rect(vp,index).has_point(position):
