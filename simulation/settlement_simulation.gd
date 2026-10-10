@@ -56,6 +56,7 @@ var utility_failures := {
 var event_director := EventDirector.new()
 var social_simulation := SocialSimulation.new()
 var world_simulation := WorldSimulation.new()
+var weather_simulation := WeatherSimulation.new()
 var governance_simulation := GovernanceSimulation.new()
 var economy_simulation := EconomySimulation.new()
 var faction_simulation := FactionSimulation.new()
@@ -284,6 +285,7 @@ func update(delta: float) -> void:
 		day += 1
 		add_event("NEW DAY", "Day %d begins." % day, "intel")
 
+	weather_simulation.update(self,sim_hours)
 	var alive := get_alive_citizens()
 	var population := alive.size()
 	resources["power"] = clampf(resources["power"] + _power_delta(population) * sim_hours, 0.0, 100.0)
@@ -377,7 +379,7 @@ func _update_utilities(sim_hours: float) -> void:
 			"storage": demand += 1.0
 
 	var fuel_factor := economy_simulation.consume_generator_fuel(self, sim_hours, generator_count)
-	generated *= fuel_factor
+	generated *= fuel_factor * weather_simulation.power_factor()
 	if fuel_factor < 0.2 and generator_count > 0:
 		utility_state["power_online"] = false
 	utility_state["battery_capacity"] = maxf(100.0, battery_capacity)
@@ -414,7 +416,7 @@ func _update_utilities(sim_hours: float) -> void:
 	var extracted := pump_capacity * power_factor * sim_hours
 	utility_state["raw_water"] = minf(300.0, float(utility_state["raw_water"]) + extracted)
 	var raw_available := float(utility_state["raw_water"])
-	var clean_rate := minf(purifier_capacity * power_factor, raw_available / maxf(sim_hours, 0.001))
+	var clean_rate := minf(purifier_capacity * power_factor * weather_simulation.water_factor(), raw_available / maxf(sim_hours, 0.001))
 	var cleaned := clean_rate * sim_hours
 	utility_state["raw_water"] = maxf(0.0, raw_available - cleaned)
 	stockpiles["command"]["water"] = minf(420.0, float(stockpiles["command"].get("water",0.0)) + cleaned)
@@ -525,6 +527,16 @@ func _choose_action(c: Dictionary) -> void:
 		return
 	if not is_selected_work_enabled(c):
 		_set_action(c, "Off Duty", "housing")
+		return
+	# An issued shelter order changes real work assignments and prevents
+	# outside construction/hauling/farming progress while the storm persists.
+	if weather_simulation.should_shelter(c):
+		if int(c.get("target_blueprint_id",0))>0:
+			var blueprint := get_blueprint_by_id(int(c["target_blueprint_id"]))
+			if not blueprint.is_empty() and int(blueprint.get("assigned_builder",0))==int(c["id"]):
+				blueprint["assigned_builder"]=0
+			c["target_blueprint_id"]=0
+		_set_action(c,"Shelter: Dust Storm","housing")
 		return
 
 	if c["job"] == "Builder":
@@ -908,6 +920,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"completed_rooms": completed_rooms,
 		"utility_state": utility_state,
 		"utility_failures": utility_failures,
+		"weather": {"condition":weather_simulation.condition,"intensity":weather_simulation.intensity,"front_ends_at":weather_simulation.front_ends_at,"next_front_at":weather_simulation.next_front_at,"shelter_in_place":weather_simulation.shelter_in_place},
 		"world_locations": _serialize_vector_dicts(world_simulation.locations),
 		"expeditions": world_simulation.expeditions,
 		"discovered_location_ids": world_simulation.discovered_location_ids,
@@ -1022,6 +1035,14 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	completed_rooms = int(data.get("completed_rooms", detect_rooms()))
 	utility_state = data.get("utility_state", utility_state)
 	utility_failures = data.get("utility_failures", utility_failures)
+	var saved_weather: Dictionary=data.get("weather",{})
+	weather_simulation.condition=str(saved_weather.get("condition",WeatherSimulation.CLEAR))
+	if weather_simulation.condition not in [WeatherSimulation.CLEAR,WeatherSimulation.DUST_STORM]:
+		weather_simulation.condition=WeatherSimulation.CLEAR
+	weather_simulation.intensity=clampf(float(saved_weather.get("intensity",0.0)),0.0,1.0) if weather_simulation.condition==WeatherSimulation.DUST_STORM else 0.0
+	weather_simulation.front_ends_at=maxf(0.0,float(saved_weather.get("front_ends_at",0.0)))
+	weather_simulation.next_front_at=maxf(total_hours+1.0,float(saved_weather.get("next_front_at",total_hours+46.0)))
+	weather_simulation.shelter_in_place=bool(saved_weather.get("shelter_in_place",false)) if weather_simulation.condition==WeatherSimulation.DUST_STORM else false
 	world_simulation.locations = _restore_vector_dicts(data.get("world_locations", world_simulation.locations))
 	world_simulation.expeditions = _restore_dict_array(data.get("expeditions", world_simulation.expeditions))
 	world_simulation.discovered_location_ids = _restore_int_array(data.get("discovered_location_ids", world_simulation.discovered_location_ids))
