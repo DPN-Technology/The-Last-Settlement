@@ -260,6 +260,7 @@ func _draw() -> void:
 		_draw_settlement_minimap()
 	if ui_diagnostic_pass != 4 and overview_visible and not workforce_mode:
 		_draw_overview()
+	_draw_command_close()
 	# Draw the incident console LAST, above every other menu and HUD surface.
 	# F2 no longer creates an invisible/persistent panel underneath other modes.
 	if incident_panel_visible:
@@ -2058,6 +2059,71 @@ func _draw_event_toasts() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(left + 29, row_y + 3), str(incident.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 263, 11, TEXT)
 		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 17), str(incident.get("body", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 9, MUTED)
 
+# Every major command view must have a predictable visible X, with the
+# same physical rectangle used to draw it and handle mouse clicks.
+func _active_command_panel() -> Rect2:
+	var size := get_viewport_rect().size
+	if workforce_mode:
+		return SettlementUILayout.workforce_panel(size)
+	if help_mode:
+		return SettlementUILayout.guide_rect(size)
+	if update_mode:
+		return SettlementUILayout.side_panel(size,500.0)
+	if build_mode:
+		return SettlementUILayout.build_palette(size,0)
+	if world_map_mode:
+		return SettlementUILayout.side_panel(size,372.0)
+	if governance_mode or faction_mode:
+		return SettlementUILayout.side_panel(size,480.0)
+	if economy_mode:
+		return SettlementUILayout.workshop_panel(size) if industry_workshop_visible else SettlementUILayout.side_panel(size,480.0)
+	if civilization_mode:
+		return SettlementUILayout.side_panel(size,620.0)
+	if not selected_citizen.is_empty() or not selected_blueprint.is_empty():
+		return SettlementUILayout.side_panel(size,350.0)
+	if not selected_building.is_empty():
+		return SettlementUILayout.facility_inspector(size)
+	return Rect2()
+
+func _draw_command_close() -> void:
+	var panel := _active_command_panel()
+	if panel.size.x<=0.0 or incident_panel_visible:
+		return
+	var button := SettlementUILayout.command_close_rect(panel)
+	DPNUISkin.button(self,button,"X",button.has_point(get_local_mouse_position()),false,true)
+
+func _handle_command_close_click(point: Vector2) -> bool:
+	if incident_panel_visible:
+		return false
+	var panel := _active_command_panel()
+	if panel.size.x<=0.0 or not SettlementUILayout.command_close_rect(panel).has_point(point):
+		return false
+	if workforce_mode:
+		workforce_mode=false
+	elif help_mode:
+		help_mode=false
+	elif update_mode:
+		update_mode=false
+	elif build_mode:
+		build_mode=false
+	elif world_map_mode:
+		world_map_mode=false
+	elif governance_mode:
+		governance_mode=false
+	elif economy_mode and industry_workshop_visible:
+		industry_workshop_visible=false
+	elif economy_mode:
+		economy_mode=false
+	elif faction_mode:
+		faction_mode=false
+	elif civilization_mode:
+		civilization_mode=false
+	else:
+		selected_citizen={}
+		selected_building={}
+		selected_blueprint={}
+	return true
+
 func _incident_entries() -> Array[Dictionary]:
 	return SettlementIncidentUI.groups(sim.events,incident_filter_index,incident_acknowledged)
 
@@ -2938,6 +3004,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_incident_click(event.position):
+				return
+			if _handle_command_close_click(event.position):
 				return
 			if _handle_toolbar_click(event.position):
 				overview_visible = false
