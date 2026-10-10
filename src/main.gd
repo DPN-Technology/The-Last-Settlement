@@ -1436,11 +1436,12 @@ func _draw_hud() -> void:
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,rect.size.x-14),2)),Color("#2d383b"))
 		draw_rect(Rect2(rect.position + Vector2(7,rect.size.y-5),Vector2(maxf(1.0,(rect.size.x-14)*fraction),2)),severity)
 	var battery_percent := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
-	var summary := "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
+	var weather_name := sim.weather_simulation.condition
+	var summary := "Day %d  •  %02d:%02d  |  Weather: %s  |  Materials: %.0f  |  Projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
 	if vp.x >= 1120.0:
-		summary = "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Building projects: %d  |  Power: %.0f produced / %.0f needed  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size(),float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),battery_percent]
+		summary = "Day %d  •  %02d:%02d  |  Weather: %s  |  Materials: %.0f  |  Projects: %d  |  Power: %.0f / %.0f  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,float(sim.resources["materials"]),sim.blueprints.size(),float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),battery_percent]
 	elif vp.x < 920.0:
-		summary = "Day %d  •  %02d:%02d  |  Materials: %.0f  |  Projects: %d" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),float(sim.resources["materials"]),sim.blueprints.size()]
+		summary = "Day %d  •  %02d:%02d  |  %s  |  Projects: %d" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,sim.blueprints.size()]
 	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-175,10,MUTED)
 	var attention := _settlement_attention()
 	draw_string(ThemeDB.fallback_font,Vector2(vp.x-152,69),str(attention[0]),HORIZONTAL_ALIGNMENT_RIGHT,138,10,Color(attention[1]))
@@ -1493,6 +1494,8 @@ func _settlement_attention() -> Array:
 		return ["CHECK FOOD",WARN]
 	if float(sim.utility_state["power_generated"]) < float(sim.utility_state["power_demand"]):
 		return ["POWER SHORTFALL",WARN]
+	if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM:
+		return ["SHELTER ACTIVE" if sim.weather_simulation.shelter_in_place else "STORM: TAKE COVER", WARN if sim.weather_simulation.shelter_in_place else BAD]
 	return [_active_screen_label(),GOOD]
 
 func _next_settlement_goal() -> String:
@@ -1539,8 +1542,13 @@ func _draw_overview() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+268),"Battery charge: %.0f%%    |    Sanitation: %.0f%%" % [charge,float(sim.utility_state["sanitation"])],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
 	if area.size.y>350.0:
 		draw_line(Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#31484e"),1.0)
-		draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"TIP: Click people or buildings to inspect them.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Use Space to pause or resume the settlement.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
+		var weather := sim.weather_simulation
+		if weather.condition==WeatherSimulation.DUST_STORM:
+			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"DUST FRONT: %.1fh remaining  /  %.0f%% strength" % [weather.remaining_hours(sim),weather.intensity*100.0],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
+			draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Click upper-right STORM alert to toggle shelter order.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,GOOD if weather.shelter_in_place else WARN)
+		else:
+			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"Weather: clear  /  forecast front in %.0fh" % weather.remaining_hours(sim),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
+			draw_string(ThemeDB.fallback_font,Vector2(left,top+319),"Select people and structures to inspect them.",HORIZONTAL_ALIGNMENT_LEFT,full_width,10,MUTED)
 	var buttons := ["OPEN BUILD", "SHOW GOALS", "CLOSE"]
 	for index in range(buttons.size()):
 		var rect := SettlementUILayout.overview_button_rect(vp,index)
@@ -1753,6 +1761,11 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 				_open_building_from_status("generator")
 			"NO SURVIVORS":
 				_toggle_workforce()
+			"STORM: TAKE COVER","SHELTER ACTIVE":
+				var storm := sim.weather_simulation
+				if storm.set_shelter_order(sim,not storm.shelter_in_place):
+					playtest_notice="SHELTER ORDER ISSUED  /  FIELD TEAMS TAKE COVER" if storm.shelter_in_place else "SHELTER ORDER RELEASED"
+					playtest_notice_seconds=5.0
 			_:
 				return false
 		return true
