@@ -46,6 +46,11 @@ func _smoke() -> void:
 			push_error("SMOKE: Unsafe raw canvas line primitives in "+source_path)
 			quit(1)
 			return
+		for source_line in source_code.split("\n"):
+			if source_line.contains("draw_rect(") and (source_line.contains(",false,") or source_line.contains(", false,") or source_line.contains(", false)")):
+				push_error("SMOKE: Native UI rectangle outlines must use filled border strips: "+source_path)
+				quit(1)
+				return
 	for visual_size in [Vector2(960,720),Vector2(1024,600),Vector2(1280,720),Vector2(1366,768),Vector2(1920,1080)]:
 		var nav_last_right := 0.0
 		for n in range(9):
