@@ -859,6 +859,35 @@ func toggle_selected_work(c: Dictionary) -> void:
 		c["work_priority"][job] = 3
 		add_event("DUTY RESTORED", "%s returned to %s duty." % [c["name"], job], "good")
 
+# Job assignments are a simulation transaction, not cosmetic labels.  A
+# reassigned Builder releases unfinished projects before returning to a role.
+func assign_citizen_job(c: Dictionary, new_job: String) -> bool:
+	if c.is_empty() or not CitizenFactory.JOBS.has(new_job):
+		return false
+	var known := get_citizen_by_id(int(c.get("id",-1)))
+	if known.is_empty() or not bool(known.get("alive",false)):
+		return false
+	if int(known.get("age",0))<18 or str(known.get("job",""))=="Child":
+		return false
+	if bool(known.get("on_expedition",false)) or str(known.get("home_settlement","LAST_HAVEN"))!="LAST_HAVEN":
+		return false
+	if str(known["job"])==new_job:
+		return false
+	var old_job := str(known["job"])
+	if old_job=="Builder":
+		for blueprint in blueprints:
+			if int(blueprint.get("assigned_builder",0))==int(known["id"]):
+				blueprint["assigned_builder"]=0
+	known["job"]=new_job
+	known["target_blueprint_id"]=0
+	known["target"]=Vector2.ZERO
+	known["target_building"]=""
+	known["current_action"]="Idle"
+	# Explicit reassignment activates the newly chosen assignment.
+	known["work_priority"][new_job]=maxi(1,int(known["work_priority"].get(new_job,3)))
+	add_event("WORKFORCE REASSIGNED", "%s moved from %s to %s duty." % [str(known["name"]),old_job,new_job], "intel")
+	return true
+
 func save_game(path: String = "user://settlement_save.json") -> bool:
 	var data := {
 		"version": SAVE_VERSION,
