@@ -1181,14 +1181,13 @@ func _draw_help_panel() -> void:
 	for i in range(lessons.size()):
 		var box := SettlementUILayout.guide_lesson_rect(vp,i)
 		var hover := box.has_point(get_local_mouse_position())
-		draw_rect(box,Color("#30444b") if hover else Color("#172a35"))
-		draw_rect(box,GOOD if hover else Color("#496772"),false,1)
-		draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT)
+		DPNUISkin.list_row(self,box,false,hover)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,24),str(lessons[i][0]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-24,13,TEXT)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,50),str(lessons[i][1]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-24,11,MUTED)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,72),str(lessons[i][2]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-24,11,GOOD)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,box.size.y-7),"CLICK TO OPEN  ›",HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22,9,GOOD if hover else MUTED)
-	draw_rect(Rect2(x+17,y+h-46,w-34,31),Color("#20343b"))
+	draw_rect(Rect2(x+17,y+h-46,w-34,31),DPNUISkin.SURFACE)
+	draw_line(Vector2(x+18,y+h-46),Vector2(x+w-18,y+h-46),ACCENT,1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+h-25),"SPACE  PAUSE    S  SAVE    L  LOAD    F8  SCREENSHOT    F9  REPORT    ESC  CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-54,11,TEXT)
 
 func _open_guide_section(index: int) -> void:
@@ -1415,7 +1414,8 @@ func _draw_hud() -> void:
 		summary = "Day %d  •  %02d:%02d  |  %s  |  Projects: %d" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,sim.blueprints.size()]
 	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-175,10,MUTED)
 	var attention := _settlement_attention()
-	draw_string(ThemeDB.fallback_font,Vector2(vp.x-152,69),str(attention[0]),HORIZONTAL_ALIGNMENT_RIGHT,138,10,Color(attention[1]))
+	var warning := Rect2(vp.x-158,54.0,154.0,24.0)
+	DPNUISkin.button(self,warning,str(attention[0]),warning.has_point(get_local_mouse_position()),false,str(attention[0]) in ["STORM: TAKE COVER","NO SURVIVORS","POWER SHORTFALL","CHECK FOOD","CHECK WATER"],true,true)
 
 	if selected_citizen.is_empty() and selected_building.is_empty() and not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and not help_mode and not update_mode:
 		if incident_panel_visible:
@@ -1443,8 +1443,7 @@ func _draw_hud() -> void:
 		var tooltip_width := 300.0
 		var tooltip_x := clampf(card.position.x,10.0,maxf(10.0,vp.x-tooltip_width-10))
 		var tooltip := Rect2(tooltip_x,top_h+8.0,tooltip_width,48.0)
-		draw_rect(tooltip,Color("#101b20f3"))
-		draw_rect(tooltip,Color("#7a9297"),false,1.0)
+		DPNUISkin.frame(self,tooltip,ui_animation_clock,false)
 		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,18),str(source[0])+"  //  "+str(source[1]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,12,TEXT)
 		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,35),str(source[3]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,10,MUTED)
 	if playtest_notice_seconds > 0.0:
@@ -2034,9 +2033,7 @@ func _draw_building_panel(b: Dictionary) -> void:
 	for index in range(3):
 		var button := SettlementUILayout.facility_action(vp,index)
 		var highlight := button.has_point(get_local_mouse_position())
-		draw_rect(button,Color("#603036") if highlight or (index==1 and pending_demolition_key==_facility_key(b)) else Color("#1d313a"))
-		draw_rect(button,BAD if index==1 else (GOOD if index==0 and condition<99.5 else Color("#607c87")),false,1)
-		draw_string(ThemeDB.fallback_font,button.position+Vector2(9,21),labels[index],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-16,11,TEXT)
+		DPNUISkin.button(self,button,labels[index],highlight,pending_demolition_key==_facility_key(b) and index==1,index==1,true,true)
 
 func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> void:
 	draw_string(ThemeDB.fallback_font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, 150, 10, MUTED)
