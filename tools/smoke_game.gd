@@ -1558,12 +1558,12 @@ func _smoke() -> void:
 		push_error("SMOKE: Actual 3D furnished rooms, door hinges or cutaway roof meshes missing")
 		quit(1)
 		return
-	var visible_roof_mode := instance.roof_view_mode
+	var visible_roof_mode: int = int(instance.roof_view_mode)
 	instance.roof_view_mode=1
 	instance.settlement_world._update_roof_views(sim,{}, {},1)
 	var revealed := 0
 	for structure in instance.settlement_world.structure_layer.get_children():
-		var interior := structure.get_node_or_null("InteriorFurnishings")
+		var interior: Node3D = structure.get_node_or_null("InteriorFurnishings") as Node3D
 		if interior!=null and interior.visible:
 			revealed+=1
 			for part in structure.get_children():
@@ -1577,7 +1577,7 @@ func _smoke() -> void:
 		return
 	instance.settlement_world._update_roof_views(sim,{}, {},2)
 	for structure in instance.settlement_world.structure_layer.get_children():
-		var interior := structure.get_node_or_null("InteriorFurnishings")
+		var interior: Node3D = structure.get_node_or_null("InteriorFurnishings") as Node3D
 		if interior!=null and interior.visible:
 			push_error("SMOKE: Exterior roof mode left interior furniture exposed")
 			quit(1)
