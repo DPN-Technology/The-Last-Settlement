@@ -1,3 +1,17 @@
+# October 9 player screenshot feedback — UI readability & density pass
+
+Eight photographed Windows playtest screenshots identified the specific problems this patch addresses: HUD labels small at 1280×720, cramped bottom dock / speed row, miniature build/region list entries, wide nearly-empty Nation and Factions panels, and weak hierarchy between commands and live values.
+
+**Implemented fixes:** the dock remains shallow (62 logical pixels) while the nine navigation buttons gain larger click targets and readable labels; speed controls remain distinct above navigation. Top resources emphasize larger numbers instead of tiny values. Build and Region lists have taller rows, stronger type and more legible prices/risks. Nation Overview adds three actual telemetry cards (**discovered sites**, **cleared colony sites**, **active field teams**) and, if vertical space permits, a live event feed. Factions without radio contacts now shows live site/team/relay cards when room permits. These are drawn only when they fit above the action footer. Decorative binary stays inside the dock instead of over the playing field.
+
+**NEW: F7 UI SCALE.** Press F7 to cycle interface sizes 100%, 115%, and 130%. The game refuses a setting that would leave fewer than 960×600 *logical* pixels and resets to 100% in a too-small window. This uses Godot's window content scaling, so drawn hit targets and mouse interaction should remain aligned. The setting is currently for the current session only, not written to the save file.
+
+**Player test:** use F7 at your desired Windows resolution and compare overall legibility, then open Build, Region, Nation, Factions, Industry, Governance, Workforce and an inspected survivor. Specifically confirm the four speed controls don't overlap the nine dock tabs; Nation and Factions never cover their bottom action buttons; text remains inside cards; and the simulation remains responsive to clicks. Use **F8** to capture direct game screenshots rather than photographing the monitor. Long diagonal light streaks in the supplied photos were not found in the DPN UI renderer and may be a camera/display moiré artifact; a direct F8 screenshot will confirm that rather than prompting a speculative 3D graphics fix.
+
+This is a targeted improvement, not a claimed complete high-end commercial UI redesign. Typography and responsive compositing still require real Windows visual acceptance before merging PR #6.
+
+---
+
 # Dust Fronts & Settlement Emergency Orders — Windows playtest
 
 This developer preview adds a dynamic **dust-storm weather front** to the actual Godot simulation. A first front can begin after approximately two simulation days; subsequent fronts recur with a varied interval, duration and severity. The game shows the active weather in the thin HUD data rail, surfaces an urgent **STORM: TAKE COVER** warning, and adds a weather briefing with estimated time remaining in the Overview screen. It uses no real-world forecast service.
