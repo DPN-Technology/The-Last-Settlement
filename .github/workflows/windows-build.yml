@@ -143,7 +143,10 @@ jobs:
 
           1. Extract the complete ZIP to a normal folder.
           2. Keep TheLastSettlement.exe and TheLastSettlement.pck together.
-          3. Double-click TheLastSettlement.exe.
+          3. Start with Launch-TheLastSettlement.cmd (SAFE OpenGL renderer).
+          4. Use Launch-TheLastSettlement-HighGraphics.cmd only to compare
+             Vulkan Forward+ if the compatibility path causes trouble.
+          5. Press F8 to capture a direct in-game PNG if lines persist.
 
           Unsigned builds can trigger a Windows SmartScreen warning. Windows
           may show "Unknown publisher" until DPN Technology uses a signing
@@ -174,7 +177,7 @@ jobs:
             pause
             exit /b 1
           )
-          start "" "TheLastSettlement.exe"
+          start "" "TheLastSettlement.exe" --rendering-method gl_compatibility
           EOF
           cat > dist/windows/Launch-TheLastSettlement-Compatibility.cmd <<'EOF'
           @echo off
@@ -187,11 +190,30 @@ jobs:
           )
           start "" "TheLastSettlement.exe" --rendering-method gl_compatibility
           EOF
+          cat > dist/windows/Launch-TheLastSettlement-HighGraphics.cmd <<'EOF'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "TheLastSettlement.exe" (
+            echo Game executable missing. Extract all files from the ZIP.
+            pause
+            exit /b 1
+          )
+          if not exist "TheLastSettlement.pck" (
+            echo Game data missing. Keep the EXE and PCK together.
+            pause
+            exit /b 1
+          )
+          start "" "TheLastSettlement.exe" --rendering-method forward_plus
+          EOF
           {
             printf 'THE LAST SETTLEMENT // PLAYTEST BUILD\n'
             printf 'Commit: %s\n' "$GITHUB_SHA"
             printf 'Event: %s\n' "$GITHUB_EVENT_NAME"
             printf 'Run: https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            printf 'Default renderer: OpenGL compatibility / GPU-safe line primitives.\n'
+            printf 'High-graphics comparison: Launch-TheLastSettlement-HighGraphics.cmd\n'
+            printf 'Press F8 for direct PNG evidence of any display lines.\n'
             printf 'For feedback press F9 in the game; see docs/PLAYTESTING.md.\n'
             printf 'Back up save data before opening a development build.\n'
           } > dist/windows/PLAYTEST-INFO.txt
@@ -201,7 +223,7 @@ jobs:
         run: |
           set -euo pipefail
           cd dist/windows
-          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             PLAYTEST-INFO.txt             Launch-TheLastSettlement.cmd             Launch-TheLastSettlement-Compatibility.cmd             SHA256SUMS.txt
+          zip -9 "../TheLastSettlement-Windows-x86_64.zip"             TheLastSettlement.exe             TheLastSettlement.pck             README-WINDOWS.txt             PLAYTEST-INFO.txt             Launch-TheLastSettlement.cmd             Launch-TheLastSettlement-Compatibility.cmd             Launch-TheLastSettlement-HighGraphics.cmd             SHA256SUMS.txt
           cd ../..
           test -s dist/TheLastSettlement-Windows-x86_64.zip
 
@@ -240,6 +262,7 @@ jobs:
             dist/windows/PLAYTEST-INFO.txt
             dist/windows/Launch-TheLastSettlement.cmd
             dist/windows/Launch-TheLastSettlement-Compatibility.cmd
+            dist/windows/Launch-TheLastSettlement-HighGraphics.cmd
             dist/windows/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
@@ -316,7 +339,7 @@ jobs:
             "$pckHash  TheLastSettlement.pck"
           ) | Set-Content "payload\SHA256SUMS.txt" -Encoding ascii
           New-Item -ItemType Directory -Force -Path "dist" | Out-Null
-          Compress-Archive -Path "payload\TheLastSettlement.exe","payload\TheLastSettlement.pck","payload\README-WINDOWS.txt","payload\PLAYTEST-INFO.txt","payload\Launch-TheLastSettlement.cmd","payload\SHA256SUMS.txt" -DestinationPath "dist\TheLastSettlement-Windows-x86_64.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "payload\TheLastSettlement.exe","payload\TheLastSettlement.pck","payload\README-WINDOWS.txt","payload\PLAYTEST-INFO.txt","payload\Launch-TheLastSettlement.cmd","payload\Launch-TheLastSettlement-HighGraphics.cmd","payload\SHA256SUMS.txt" -DestinationPath "dist\TheLastSettlement-Windows-x86_64.zip" -CompressionLevel Optimal -Force
 
       - name: Build per-user MSI installer
         shell: pwsh
