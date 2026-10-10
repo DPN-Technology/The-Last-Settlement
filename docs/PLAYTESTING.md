@@ -1,3 +1,17 @@
+# Industry Workshop Command — October 2026 candidate
+
+This pull-request build contains a **real production management screen**, not just a graphical preview. Open **Industry (K)**, then click **Open Workshop Control / Manage Orders** in the middle of the trade screen. The new right-side interface leaves the 3D settlement visible.
+
+The workshop displays the current shift's eligible Builders and Engineers, running efficiency and genuine bottlenecks. Select one of the six production recipes to inspect real inputs, outputs and ingredient readiness. Choose **QUEUE 1** or **QUEUE 5** to add actual orders. Active jobs appear with their statuses and progress; select a queued order to **MOVE UP**, **MOVE DOWN**, or **CANCEL** it. Pagination supports long queues, and production orders have a maximum active backlog of 48 to prevent runaway clicking. Reprioritization never changes a working order. Cancelling is allowed **only before a batch starts and consumes stock**, so no materials are lost or falsely refunded.
+
+**PAUSE / RESUME** stops or restarts the workshop simulation, not the whole settlement clock. It persists in compatible existing save files. Labor availability now checks real shift hours, the on-duty flag, adult status, custody, health and current presence; reassigning an Engineer in Workforce or pausing their duty can leave production short of labor. Resuming labor allows production to continue normally.
+
+**Windows acceptance checks:** queue one Fuel Blend and five Machine Parts; move a pending order, cancel one, and verify the queue changes without stock deduction. Allow one order to become WORKING and confirm it cannot be cancelled; pause production, advance time at 4×, confirm its progress stays fixed; resume and verify actual progress. Send Engineers away on an expedition or set them off duty and confirm production reflects fewer eligible workers. Save while paused, load, and confirm the hold remains. Verify recipe and action buttons at 960×720, 1024×600 and fullscreen, capture F8 screenshots, and report any cut-off areas.
+
+**Limitations:** The screen reuses existing crafting recipes and simulation; this does not add modeled factory interiors, new machines, assembly animations or a full supply-chain logistics network. The automated smoke covers transaction validity and geometry but not visual quality on the player's Windows machine. Keep the PR unmerged until that playtest is approved.
+
+---
+
 ## Emergency mission recall
 
 When a mission is **Outbound** or **Searching**, the right-side active-expedition list now includes a clickable **RECALL TEAM** control. This immediately changes that expedition to **Returning**. An outbound team turns back from the distance it actually traveled (the map marker follows its shortened route). A team already searching must make the full trip home. Incomplete missions do not award phantom loot or refund provisions. Recalling a returning or finished mission is rejected. Arrival clears each surviving member's offsite assignment so they can resume work in Last Haven.
