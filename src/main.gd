@@ -51,6 +51,7 @@ var selected_world_location_id := 0
 var expedition_team_size := 3
 var expedition_strategy_index := 0
 var region_atlas := RegionAtlas.new()
+var settlement_minimap_visible := true
 var governance_mode := false
 var economy_mode := false
 var faction_mode := false
@@ -229,6 +230,8 @@ func _draw() -> void:
 	# Action buttons are drawn after command content and use the same hitboxes
 	# as input handling. Keyboard-only workflows now have mouse equivalents.
 	_draw_panel_actions()
+	if _can_draw_settlement_minimap():
+		_draw_settlement_minimap()
 	if overview_visible and not workforce_mode:
 		_draw_overview()
 
@@ -609,6 +612,68 @@ func _dispatch_region() -> bool:
 	playtest_notice = ("EXPEDITION DISPATCHED  /  " + str(place["name"])) if ok else ("EXPEDITION BLOCKED  /  " + event_text)
 	playtest_notice_seconds = 5.0
 	return ok
+
+func _can_draw_settlement_minimap() -> bool:
+	return settlement_minimap_visible and not (world_map_mode or build_mode or workforce_mode or governance_mode or economy_mode or faction_mode or civilization_mode or help_mode or update_mode or overview_visible) and selected_citizen.is_empty() and selected_building.is_empty() and selected_blueprint.is_empty()
+
+func _settlement_minimap_project(world: Vector2, plot: Rect2) -> Vector2:
+	var normalized := Vector2(clampf((world.x-240.0)/1200.0,0.0,1.0),clampf((world.y-135.0)/730.0,0.0,1.0))
+	return plot.position+normalized*plot.size
+
+func _draw_settlement_minimap() -> void:
+	var size := get_viewport_rect().size
+	var frame := SettlementUILayout.settlement_minimap(size)
+	var plot := SettlementUILayout.minimap_plot(size)
+	DPNUISkin.frame(self,frame,ui_animation_clock)
+	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,23),"LAST HAVEN  /  FACILITY MAP  [F5]",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-23,12,TEXT)
+	draw_rect(plot,Color("#202823"))
+	for i in range(1,6):
+		var px := plot.position.x+plot.size.x*float(i)/6.0
+		var py := plot.position.y+plot.size.y*float(i)/6.0
+		draw_line(Vector2(px,plot.position.y),Vector2(px,plot.end.y),Color("#91917a",0.11),1.0)
+		draw_line(Vector2(plot.position.x,py),Vector2(plot.end.x,py),Color("#91917a",0.11),1.0)
+	for building in sim.buildings:
+		var point := _settlement_minimap_project(Vector2(building["position"]),plot)
+		var extent := Vector2(building["size"])*Vector2(plot.size.x/1200.0,plot.size.y/730.0)
+		var footprint := Rect2(point-extent*0.5,extent)
+		var type := str(building["type"])
+		var tint := Color("#ad826c")
+		if type=="farm":
+			tint=Color("#749b60")
+		elif type in ["water","sewage"]:
+			tint=Color("#76aec0")
+		elif type in ["power","industry"]:
+			tint=Color("#e1a16d")
+		elif type=="medical":
+			tint=Color("#c8d1c7")
+		draw_rect(footprint,Color("#0a0d10"))
+		draw_rect(footprint.grow(-1.0),tint)
+		draw_rect(footprint,Color("#e9decb",0.42),false,1.0)
+	for blueprint in sim.blueprints:
+		var ghost := _settlement_minimap_project(Vector2(blueprint["position"]),plot)
+		draw_rect(Rect2(ghost-Vector2(3,3),Vector2(6,6)),Color("#f05267"),false,1.0)
+	for person in sim.get_settlement_citizens():
+		if bool(person.get("on_expedition",false)):
+			continue
+		var marker := _settlement_minimap_project(Vector2(person.get("position",Vector2(700,450))),plot)
+		draw_circle(marker,1.6,Color("#f8e8d3"))
+	var focus_point := _settlement_minimap_project(settlement_world.game_position(settlement_world.focus),plot)
+	draw_arc(focus_point,6.0,0.0,TAU,20,ACCENT,1.6)
+	draw_line(focus_point-Vector2(9,0),focus_point+Vector2(9,0),ACCENT,1.0)
+	draw_line(focus_point-Vector2(0,9),focus_point+Vector2(0,9),ACCENT,1.0)
+	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,frame.size.y-5),"CLICK TO FOCUS  /  BUILDINGS + CREW",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-24,9,MUTED)
+
+func _handle_minimap_click(position: Vector2) -> bool:
+	if not _can_draw_settlement_minimap():
+		return false
+	var box := SettlementUILayout.settlement_minimap(get_viewport_rect().size)
+	if not box.has_point(position):
+		return false
+	var plot := SettlementUILayout.minimap_plot(get_viewport_rect().size)
+	if plot.has_point(position):
+		var normalized := (position-plot.position)/plot.size
+		_focus_world_position(Vector2(240.0+normalized.x*1200.0,135.0+normalized.y*730.0))
+	return true
 
 func _draw_world_map() -> void:
 	var vp := get_viewport_rect().size
@@ -2199,13 +2264,15 @@ func _cycle_ui_scale() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
-		if workforce_mode and event.keycode not in [KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
+		if workforce_mode and event.keycode not in [KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
 		match event.keycode:
 			KEY_F6:
 				_toggle_workforce()
 			KEY_F7:
 				_cycle_ui_scale()
+			KEY_F5:
+				settlement_minimap_visible=not settlement_minimap_visible
 			KEY_F1:
 				help_mode = not help_mode
 			KEY_F2:
@@ -2566,6 +2633,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if update_mode:
 				return
 			if _handle_resource_chip_click(event.position):
+				return
+			if _handle_minimap_click(event.position):
 				return
 			if event.position.y < SettlementUILayout.TOP_H:
 				return
