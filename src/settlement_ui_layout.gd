@@ -161,3 +161,30 @@ static func workforce_action(size: Vector2, index: int) -> Rect2:
 # They never collide with the nine primary navigation stations.
 static func time_control(size: Vector2, index: int) -> Rect2:
 	return Rect2(size.x-226.0+float(index)*53.0,size.y-BOTTOM_H+2.0,47.0,14.0)
+
+# All workshop render regions are also the sole source of mouse hit tests.
+static func workshop_panel(size: Vector2) -> Rect2:
+	return side_panel(size,635.0)
+
+static func workshop_recipe(size: Vector2, index: int) -> Rect2:
+	var panel := workshop_panel(size)
+	var gap := 7.0
+	var unit := (panel.size.x-36.0-gap*2.0)/3.0
+	return Rect2(panel.position+Vector2(14.0+float(index%3)*(unit+gap),99.0+float(int(index/3))*39.0),Vector2(unit,32.0))
+
+static func workshop_visible_rows(size: Vector2) -> int:
+	return maxi(1,mini(5,int(floor((workshop_panel(size).size.y-335.0)/29.0))))
+
+static func workshop_queue_row(size: Vector2, index: int) -> Rect2:
+	var panel := workshop_panel(size)
+	return Rect2(panel.position+Vector2(14.0,246.0+float(index)*29.0),Vector2(panel.size.x-28.0,27.0))
+
+static func workshop_action(size: Vector2, index: int) -> Rect2:
+	var panel := workshop_panel(size)
+	var gap := 5.0
+	var width := (panel.size.x-28.0-gap*4.0)/5.0
+	return Rect2(panel.position+Vector2(14.0+float(index%5)*(width+gap),panel.size.y-87.0+float(int(index/5))*35.0),Vector2(width,30.0))
+
+static func workshop_entry(size: Vector2) -> Rect2:
+	var panel := side_panel(size,480.0)
+	return Rect2(panel.position+Vector2(16.0,316.0),Vector2(panel.size.x-32.0,29.0))
