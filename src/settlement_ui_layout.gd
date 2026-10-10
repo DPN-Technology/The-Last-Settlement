@@ -60,9 +60,17 @@ static func region_point(size: Vector2, world_pos: Vector2) -> Vector2:
 static func region_site_row(size: Vector2, row: int) -> Rect2:
 	return Rect2(16.0,TOP_H+85.0+float(row)*29.0,211.0,28.0)
 
+static func region_team_control(size: Vector2, index: int) -> Rect2:
+	var panel := side_panel(size,372.0)
+	if index==0:
+		return Rect2(panel.position+Vector2(16.0,180.0),Vector2(55.0,29.0))
+	if index==1:
+		return Rect2(panel.position+Vector2(77.0,180.0),Vector2(55.0,29.0))
+	return Rect2(panel.position+Vector2(139.0,180.0),Vector2(panel.size.x-155.0,29.0))
+
 static func region_dispatch_rect(size: Vector2) -> Rect2:
 	var panel := side_panel(size,372.0)
-	return Rect2(panel.position+Vector2(16.0,194.0),Vector2(panel.size.x-32.0,33.0))
+	return Rect2(panel.position+Vector2(16.0,278.0),Vector2(panel.size.x-32.0,34.0))
 
 static func civilization_tab_rect(size: Vector2, index: int, count: int = 6) -> Rect2:
 	var area := side_panel(size,620.0)
