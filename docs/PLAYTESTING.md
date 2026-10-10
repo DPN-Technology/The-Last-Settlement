@@ -1,3 +1,20 @@
+# Region Mission Planner — PR #6 playtest
+
+**This preview changes gameplay, not merely the layout of the map.**
+
+Open **Region (M)**, choose a discovered salvage site on the map or the site list, then configure **team size (1–4)** with − TEAM / + TEAM and choose a route with the **TACTIC** button. The site card previews who will actually go, required prepared meals / clean water / optional medicine, estimated one-way travel duration, search time and encounter hazard. The dispatch button uses the exact same validation shown in the preview; when a team is unavailable, another expedition is already at the site, or supplies are insufficient, a human-readable reason appears. Rejected missions **never debit supplies**.
+
+The three tactics affect simulated travel, encounter risk and recovery time:
+- **Balanced:** conventional speed, risk and salvage.
+- **Cautious:** slower travel and longer search, reduced encounter risk, slightly more water, and a better expected loot recovery.
+- **Rapid:** faster travel and shorter search, increased encounter risk, one more meal per member, and lower expected loot recovery.
+
+A mission only takes eligible present adults who are healthy enough to travel; Scavengers, Guards, Medics and Engineers receive priority over other jobs. If a Builder departs, their blueprint is released for another worker. Once launched, Region shows actual progress on outbound, searching and returning legs. Members stay marked away from home until they return.
+
+**Acceptance checks on Windows:** verify the preview updates when you change team size or tactic; confirm the mission consumes exactly the listed provisions; re-open the same location and confirm duplicate dispatch is blocked; advance time to see the phase bar progress; verify staffing reductions in Workforce while teams are away; after returning, check supplies and survivor state. Save during a mission and reload to confirm the strategy and elapsed phase persist. F8 captures real screenshots. Do not merge into stable without direct Windows gameplay acceptance.
+
+---
+
 # Workforce Command and Live Timeline — PR #6 playtest
 
 **This is a development-branch feature, not part of the installed stable v1.0.5 build.**
