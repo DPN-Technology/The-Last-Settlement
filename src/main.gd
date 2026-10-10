@@ -50,6 +50,7 @@ var world_map_mode := false
 var selected_world_location_id := 0
 var expedition_team_size := 3
 var expedition_strategy_index := 0
+var region_atlas := RegionAtlas.new()
 var governance_mode := false
 var economy_mode := false
 var faction_mode := false
@@ -630,45 +631,44 @@ func _draw_world_map() -> void:
 		draw_string(ThemeDB.fallback_font,r.position+Vector2(r.size.x-34,20),"%d%%" % int(risk*100.0),HORIZONTAL_ALIGNMENT_RIGHT,28,11,WARN if risk<0.5 else BAD)
 	if discovered.size()>site_rows:
 		draw_string(ThemeDB.fallback_font,Vector2(22,vp.y-SettlementUILayout.BOTTOM_H-15),"%d sites visible  /  %d discovered" % [site_rows,discovered.size()],HORIZONTAL_ALIGNMENT_LEFT,200,10,WARN)
-	# Normalized projection shared with _world_map_select; all nodes remain
-	# within the map canvas, regardless of normal or fullscreen resolution.
-	draw_rect(map,Color("#0b0a11"))
-	draw_rect(Rect2(map.position,Vector2(map.size.x,3)),ACCENT)
-	draw_rect(Rect2(map.position+Vector2(0,3),Vector2(3,map.size.y-3)),Color("#842334"))
-	draw_string(ThemeDB.fallback_font,map.position+Vector2(12,19),"DPN  /  REGIONAL INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,map.size.x-25,10,ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(map.end.x-13,map.end.y-13),"LIVE TACTICAL PROJECTION   •   RADIO FOG ACTIVE",HORIZONTAL_ALIGNMENT_RIGHT,map.size.x-22,9,MUTED)
-	# Thin rotating command radar indicates active regional telemetry. It never
-	# changes the real discovered-site flags or dispatch distances.
-	var radar_centre := SettlementUILayout.region_point(vp,Vector2(600,410))
-	var radar_tip := radar_centre+Vector2(cos(ui_animation_clock*0.33),sin(ui_animation_clock*0.33))*minf(map.size.x,map.size.y)*0.31
-	draw_line(radar_centre,radar_tip,Color("#e94258",0.48),1.0)
-	draw_arc(radar_centre,minf(map.size.x,map.size.y)*0.31,0.0,TAU,72,Color("#a32c42",0.20),1.0)
-	for line in range(1,7):
-		var gx := map.position.x+map.size.x*float(line)/7.0
-		var gy := map.position.y+map.size.y*float(line)/7.0
-		draw_line(Vector2(gx,map.position.y),Vector2(gx,map.end.y),Color("#5729386e"),1)
-		draw_line(Vector2(map.position.x,gy),Vector2(map.end.x,gy),Color("#5729386e"),1)
-	draw_rect(map,Color("#6d3845"),false,1)
+	# Terrain relief, river and archival roads replace the opaque radar disk.
+	# Projected site hitboxes still use SettlementUILayout.region_point.
+	RegionAtlas.draw_cartography(self,map,region_atlas,sim.world_simulation.get_radio_range())
 	var home := SettlementUILayout.region_point(vp,Vector2(600,410))
-	var scale_range := minf(map.size.x/1200.0,map.size.y/820.0)*sim.world_simulation.get_radio_range()
-	draw_circle(home,scale_range,Color("#ab2636",0.13))
-	draw_arc(home,scale_range,0.0,TAU,64,Color("#e44859",0.66),1.0)
+	var range_px := minf(map.size.x/1200.0,map.size.y/820.0)*sim.world_simulation.get_radio_range()
+	# Only the thin radio boundary is drawn; it does not conceal the terrain.
+	draw_arc(home,range_px,0.0,TAU,80,Color("#eb566b",0.47),1.5)
+	# Home -> North Ridge Relay is an actual salvage objective. Show only
+	# discovered destinations here; other ruins remain secret until found.
+	var relay := sim.world_simulation.get_location_by_id(3)
+	if not relay.is_empty() and bool(relay.get("discovered",false)) and not bool(relay.get("restored",false)):
+		var relay_pos := SettlementUILayout.region_point(vp,Vector2(relay["position"]))
+		_draw_region_route_trace(home,relay_pos,Color("#efa56c",0.36))
 	for location in sim.world_simulation.locations:
 		var location_pos := SettlementUILayout.region_point(vp,Vector2(location["position"]))
 		var discovered_site := bool(location.get("discovered",false))
 		if not discovered_site:
-			draw_circle(location_pos,3.5,Color("#40515b"))
+			# Do not leak undiscovered locations as dark dots on the map.
 			continue
 		var id := int(location["id"])
 		var risk := float(location.get("danger",0.0))
 		var color := GOOD if str(location["type"]) in ["settlement","player_settlement"] else (BAD if risk>0.50 else WARN)
 		if bool(location.get("depleted",false)):
 			color = MUTED
-		draw_circle(location_pos,6.0,color)
-		if selected_world_location_id == id:
-			draw_arc(location_pos,12.0,0.0,TAU,24,ACCENT,2.0)
+		var focused := selected_world_location_id == id
+		if focused:
+			draw_circle(location_pos,14.0,Color("#e33950",0.22))
+			draw_arc(location_pos,13.0,0.0,TAU,32,ACCENT,2.5)
+		draw_circle(location_pos,7.0,Color("#111016"))
+		draw_circle(location_pos,5.0,color)
 		if map.size.x >= 370.0:
-			draw_string(ThemeDB.fallback_font,location_pos+Vector2(10,-8),str(location["name"]),HORIZONTAL_ALIGNMENT_LEFT,115,10,TEXT)
+			var label := str(location["name"])
+			var label_x := clampf(location_pos.x+11.0,map.position.x+4.0,map.end.x-127.0)
+			var label_y := clampf(location_pos.y-11.0,map.position.y+42.0,map.end.y-32.0)
+			var caption := Rect2(label_x-3.0,label_y-13.0,123.0,20.0)
+			draw_rect(caption,Color("#07090c",0.81))
+			draw_rect(caption,Color("#9c3445",0.8) if focused else Color("#445355",0.43),false,1.0)
+			draw_string(ThemeDB.fallback_font,Vector2(label_x+3.0,label_y+1.0),label,HORIZONTAL_ALIGNMENT_LEFT,112.0,11,TEXT)
 	for expedition in sim.world_simulation.get_active_expeditions():
 		var destination: Dictionary = sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
 		if destination.is_empty():
@@ -682,7 +682,7 @@ func _draw_world_map() -> void:
 		var route_end := home.lerp(end,clampf(return_distance/distance,0.0,1.0)) if recalled else end
 		var fraction := clampf(traveled/distance,0.0,1.0)
 		var exp_pos := home.lerp(end,fraction) if phase=="outbound" else (route_end.lerp(home,clampf(traveled/maxf(0.01,return_distance),0.0,1.0)) if phase=="returning" else end)
-		draw_line(home,route_end,Color("#e448596f"),1.4)
+		_draw_region_route_trace(home,route_end,Color("#f75e70",0.9))
 		draw_circle(exp_pos,5.0,ACCENT)
 		draw_string(ThemeDB.fallback_font,exp_pos+Vector2(7,-7),"EXP %d" % int(expedition["id"]),HORIZONTAL_ALIGNMENT_LEFT,70,9,TEXT)
 	_draw_ui_panel(side,ACCENT)
@@ -747,6 +747,20 @@ func _draw_world_map() -> void:
 		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#251721"))
 		draw_rect(Rect2(px,ey+20,(side.size.x-36.0)*completion,3.0),GOOD)
 		ey+=48.0
+
+func _draw_region_route_trace(origin: Vector2, destination: Vector2, tint: Color) -> void:
+	# Alternating direct-route segments keep the real straight-line travel
+	# estimate legible on top of detailed terrain, without faking a road route.
+	var distance := origin.distance_to(destination)
+	if distance < 1.0:
+		return
+	var steps := maxi(1,int(ceil(distance/13.0)))
+	for i in range(steps):
+		if i%2!=0:
+			continue
+		var a := origin.lerp(destination,float(i)/float(steps))
+		var b := origin.lerp(destination,minf(1.0,float(i+1)/float(steps)))
+		draw_line(a,b,tint,2.0)
 
 func _world_map_select(screen_pos: Vector2) -> void:
 	var vp := get_viewport_rect().size
