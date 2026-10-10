@@ -1112,6 +1112,20 @@ func _smoke() -> void:
 			return
 	instance.help_mode=false
 	instance.civilization_mode=false
-	print("PLAYTEST SMOKE PASS: controllable expedition recall, planned regional missions, crew costs, workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
+	# A workshop stopped by a player must remain stopped after reloading a
+	# current or pre-existing v14 settlement. No save-schema bump is required.
+	sim.economy_simulation.set_production_paused(sim,true)
+	var workshop_save := "user://settlement-workshop-smoke.json"
+	if not sim.save_game(workshop_save):
+		push_error("SMOKE: Could not persist industrial workshop state")
+		quit(1)
+		return
+	sim.economy_simulation.production_paused=false
+	if not sim.load_game(workshop_save) or not sim.economy_simulation.production_paused:
+		push_error("SMOKE: Workshop pause was not restored from save")
+		quit(1)
+		return
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(workshop_save))
+	print("PLAYTEST SMOKE PASS: real workshop order control, regional missions and recall, workforce management, 3D navigation and save/load")
 	instance.queue_free()
 	quit(0)
