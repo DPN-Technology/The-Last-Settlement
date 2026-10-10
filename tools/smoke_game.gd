@@ -1599,6 +1599,51 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
+	# World graphics use real meshes; detail roofs remain reversible in cutaway.
+	var fidelity_terrain: Node3D=world.terrain_layer.get_node_or_null("FidelityTerrainDressing") as Node3D
+	if fidelity_terrain==null:
+		push_error("SMOKE: new fidelity terrain was not created in 3D world")
+		quit(1)
+		return
+	var stones: MultiMeshInstance3D=fidelity_terrain.get_node_or_null("InstancedWastelandRocks") as MultiMeshInstance3D
+	if stones==null or stones.multimesh==null or stones.multimesh.instance_count<650:
+		push_error("SMOKE: terrain rocks were not instanced and batched")
+		quit(1)
+		return
+	var detailed_exteriors := 0
+	var detailed_rooms := 0
+	var roof_count := 0
+	for structure in world.structure_layer.get_children():
+		if structure.get_node_or_null("FidelityExterior")!=null:
+			detailed_exteriors+=1
+		var new_roof: Node3D=structure.get_node_or_null("FidelityRoofDetail") as Node3D
+		if new_roof!=null:
+			if not new_roof.has_meta("cutaway_roof"):
+				push_error("SMOKE: fidelity roof does not participate in cutaway")
+				quit(1)
+				return
+			roof_count+=1
+		if structure.get_node_or_null("InteriorFurnishings/FidelityInteriorDetails")!=null:
+			detailed_rooms+=1
+	if detailed_exteriors<6 or detailed_rooms<6 or roof_count<6:
+		push_error("SMOKE: upgraded building exterior or interior visuals missing")
+		quit(1)
+		return
+	world._update_roof_views(sim,{}, {},1)
+	for structure in world.structure_layer.get_children():
+		var new_roof: Node3D=structure.get_node_or_null("FidelityRoofDetail") as Node3D
+		if new_roof!=null and new_roof.visible:
+			push_error("SMOKE: exterior roof props float above open rooms")
+			quit(1)
+			return
+	world._update_roof_views(sim,{}, {},2)
+	for structure in world.structure_layer.get_children():
+		var new_roof: Node3D=structure.get_node_or_null("FidelityRoofDetail") as Node3D
+		if new_roof!=null and not new_roof.visible:
+			push_error("SMOKE: fidelity roof details not restored in exterior mode")
+			quit(1)
+			return
+	world._update_roof_views(sim,{}, {},int(instance.roof_view_mode))
 	# World-space interior props and animated door hinges must exist in the
 	# exported scene, with roof hiding limited to the chosen structure.
 	var has_interiors := 0

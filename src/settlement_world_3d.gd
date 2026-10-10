@@ -384,6 +384,7 @@ func _build_terrain() -> void:
 	WastelandDetail.detail_ruins(terrain_layer, materials)
 	WastelandDetail.build_terrain_dressing(terrain_layer, materials)
 	SettlementDistrict3D.build(terrain_layer,materials)
+	SettlementFidelity3D.terrain(terrain_layer,materials)
 
 func _road(a: Vector3, b: Vector3, width: float) -> void:
 	var delta := b - a
@@ -581,6 +582,7 @@ func _build_structure(b: Dictionary) -> void:
 	# Physical furniture remains inside the shell; roofs can reveal it on demand.
 	SettlementInteriors3D.populate(group,type,size,materials)
 	SettlementWorldReadability3D.decorate(group,b,size,body_height,materials)
+	SettlementFidelity3D.exterior(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])

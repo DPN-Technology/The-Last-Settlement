@@ -149,6 +149,7 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 				_cabinet(room,Vector3(side*hx*0.65,0,size.y*0.19),mats)
 			_workbench(room,Vector3(0,0,size.y*0.30),mats)
 	_stage_rooms(room,kind,size,mats)
+	SettlementFidelity3D.interior(room,kind,size,mats)
 	# Restrict internal light to revealed interiors; no glowing exterior boxes.
 	var light := OmniLight3D.new()
 	light.name="InteriorWorkLight"

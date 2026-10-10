@@ -1,3 +1,11 @@
+# WORLD REALISM — PLAYABLE 3D GRAPHICS PASS
+
+This is an actual Godot implementation, not the generated visual target. A new art-direction module adds MultiMesh-instanced wasteland rocks (700), scrap (250), and dry scrub (480), plus environmental salvage stations; each supported facility receives corroded exterior armor, welded panel seams, entry protective details, supply pallets, service conduit and roof fittings. Furnished building interiors gain floor tile seams, short dividers, job-specific equipment and localized task lamps. Rooftop additions use the existing cutaway metadata and should disappear when buildings are opened. All new props are decorative and do not change simulation logic, path collision, speed control, saves, or HUD rendering.
+
+Acceptance on Windows: compare in-game screenshots—not the concept image—at the same 08:21 day/time, confirm new external world dressing and interior equipment are clearly present, select a shelter/clinic/workshop and cycle Tab for interior/roof visibility, and check frame time and material legibility. Art direction still requires dedicated glTF/PBR building kits, character animation and real obstacle navigation to match the concept's fidelity.
+
+---
+
 # PLAYTEST FEEDBACK — TIME CONTROL AND VISIBLE WORLD UPGRADE (OCTOBER 10)
 
 **Time bug confirmed:** the former world clock ran at 19.2 in-game minutes per real second on 1x. It is now calibrated at 1 game minute/second on 1x (24-minute day), 4 minutes/second on 4x, and 12 minutes/second on 12x. 1x survivor walking is reduced to about 1.2 meters/second. The Day-2 objective no longer silently forces 4x, keyboard and mouse speed presets share one handler, and exceptional >250ms stalled frames are capped to prevent unintended jumps. Headless gameplay smoke tests advance full simulation fixtures using 5fps and 20fps update intervals and verify pause stops time.
