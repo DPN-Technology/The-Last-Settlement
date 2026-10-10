@@ -25,6 +25,22 @@ func _smoke() -> void:
 		push_error("SMOKE: DPN crimson/black shared command skin is missing")
 		quit(1)
 		return
+	# Issue #9: the 9 button frames and 6 resource shells are now SVG
+	# rasterized textures. Require the rasterization to work in exported Godot,
+	# rather than silently reverting to the old primitive fallback.
+	for glyph_index in range(9):
+		var raster_glyph: Texture2D=DPNUISkin._nav_glyph(glyph_index)
+		if raster_glyph==null or raster_glyph.get_width()<20:
+			push_error("SMOKE: UI icon texture was not rasterized for station "+str(glyph_index))
+			quit(1)
+			return
+	for current in [false,true]:
+		var nav_shell: Texture2D=DPNUISkin._nav_background(current,false)
+		var telemetry_shell: Texture2D=DPNUISkin._resource_background(current)
+		if nav_shell==null or nav_shell.get_width()<120 or telemetry_shell==null or telemetry_shell.get_width()<120:
+			push_error("SMOKE: UI raster control backgrounds unavailable")
+			quit(1)
+			return
 	# Full-screen red line captures were absent from the isolated 3D pass:
 	# lock the UI decoration toggle to reversible behavior without gameplay
 	# state changes, so the player can isolate any residual graphics artifact.
