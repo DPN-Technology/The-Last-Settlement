@@ -170,6 +170,74 @@ static func meter(canvas: CanvasItem, rect: Rect2, value: float, severity: Color
 		var x := rect.position.x+rect.size.x*float(i)/10.0
 		stroke(canvas,Vector2(x,rect.position.y),Vector2(x,rect.end.y),Color("#07080c",0.6),1.0)
 
+# Issue #9: source images are rasterized ONCE on the CPU. The Windows
+# compositor receives compact textures, not many separately batched narrow
+# CanvasItem vector/rectangle strokes at the 9 repeating dock coordinates.
+static var _hud_raster_cache: Dictionary = {}
+
+static func _raster_svg(svg_source: String) -> Texture2D:
+	var image := Image.new()
+	if image.load_svg_from_buffer(svg_source.to_utf8_buffer(),2.0)!=OK:
+		return null
+	return ImageTexture.create_from_image(image)
+
+static func _nav_background(active: bool, hover: bool) -> Texture2D:
+	var key := "nav_%d_%d" % [int(active),int(hover)]
+	if _hud_raster_cache.has(key):
+		return _hud_raster_cache[key]
+	var fill := "#35141f" if active else ("#21131b" if hover else "#101117")
+	var edge := "#e2374c" if active else ("#b94c5c" if hover else "#69404b")
+	var svg := "<svg xmlns='http://www.w3.org/2000/svg' width='192' height='40' viewBox='0 0 192 40'>"
+	svg += "<rect x='0' y='0' width='192' height='40' fill='"+fill+"'/>"
+	svg += "<rect x='0.5' y='0.5' width='191' height='39' fill='none' stroke='"+edge+"' stroke-width='1'/>"
+	svg += "<rect x='2' y='3' width='3' height='34' fill='"+edge+"'/>"
+	svg += "<rect x='9' y='2' width='174' height='1' fill='#4e2733'/>"
+	if active:
+		svg += "<rect x='6' y='37' width='180' height='3' fill='#ed3c51'/>"
+	elif hover:
+		svg += "<rect x='8' y='38' width='176' height='2' fill='#a63c4e'/>"
+	svg += "</svg>"
+	var texture := _raster_svg(svg)
+	_hud_raster_cache[key]=texture
+	return texture
+
+static func _resource_background(hover: bool) -> Texture2D:
+	var key := "telemetry_%d" % int(hover)
+	if _hud_raster_cache.has(key):
+		return _hud_raster_cache[key]
+	var svg := "<svg xmlns='http://www.w3.org/2000/svg' width='192' height='48' viewBox='0 0 192 48'>"
+	svg += "<rect width='192' height='48' fill='"+("#25131e" if hover else "#0b0e14")+"'/>"
+	svg += "<rect x='0.5' y='0.5' width='191' height='47' fill='none' stroke='"+("#bb5062" if hover else "#4b2837")+"' stroke-width='1'/>"
+	svg += "<rect x='7' y='2' width='178' height='1' fill='#612a3a'/>"
+	svg += "</svg>"
+	var texture := _raster_svg(svg)
+	_hud_raster_cache[key]=texture
+	return texture
+
+static func _nav_glyph(index: int) -> Texture2D:
+	var key := "glyph_%d" % index
+	if _hud_raster_cache.has(key):
+		return _hud_raster_cache[key]
+	# Nine custom symbols follow familiar game-UI metaphors and retain DPN's
+	# compact icon/label language without submitting OpenGL line draw calls.
+	var paths := [
+		"<path d='M3 11L12 4L21 11V21H3Z'/><path d='M9 21V14H15V21'/>",
+		"<circle cx='12' cy='12' r='8'/><path d='M12 2V22M2 12H22'/>",
+		"<path d='M3 7H21M5 7V20M10 7V20M15 7V20M20 7V20M3 20H22M12 3L3 7H21Z'/>",
+		"<path d='M3 21V9L9 13L14 8L21 12V21Z'/><path d='M3 9V5H7V11M9 17H11M15 17H17'/>",
+		"<circle cx='12' cy='4' r='2'/><circle cx='5' cy='20' r='2'/><circle cx='19' cy='20' r='2'/><path d='M11 6L6 18M13 6L18 18M7 20H17'/>",
+		"<circle cx='12' cy='12' r='9'/><path d='M3 12H21M12 3V21M6 6Q12 12 6 18M18 6Q12 12 18 18'/>",
+		"<path d='M4 4H20V20H4Z'/><path d='M12 6V16M8 12L12 16L16 12'/>",
+		"<path d='M4 4H20V20H4Z'/><path d='M12 18V8M8 12L12 8L16 12'/>",
+		"<path d='M5 4H19V20H5Z'/><path d='M8 9H16M8 13H16M8 17H13'/>"
+	]
+	if index<0 or index>=paths.size():
+		return null
+	var svg := "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='#ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>"+str(paths[index])+"</svg>"
+	var texture := _raster_svg(svg)
+	_hud_raster_cache[key]=texture
+	return texture
+
 static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) -> void:
 	var center := at+Vector2(8,8)
 	match index:
@@ -211,33 +279,39 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 
 
 static func nav_station(canvas: CanvasItem, rect: Rect2, index: int, label: String, key_hint: String, active: bool, hover: bool) -> void:
-	button(canvas,rect,"",hover,active,false,true,true)
+	var surface := _nav_background(active,hover)
+	if surface!=null:
+		canvas.draw_texture_rect(surface,rect,false)
+	else:
+		canvas.draw_rect(rect,Color("#23131d") if active else SURFACE)
 	var icon_color := RED if active else (TEXT if hover else Color("#aa8f96"))
-	canvas.draw_rect(Rect2(rect.position+Vector2(3,4),Vector2(2,rect.size.y-8)),RED if active else Color("#492631"))
-	nav_icon(canvas,rect.position+Vector2(8,rect.size.y*0.5-8),index,icon_color)
+	var icon := _nav_glyph(index)
+	if icon!=null:
+		canvas.draw_texture_rect(icon,Rect2(rect.position+Vector2(9.0,rect.size.y*0.5-11.0),Vector2(22,22)),false,icon_color)
+	else:
+		canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,rect.size.y*0.5+5),str(index+1),HORIZONTAL_ALIGNMENT_LEFT,20,12,icon_color)
 	var compact := rect.size.x<112.0
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(34,rect.size.y*0.5+5),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(10.0,rect.size.x-(38.0 if compact else 55.0)),11 if compact else 12,TEXT)
 	if not compact:
 		canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,10,RED if active else MUTED)
-	if active:
-		canvas.draw_rect(Rect2(rect.position+Vector2(4,rect.size.y-3),Vector2(rect.size.x-8,3)),RED)
-		canvas.draw_rect(Rect2(rect.position+Vector2(7,3),Vector2(rect.size.x-14,2)),Color("#ff7280",0.68))
-	elif hover:
-		canvas.draw_rect(Rect2(rect.position+Vector2(6,rect.size.y-3),Vector2(rect.size.x-12,2)),Color("#b84658",0.72))
 
 
 static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: String, fraction: float, severity: Color, hover: bool) -> void:
-	# Compact instrument: prominent value, restrained diagnostics and truthful severity.
-	canvas.draw_rect(rect,Color("#25131e") if hover else Color("#0b0e14"))
-	outline(canvas,rect,Color("#bb5062") if hover else Color("#4b2837"),1.0)
-	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,rect.size.y-4)),severity)
-	stroke(canvas,rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#aa394d",0.50 if hover else 0.23),1.0)
+	# The entire HUD background is a cached texture. Individual values and
+	# bar fill remain live CanvasItem text/solid rectangles for truthful data.
+	var surface := _resource_background(hover)
+	if surface!=null:
+		canvas.draw_texture_rect(surface,rect,false)
+	else:
+		canvas.draw_rect(rect,Color("#25131e") if hover else Color("#0b0e14"))
+	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,maxf(1.0,rect.size.y-4))),severity)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),11,MUTED)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,34),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),18,TEXT)
-	meter(canvas,Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(maxf(3.0,rect.size.x-14.0),3)),fraction,severity)
+	var width := maxf(3.0,rect.size.x-14.0)
+	canvas.draw_rect(Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(width,3)),Color("#29202b"))
+	canvas.draw_rect(Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(width*clampf(fraction,0.0,1.0),3)),severity)
 	canvas.draw_circle(rect.position+Vector2(rect.size.x-10,10),2.2,severity)
-	if hover:
-		stroke(canvas,Vector2(rect.position.x+9,rect.end.y-9),Vector2(rect.end.x-9,rect.end.y-9),Color("#ec4d63",0.4),1.0)
+
 
 # Real-status cards are designed for spare screen area, not invented stats.
 static func metric_card(canvas: CanvasItem, rect: Rect2, caption: String, value: String, detail: String, warning: bool = false) -> void:
