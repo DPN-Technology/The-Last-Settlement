@@ -3,6 +3,13 @@ extends RefCounted
 
 const ELECTION_INTERVAL_HOURS := 720.0
 const GOVERNMENT_TYPES := ["Emergency Council","Representative Council","Technocracy","Security Directorate","Communal Assembly"]
+const LAW_OPTIONS := {
+	"rationing":["Open","Standard","Strict"],
+	"security":["Minimal","Balanced","Heavy"],
+	"labor":["Voluntary","Directed","Mandatory"],
+	"justice":["Restorative","Balanced","Punitive"],
+	"speech":["Protected","Regulated","Restricted"]
+}
 
 var government_type := "Emergency Council"
 var laws := {
@@ -54,40 +61,59 @@ func update(sim: SettlementSimulation, sim_hours: float) -> void:
 	if sim.total_hours >= next_election_hour:
 		_run_election(sim)
 
-func cycle_law(sim: SettlementSimulation, law_key: String) -> void:
-	var options := {
-		"rationing":["Open","Standard","Strict"],
-		"security":["Minimal","Balanced","Heavy"],
-		"labor":["Voluntary","Directed","Mandatory"],
-		"justice":["Restorative","Balanced","Punitive"],
-		"speech":["Protected","Regulated","Restricted"]
-	}
-	if not options.has(law_key):
-		return
-	var current := str(laws[law_key])
-	var values: Array = options[law_key]
-	var idx := values.find(current)
-	laws[law_key] = values[(idx + 1) % values.size()]
-	sim.add_event("LAW CHANGED","%s policy changed to %s." % [law_key.capitalize(), laws[law_key]],"intel")
-	for citizen in sim.get_settlement_citizens():
-		_apply_law_reaction(citizen, law_key)
+func next_law_option(law_key: String) -> String:
+	if not LAW_OPTIONS.has(law_key):
+		return ""
+	var values: Array=LAW_OPTIONS[law_key]
+	return str(values[(values.find(str(laws[law_key]))+1)%values.size()])
 
-func _apply_law_reaction(citizen:Dictionary, law_key:String) -> void:
+func _reaction_for(citizen: Dictionary, law_key: String, option: String) -> float:
 	var liberty := float(citizen.get("liberty_value",50.0))
 	var order := float(citizen.get("order_value",50.0))
-	var reaction := 0.0
 	match law_key:
 		"security":
-			reaction = (order-liberty) * 0.035 if laws["security"] == "Heavy" else (liberty-order) * 0.02
+			return (order-liberty)*0.035 if option=="Heavy" else (liberty-order)*0.02
 		"labor":
-			reaction = -absf(liberty-50.0)*0.02 if laws["labor"] == "Mandatory" else 0.4
+			return -absf(liberty-50.0)*0.02 if option=="Mandatory" else 0.4
 		"speech":
-			reaction = -liberty*0.03 if laws["speech"] == "Restricted" else liberty*0.01
+			return -liberty*0.03 if option=="Restricted" else liberty*0.01
 		"justice":
-			reaction = (order-50.0)*0.02 if laws["justice"] == "Punitive" else 0.2
+			return (order-50.0)*0.02 if option=="Punitive" else 0.2
 		"rationing":
-			reaction = 0.6 if laws["rationing"] == "Standard" else -0.2
-	citizen["loyalty"] = clampf(float(citizen["loyalty"]) + reaction,0.0,100.0)
+			return 0.6 if option=="Standard" else -0.2
+	return 0.0
+
+# Read-only citizen reaction preview: use exactly the same formula and
+# clamped loyalty that cycle_law applies to its next legislative option.
+func preview_next_law(sim: SettlementSimulation, law_key: String) -> Dictionary:
+	var next := next_law_option(law_key)
+	if next.is_empty():
+		return {}
+	var delta := 0.0
+	var residents := 0
+	var opposition := 0
+	for citizen in sim.get_settlement_citizens():
+		var loyalty := float(citizen.get("loyalty",50.0))
+		var projected := clampf(loyalty+_reaction_for(citizen,law_key,next),0.0,100.0)
+		var change := projected-loyalty
+		delta+=change
+		residents+=1
+		if change<-0.001:
+			opposition+=1
+	return {"current":str(laws[law_key]),"proposed":next,"loyalty_delta":delta/maxf(1.0,float(residents)),"residents":residents,"negative_residents":opposition}
+
+func cycle_law(sim: SettlementSimulation, law_key: String) -> void:
+	var next := next_law_option(law_key)
+	if next.is_empty():
+		return
+	laws[law_key]=next
+	sim.add_event("LAW CHANGED","%s policy changed to %s." % [law_key.capitalize(),laws[law_key]],"intel")
+	for citizen in sim.get_settlement_citizens():
+		_apply_law_reaction(citizen,law_key)
+
+func _apply_law_reaction(citizen: Dictionary, law_key: String) -> void:
+	var reaction := _reaction_for(citizen,law_key,str(laws.get(law_key,"")))
+	citizen["loyalty"]=clampf(float(citizen["loyalty"])+reaction,0.0,100.0)
 
 func _update_factions(sim:SettlementSimulation) -> void:
 	for name in factions.keys():
