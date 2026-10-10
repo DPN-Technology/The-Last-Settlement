@@ -76,7 +76,7 @@ static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictio
 			box(room,"DiningBench",Vector3(0,0.61,z*0.36),Vector3(2.2,0.16,0.75),mats["rust"])
 		"medical":
 			for side in [-1.0,1.0]:
-				var cx := side*x*0.34
+				var cx: float = float(side)*x*0.34
 				cylinder(room,"IVStand",Vector3(cx,1.15,z*0.23),0.042,2.16,mats["steel"])
 				box(room,"IVSupport",Vector3(cx,2.15,z*0.23),Vector3(0.50,0.08,0.09),mats["steel"])
 				box(room,"FluidBag",Vector3(cx+0.18,1.83,z*0.23),Vector3(0.22,0.42,0.18),mats["clinic"])
