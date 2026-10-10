@@ -1122,6 +1122,24 @@ func _smoke() -> void:
 			push_error("SMOKE: executive DPN command center tab fails to show real simulation data")
 			quit(1)
 			return
+	# The new intelligence rows must actually navigate to owning systems,
+	# not merely advertise dashboard metrics. Querying tabs stays read-only.
+	var resource_snapshot := sim.resources.duplicate(true)
+	instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,2).get_center())
+	instance._overview_rows()
+	instance._overview_metrics()
+	if sim.resources!=resource_snapshot:
+		push_error("SMOKE: viewing industry dashboard changed saved settlement resources")
+		quit(1)
+		return
+	instance._handle_overview_click(SettlementUILayout.overview_data_row(screen,0).get_center())
+	if instance.overview_visible or not instance.economy_mode or not instance.industry_workshop_visible:
+		push_error("SMOKE: live Industry intelligence row is not linked to Workshop")
+		quit(1)
+		return
+	instance.economy_mode=false
+	instance.industry_workshop_visible=false
+	instance._handle_overview_click(home_identity.get_center())
 	instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,0).get_center())
 	if instance.overview_tab_index!=0:
 		push_error("SMOKE: executive command center could not return to Command tab")
