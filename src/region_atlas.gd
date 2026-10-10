@@ -82,14 +82,15 @@ static func draw_cartography(canvas: CanvasItem, region: Rect2, atlas: RegionAtl
 		var projected := PackedVector2Array()
 		for point in road:
 			projected.append(_point(region,point))
-		canvas.draw_polyline(projected,Color("#171b1a",0.7),4.0,true)
-		canvas.draw_polyline(projected,Color("#807360",0.55),1.6,true)
+		for point_index in range(projected.size()-1):
+			DPNUISkin.stroke(canvas,projected[point_index],projected[point_index+1],Color("#171b1a",0.7),4.0)
+			DPNUISkin.stroke(canvas,projected[point_index],projected[point_index+1],Color("#807360",0.55),1.6)
 	# Low-contrast regional grid, north pointer, and physical map key.
 	for i in range(1,6):
 		var x := region.position.x+region.size.x*float(i)/6.0
 		var y := region.position.y+region.size.y*float(i)/6.0
-		canvas.draw_line(Vector2(x,region.position.y),Vector2(x,region.end.y),Color("#9a8e7e",0.10),1.0)
-		canvas.draw_line(Vector2(region.position.x,y),Vector2(region.end.x,y),Color("#9a8e7e",0.10),1.0)
+		DPNUISkin.stroke(canvas,Vector2(x,region.position.y),Vector2(x,region.end.y),Color("#9a8e7e",0.10),1.0)
+		DPNUISkin.stroke(canvas,Vector2(region.position.x,y),Vector2(region.end.x,y),Color("#9a8e7e",0.10),1.0)
 	canvas.draw_rect(Rect2(region.position,Vector2(region.size.x,30.0)),Color("#080b11",0.89))
 	canvas.draw_string(ThemeDB.fallback_font,region.position+Vector2(12,20),"DPN  /  WASTELAND TERRAIN INTELLIGENCE",HORIZONTAL_ALIGNMENT_LEFT,region.size.x-105.0,13,Color("#efe8df"))
 	canvas.draw_string(ThemeDB.fallback_font,Vector2(region.end.x-16,region.position.y+20),"N  ↑",HORIZONTAL_ALIGNMENT_RIGHT,66.0,13,Color("#ec5363"))
