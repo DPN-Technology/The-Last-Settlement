@@ -24,6 +24,9 @@ var help_mode := false
 var incident_panel_visible := false
 var field_directives_visible := false
 var overview_visible := false
+var workforce_mode := false
+var workforce_page := 0
+var workforce_selected_id := 0
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var camera_offset := Vector2(-75, -34)
@@ -197,7 +200,9 @@ func _draw() -> void:
 				_draw_field_objectives()
 			else:
 				_draw_directive_tab()
-	if help_mode:
+	if workforce_mode:
+		_draw_workforce_panel()
+	elif help_mode:
 		_draw_help_panel()
 	elif update_mode:
 		_draw_update_panel()
@@ -214,11 +219,146 @@ func _draw() -> void:
 	# Action buttons are drawn after command content and use the same hitboxes
 	# as input handling. Keyboard-only workflows now have mouse equivalents.
 	_draw_panel_actions()
-	if overview_visible:
+	if overview_visible and not workforce_mode:
 		_draw_overview()
 
+
+# The F6 / PEOPLE command gives players direct, saved staffing control.
+# Each reassignment changes the citizen job that drives the production loop.
+func _toggle_workforce() -> void:
+	if workforce_mode:
+		workforce_mode=false
+		return
+	workforce_mode=true
+	overview_visible=false
+	build_mode=false
+	world_map_mode=false
+	governance_mode=false
+	economy_mode=false
+	faction_mode=false
+	civilization_mode=false
+	update_mode=false
+	help_mode=false
+	selected_citizen={}
+	selected_building={}
+	selected_blueprint={}
+	var people := sim.get_settlement_citizens()
+	if not people.is_empty() and sim.get_citizen_by_id(workforce_selected_id).is_empty():
+		workforce_selected_id=int(people[0]["id"])
+	workforce_page=0
+
+func _workforce_person() -> Dictionary:
+	var people := sim.get_settlement_citizens()
+	for person in people:
+		if int(person["id"])==workforce_selected_id:
+			return person
+	if not people.is_empty():
+		workforce_selected_id=int(people[0]["id"])
+		return people[0]
+	return {}
+
+func _draw_workforce_panel() -> void:
+	var vp := get_viewport_rect().size
+	var bounds := SettlementUILayout.workforce_panel(vp)
+	var x := bounds.position.x
+	var y := bounds.position.y
+	var w := bounds.size.x
+	var h := bounds.size.y
+	var people := sim.get_settlement_citizens()
+	var rows := SettlementUILayout.workforce_page_size(vp)
+	var pages := maxi(1,int(ceil(float(people.size())/float(rows))))
+	workforce_page=clampi(workforce_page,0,pages-1)
+	_draw_ui_panel(bounds,ACCENT)
+	draw_rect(Rect2(x+15,y+16,4,22),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+33),"WORKFORCE  /  PERSONNEL COMMAND",HORIZONTAL_ALIGNMENT_LEFT,w-45,17,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+17,y+55),"%d residents on site   •   page %d / %d   •   F6 closes" % [people.size(),workforce_page+1,pages],HORIZONTAL_ALIGNMENT_LEFT,w-35,11,GOOD)
+	var counts := {}
+	for p in people:
+		var job := str(p.get("job","Unassigned"))
+		counts[job]=int(counts.get(job,0))+1
+	var parts := PackedStringArray()
+	for job in CitizenFactory.JOBS:
+		if int(counts.get(job,0))>0:
+			parts.append(job.substr(0,3).to_upper()+":"+str(counts[job]))
+	draw_string(ThemeDB.fallback_font,Vector2(x+17,y+76),"ON-SITE ROLES  /  "+"  ".join(parts),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+95),"SELECT SURVIVOR TO CHANGE ASSIGNMENT",HORIZONTAL_ALIGNMENT_LEFT,w-33,10,WARN)
+	for i in range(rows):
+		var index := workforce_page*rows+i
+		if index>=people.size():
+			break
+		var p: Dictionary=people[index]
+		var box := SettlementUILayout.workforce_row(vp,i)
+		var active := int(p["id"])==workforce_selected_id
+		var hovered := box.has_point(get_local_mouse_position())
+		draw_rect(box,Color("#51282e") if active else (Color("#2b3d45") if hovered else Color("#14242c")))
+		draw_rect(Rect2(box.position,Vector2(3,box.size.y)),ACCENT if active else Color("#304b59"))
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(p["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x*0.43,12,TEXT)
+		var info := "%s  /  %s  /  %s" % [str(p["job"]),str(p["shift"]), "ON" if sim.is_selected_work_enabled(p) else "OFF"]
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x*0.45,18),info,HORIZONTAL_ALIGNMENT_RIGHT,box.size.x*0.52,10,GOOD if sim.is_selected_work_enabled(p) else WARN)
+	var chosen := _workforce_person()
+	var intro_y := y+h-180
+	if chosen.is_empty():
+		draw_string(ThemeDB.fallback_font,Vector2(x+17,intro_y),"No survivor available for assignment.",HORIZONTAL_ALIGNMENT_LEFT,w-32,11,WARN)
+	else:
+		var assignable := int(chosen.get("age",0))>=18 and str(chosen["job"])!="Child" and not bool(chosen.get("on_expedition",false))
+		draw_string(ThemeDB.fallback_font,Vector2(x+17,intro_y),"%s  /  %s" % [str(chosen["name"]).to_upper(),"SELECT A ROLE" if assignable else "UNAVAILABLE FOR REASSIGNMENT"],HORIZONTAL_ALIGNMENT_LEFT,w-33,11,GOOD if assignable else WARN)
+	for j in range(CitizenFactory.JOBS.size()):
+		var role := str(CitizenFactory.JOBS[j])
+		var rect := SettlementUILayout.workforce_job(vp,j)
+		var selected := not chosen.is_empty() and role==str(chosen.get("job",""))
+		draw_rect(rect,Color("#713038") if selected else (Color("#34434a") if rect.has_point(get_local_mouse_position()) else Color("#1a3039")))
+		draw_rect(rect,ACCENT if selected else Color("#506b74"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,20),role.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-15,11,TEXT if not chosen.is_empty() else MUTED)
+	if not chosen.is_empty():
+		var skill := CitizenFactory.best_skill_for_job(chosen)
+		draw_string(ThemeDB.fallback_font,Vector2(x+17,y+h-54),"Current skill: %s %d  •  role changes take effect in simulation" % [skill.capitalize(),int(chosen["skills"].get(skill,0))],HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
+	var labels := ["PREVIOUS PAGE","NEXT PAGE","CLOSE [F6]"]
+	for j in range(3):
+		var button := SettlementUILayout.workforce_action(vp,j)
+		draw_rect(button,Color("#4d2b31") if j==2 else (Color("#30454b") if button.has_point(get_local_mouse_position()) else Color("#1c3038")))
+		draw_rect(button,ACCENT if j==2 else Color("#69838b"),false,1.0)
+		draw_string(ThemeDB.fallback_font,button.position+Vector2(9,20),labels[j],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-17,11,TEXT)
+
+func _handle_workforce_click(position: Vector2) -> bool:
+	if not workforce_mode:
+		return false
+	var vp := get_viewport_rect().size
+	var bounds := SettlementUILayout.workforce_panel(vp)
+	# A click outside the panel closes it, never places a building behind it.
+	if not bounds.has_point(position):
+		workforce_mode=false
+		return true
+	var people := sim.get_settlement_citizens()
+	var rows := SettlementUILayout.workforce_page_size(vp)
+	var pages := maxi(1,int(ceil(float(people.size())/float(rows))))
+	for i in range(rows):
+		var index := workforce_page*rows+i
+		if index<people.size() and SettlementUILayout.workforce_row(vp,i).has_point(position):
+			workforce_selected_id=int(people[index]["id"])
+			return true
+	for i in range(CitizenFactory.JOBS.size()):
+		if SettlementUILayout.workforce_job(vp,i).has_point(position):
+			var person := _workforce_person()
+			var job := str(CitizenFactory.JOBS[i])
+			if sim.assign_citizen_job(person,job):
+				playtest_notice="ASSIGNED "+str(person["name"]).to_upper()+" TO "+job.to_upper()
+			else:
+				playtest_notice="ASSIGNMENT UNCHANGED  /  CHECK AGE, ROLE OR AVAILABILITY"
+			playtest_notice_seconds=5.0
+			return true
+	for i in range(3):
+		if SettlementUILayout.workforce_action(vp,i).has_point(position):
+			if i==0:
+				workforce_page=posmod(workforce_page-1,pages)
+			elif i==1:
+				workforce_page=(workforce_page+1)%pages
+			else:
+				workforce_mode=false
+			return true
+	return true
+
 func _panel_action_items() -> Array:
-	if help_mode:
+	if workforce_mode or help_mode:
 		return []
 	if update_mode:
 		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
@@ -1054,7 +1194,7 @@ func _draw_hud() -> void:
 	var alive := sim.get_alive_citizens().size()
 	var morale := sim.get_average_morale()
 	var resources := [
-		["PEOPLE", str(alive), float(alive)/24.0, "Survivors alive and available to manage"],
+		["PEOPLE", str(alive), float(alive)/24.0, "Click to assign jobs, shifts and duties in Workforce."],
 		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food. Click to build a crop field."],
 		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available. Click to build a purifier."],
 		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Actual power supply vs demand. Click to build a generator."],
@@ -1397,7 +1537,9 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 		if not cards[i].has_point(position):
 			continue
 		match i:
-			0,4:
+			0:
+				_toggle_workforce()
+			4:
 				overview_visible = true
 			1:
 				_open_building_from_status("farm")
@@ -1446,6 +1588,7 @@ func _handle_toolbar_click(position: Vector2) -> bool:
 	for index in range(TOOLBAR_NAMES.size()):
 		if not SettlementUILayout.navbar_rect(vp,index).has_point(position):
 			continue
+		workforce_mode = false
 		if index == 0:
 			# Click Build must never invoke Civilization treasury's B shortcut.
 			var was_building := build_mode and not civilization_mode and not world_map_mode
@@ -1539,6 +1682,7 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 328), "TRAIT: %s" % str(c["trait"]), HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 346), "SKILLS   BUILD %d   MED %d   FARM %d" % [int(c["skills"]["construction"]), int(c["skills"]["medicine"]), int(c["skills"]["farming"])], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 364), "ON DUTY: %s    PRIORITY: %d" % ["YES" if sim.is_selected_work_enabled(c) else "NO", int(c["work_priority"].get(c["job"], 3))], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, GOOD if sim.is_selected_work_enabled(c) else WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+385),"Manage job roles: PEOPLE metric or F6",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,GOOD)
 	var action_y := y + h - 57.0
 	var labels := ["[T] SHIFT", "[P] PRIORITY", "[W] DUTY"]
 	for i in range(3):
@@ -1755,7 +1899,12 @@ func _capture_game_screenshot() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
+		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
+		if workforce_mode and event.keycode not in [KEY_F6,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
+			return
 		match event.keycode:
+			KEY_F6:
+				_toggle_workforce()
 			KEY_F1:
 				help_mode = not help_mode
 			KEY_F2:
@@ -2070,7 +2219,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not selected_building.is_empty():
 					_apply_facility_action(1)
 			KEY_ESCAPE:
-				if pending_demolition_key!="":
+				if workforce_mode:
+					workforce_mode=false
+				elif pending_demolition_key!="":
 					pending_demolition_key=""
 				elif overview_visible:
 					overview_visible = false
@@ -2098,6 +2249,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_toolbar_click(event.position):
 				overview_visible = false
+				return
+			if workforce_mode:
+				_handle_workforce_click(event.position)
 				return
 			if _handle_overview_click(event.position):
 				return
