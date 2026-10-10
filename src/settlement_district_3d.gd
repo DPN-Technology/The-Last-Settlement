@@ -5,7 +5,7 @@ extends RefCounted
 # barriers or change movement targets / old save-game coordinates.
 static func box(parent: Node3D, name: String, at: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var item := MeshInstance3D.new()
-	item.name=name
+	item.name=name+"_"+str(parent.get_child_count())
 	var mesh := BoxMesh.new()
 	mesh.size=size
 	item.mesh=mesh
@@ -42,7 +42,7 @@ static func _fence(parent: Node3D, at: Vector3, horizontal: bool, mats: Dictiona
 
 static func _lamp(parent: Node3D, at: Vector3, mats: Dictionary) -> void:
 	var pole := Node3D.new()
-	pole.name="CampLanternPost"
+	pole.name="CampLanternPost_"+str(parent.get_child_count())
 	pole.position=at
 	parent.add_child(pole)
 	box(pole,"Pole",Vector3(0,2.50,0),Vector3(0.14,5.0,0.14),mats["steel"])
@@ -52,7 +52,7 @@ static func _lamp(parent: Node3D, at: Vector3, mats: Dictionary) -> void:
 
 static func _supply(parent: Node3D, at: Vector3, mats: Dictionary) -> void:
 	var depot := Node3D.new()
-	depot.name="SupplyDepot"
+	depot.name="SupplyDepot_"+str(parent.get_child_count())
 	depot.position=at
 	parent.add_child(depot)
 	box(depot,"Pallet",Vector3(0,0.18,0),Vector3(3.6,0.30,2.1),mats["canvas"])
