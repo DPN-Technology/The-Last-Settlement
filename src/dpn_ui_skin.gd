@@ -59,13 +59,13 @@ static func frame(canvas: CanvasItem, rect: Rect2, pulse: float = 0.0, selected:
 		canvas.draw_line(Vector2(bx,rect.position.y+9),Vector2(bx,rect.position.y+13.0+float(i%2)*3.0),Color("#b53246",0.53),1.0)
 
 static func backdrop(canvas: CanvasItem, size: Vector2, seconds: float) -> void:
-	# World is never obscured. Tiny corner-code rain visually binds the UI to
-	# the DPN identity without making interactive world information harder to read.
+	# DPN identity code stays in the DOCK, not over the 3D world or panels.
+	# It is subtle enough not to compromise interaction and readability.
 	canvas.draw_rect(Rect2(0,0,size.x,3),RED_DIM)
-	for i in range(13):
-		var x := 13.0+float(i)*20.0
-		var y := 94.0+fposmod(seconds*11.0+float(i)*23.0,maxf(90.0,size.y-175.0))
-		canvas.draw_string(ThemeDB.fallback_font,Vector2(x,y),"1" if i%3==0 else "0",HORIZONTAL_ALIGNMENT_LEFT,12.0,10,Color("#e33c51",0.14))
+	for i in range(15):
+		var x := 14.0+float(i)*maxf(18.0,(size.x-28.0)/15.0)
+		var y := size.y-57.0+fposmod(seconds*6.0+float(i)*7.0,25.0)*0.12
+		canvas.draw_string(ThemeDB.fallback_font,Vector2(x,y),"1" if i%3==0 else "0",HORIZONTAL_ALIGNMENT_LEFT,12.0,10,Color("#f04457",0.13))
 
 
 static func button(canvas: CanvasItem, rect: Rect2, label: String, hovered: bool, active: bool = false, dangerous: bool = false, enabled: bool = true, small: bool = false) -> void:
@@ -86,7 +86,7 @@ static func button(canvas: CanvasItem, rect: Rect2, label: String, hovered: bool
 		canvas.draw_line(rect.position+Vector2(2,10),rect.position+Vector2(10,2),accent,1.3)
 		canvas.draw_line(rect.end-Vector2(2,10),rect.end-Vector2(10,2),accent,1.3)
 	var color := TEXT if enabled else Color("#76686f")
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,rect.size.y*0.5+(3.2 if small else 4.0)),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(6.0,rect.size.x-17.0),10 if small else 11,color)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,rect.size.y*0.5+(3.2 if small else 4.0)),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(6.0,rect.size.x-17.0),11 if small else 12,color)
 
 static func list_row(canvas: CanvasItem, rect: Rect2, active: bool, hovered: bool, danger: bool = false) -> void:
 	var fill := Color("#34131d") if active else (Color("#28202a") if hovered else Color("#101118"))
@@ -150,8 +150,8 @@ static func nav_station(canvas: CanvasItem, rect: Rect2, index: int, label: Stri
 	var icon_color := RED if active else (TEXT if hover else Color("#aa8f96"))
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,4),Vector2(2,rect.size.y-8)),RED if active else Color("#492631"))
 	nav_icon(canvas,rect.position+Vector2(8,rect.size.y*0.5-8),index,icon_color)
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(33,rect.size.y*0.5+5),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(10.0,rect.size.x-52.0),11,TEXT)
-	canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,9,RED if active else MUTED)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(34,rect.size.y*0.5+5),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(10.0,rect.size.x-55.0),12,TEXT)
+	canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,10,RED if active else MUTED)
 	if active:
 		canvas.draw_rect(Rect2(rect.position+Vector2(4,rect.size.y-3),Vector2(rect.size.x-8,3)),RED)
 		canvas.draw_rect(Rect2(rect.position+Vector2(7,3),Vector2(rect.size.x-14,2)),Color("#ff7280",0.68))
@@ -165,9 +165,19 @@ static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: St
 	canvas.draw_rect(rect,Color("#bb5062") if hover else Color("#4b2837"),false,1.0)
 	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,rect.size.y-4)),severity)
 	canvas.draw_line(rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#aa394d",0.50 if hover else 0.23),1.0)
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),9,MUTED)
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,35),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),15,TEXT)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),11,MUTED)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,36),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),18,TEXT)
 	meter(canvas,Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(maxf(3.0,rect.size.x-14.0),3)),fraction,severity)
 	canvas.draw_circle(rect.position+Vector2(rect.size.x-10,10),2.2,severity)
 	if hover:
 		canvas.draw_line(Vector2(rect.position.x+9,rect.end.y-9),Vector2(rect.end.x-9,rect.end.y-9),Color("#ec4d63",0.4),1.0)
+
+# Real-status cards are designed for spare screen area, not invented stats.
+static func metric_card(canvas: CanvasItem, rect: Rect2, caption: String, value: String, detail: String, warning: bool = false) -> void:
+	canvas.draw_rect(rect,Color("#171017"))
+	canvas.draw_rect(rect,Color("#57303c"),false,1.0)
+	canvas.draw_rect(Rect2(rect.position,Vector2(3.0,rect.size.y)),AMBER if warning else RED)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,16),caption,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,10,MUTED)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,39),value,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,19,AMBER if warning else TEXT)
+	if rect.size.y>=65.0:
+		canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,58),detail,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,10,MUTED)
