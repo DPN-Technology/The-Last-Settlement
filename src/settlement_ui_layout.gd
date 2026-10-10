@@ -144,3 +144,8 @@ static func workforce_action(size: Vector2, index: int) -> Rect2:
 	var gap := 8.0
 	var unit := (panel.size.x-32.0-2.0*gap)/3.0
 	return Rect2(panel.position+Vector2(16.0+float(index)*(unit+gap),panel.size.y-41.0),Vector2(unit,29))
+
+# Simulation time controls sit in the shallow upper rail of the command dock.
+# They never collide with the nine primary navigation stations.
+static func time_control(size: Vector2, index: int) -> Rect2:
+	return Rect2(size.x-226.0+float(index)*53.0,size.y-BOTTOM_H+2.0,47.0,14.0)
