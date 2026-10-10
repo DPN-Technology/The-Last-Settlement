@@ -556,6 +556,19 @@ func _build_structure(b: Dictionary) -> void:
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
 		_cylinder(group, Vector3(0,body_height+3.6,0),0.07,3.0,materials["steel"])
 		_sphere(group, Vector3(0,body_height+5.0,0),0.25,materials["warning"])
+		# A readable settlement name, rather than a simulated corporate ID:
+		# real 3D plaque mounted above the command entrance.
+		_box(group,Vector3(0,3.23,-size.y*0.5-0.36),Vector3(5.15,0.65,0.18),materials["darkmetal"])
+		_box(group,Vector3(0,2.88,-size.y*0.5-0.38),Vector3(5.15,0.09,0.19),materials["cross"])
+		var identity := Label3D.new()
+		identity.name="LastHavenPhysicalSign"
+		identity.text="DPN  /  LAST HAVEN"
+		identity.font_size=30
+		identity.pixel_size=0.011
+		identity.modulate=Color("#e7dfd5")
+		identity.position=Vector3(0,3.22,-size.y*0.5-0.50)
+		identity.rotation.y=PI
+		group.add_child(identity)
 	elif type == "medical":
 		_box(group,Vector3(0,body_height+0.62,0),Vector3(0.82,0.09,3.0),materials["cross"])
 		_box(group,Vector3(0,body_height+0.63,0),Vector3(3.0,0.09,0.82),materials["cross"])
