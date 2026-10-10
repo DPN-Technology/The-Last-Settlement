@@ -23,6 +23,8 @@ const ICONS := ["build","region","govern","industry","factions","nation","save",
 # Drop malformed/stale coordinates rather than letting a line become a full-
 # screen diagonal. All existing gameplay buttons keep their hit geometry.
 static func stroke(canvas: CanvasItem, point_a: Vector2, point_b: Vector2, tint: Color, thickness: float = 1.0) -> void:
+	if not is_finite(point_a.x) or not is_finite(point_a.y) or not is_finite(point_b.x) or not is_finite(point_b.y):
+		return
 	var delta := point_b-point_a
 	if absf(point_a.x)>8192.0 or absf(point_a.y)>8192.0 or absf(point_b.x)>8192.0 or absf(point_b.y)>8192.0:
 		return
@@ -32,6 +34,16 @@ static func stroke(canvas: CanvasItem, point_a: Vector2, point_b: Vector2, tint:
 	var side := Vector2(-delta.y,delta.x).normalized()*width*0.5
 	var corners := PackedVector2Array([point_a+side,point_b+side,point_b-side,point_a-side])
 	canvas.draw_colored_polygon(corners,tint)
+
+
+static func arc(canvas: CanvasItem, center: Vector2, radius: float, from_radians: float, to_radians: float, point_count: int, tint: Color, thickness: float = 1.0) -> void:
+	if not is_finite(radius) or radius<=0.0 or radius>1200.0:
+		return
+	var steps := clampi(point_count,3,128)
+	for index in range(steps):
+		var theta_a := lerpf(from_radians,to_radians,float(index)/float(steps))
+		var theta_b := lerpf(from_radians,to_radians,float(index+1)/float(steps))
+		stroke(canvas,center+Vector2(cos(theta_a),sin(theta_a))*radius,center+Vector2(cos(theta_b),sin(theta_b))*radius,tint,thickness)
 
 static func frame(canvas: CanvasItem, rect: Rect2, pulse: float = 0.0, selected: bool = false) -> void:
 	# DPN armored-glass command surface: deep black with restrained signal detail.
@@ -128,7 +140,7 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 			stroke(canvas,center+Vector2(-7,-2),center+Vector2(0,-7),color,1.2)
 			stroke(canvas,center+Vector2(0,-7),center+Vector2(7,-2),color,1.2)
 		1:
-			canvas.draw_arc(center,6.0,0.0,TAU,24,color,1.4)
+			arc(canvas,center,6.0,0.0,TAU,24,color,1.4)
 			stroke(canvas,center+Vector2(-9,0),center+Vector2(9,0),color,1.2)
 			stroke(canvas,center+Vector2(0,-9),center+Vector2(0,9),color,1.2)
 		2:
@@ -146,7 +158,7 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 			stroke(canvas,center+Vector2(0,-6),center+Vector2(-6,5),color,1)
 			stroke(canvas,center+Vector2(0,-6),center+Vector2(6,5),color,1)
 		5:
-			canvas.draw_arc(center,7,0,TAU,28,color,1.2)
+			arc(canvas,center,7,0,TAU,28,color,1.2)
 			stroke(canvas,center+Vector2(-7,0),center+Vector2(7,0),color,1)
 			stroke(canvas,center+Vector2(0,-7),center+Vector2(0,7),color,1)
 		6,7:
