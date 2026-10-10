@@ -26,7 +26,7 @@ static func frame(canvas: CanvasItem, rect: Rect2, pulse: float = 0.0, selected:
 	canvas.draw_rect(rect,Color("#05060a",0.97))
 	canvas.draw_rect(inner,PANEL)
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,3),Vector2(rect.size.x-6,32)),Color("#1d1018"))
-	canvas.draw_rect(Rect2(rect.position+Vector2(3,35),Vector2(4,maxf(0.0,rect.size.y-39)),Color("#3a1621",0.56))
+	canvas.draw_rect(Rect2(rect.position+Vector2(3,35),Vector2(4,maxf(0.0,rect.size.y-39))),Color("#3a1621",0.56))
 	canvas.draw_rect(rect,Color("#61313f"),false,1.0)
 	canvas.draw_rect(inner,Color("#2c1b27"),false,1.0)
 	canvas.draw_line(Vector2(rect.position.x+4,rect.position.y+35),Vector2(rect.end.x-4,rect.position.y+35),Color("#7f2838",0.85),1.0)
