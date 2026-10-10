@@ -1089,6 +1089,23 @@ func _smoke() -> void:
 			push_error("SMOKE: Clickable settlement overview escapes the usable screen")
 			quit(1)
 			return
+		for tab_index in range(4):
+			var tab_rect := SettlementUILayout.overview_tab_rect(target_size,tab_index)
+			var metric_rect := SettlementUILayout.overview_metric_rect(target_size,tab_index)
+			if not overview.encloses(tab_rect) or not overview.encloses(metric_rect):
+				push_error("SMOKE: 4-tab DPN command center tab/metric overflow")
+				quit(1)
+				return
+		var row_rect := SettlementUILayout.overview_data_row(target_size,SettlementUILayout.overview_visible_rows(target_size)-1)
+		if not overview.encloses(row_rect) or row_rect.end.y>=SettlementUILayout.overview_quick_rect(target_size,0).position.y:
+			push_error("SMOKE: responsive DPN command overview rows overlap quick actions")
+			quit(1)
+			return
+		for quick_index in range(3):
+			if not overview.encloses(SettlementUILayout.overview_quick_rect(target_size,quick_index)):
+				push_error("SMOKE: quick action escaped DPN dashboard")
+				quit(1)
+				return
 		for button in range(3):
 			if not overview.has_point(SettlementUILayout.overview_button_rect(target_size,button).get_center()):
 				push_error("SMOKE: Overview action outside its modal panel")
@@ -1099,11 +1116,22 @@ func _smoke() -> void:
 		push_error("SMOKE: Home-base header cannot open readable overview")
 		quit(1)
 		return
+	for tab_index in range(4):
+		instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,tab_index).get_center())
+		if instance.overview_tab_index!=tab_index or instance._overview_metrics().size()!=4 or instance._overview_rows().is_empty():
+			push_error("SMOKE: executive DPN command center tab fails to show real simulation data")
+			quit(1)
+			return
+	instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,0).get_center())
+	if instance.overview_tab_index!=0:
+		push_error("SMOKE: executive command center could not return to Command tab")
+		quit(1)
+		return
 	if not instance._next_settlement_goal().contains("Inspect") and not instance._next_settlement_goal().contains("construction") and not instance._next_settlement_goal().contains("Explore") and not instance._next_settlement_goal().contains("Day 2") and not instance._next_settlement_goal().contains("completed"):
 		push_error("SMOKE: Settlement overview has no actionable next-step guidance")
 		quit(1)
 		return
-	var safe_click: Vector2 = Vector2(screen.x*0.5,screen.y*0.5)
+	var safe_click: Vector2 = Vector2(screen.x-4.0,screen.y*0.5)
 	if not instance._handle_overview_click(safe_click) or instance.overview_visible:
 		push_error("SMOKE: Clicking outside the briefing did not consume/close it")
 		quit(1)
@@ -1134,6 +1162,25 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance._handle_toolbar_click(build_button)
+	# Dashboard actions must navigate to working game systems rather than
+	# displaying labels with no behavior. Preserve the legacy footer too.
+	instance._handle_overview_click(home_identity.get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,2).get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_quick_rect(screen,0).get_center())
+	if instance.overview_visible or not instance.economy_mode or not instance.industry_workshop_visible:
+		push_error("SMOKE: DPN Command Center WORKSHOP action did not open real production")
+		quit(1)
+		return
+	instance.industry_workshop_visible=false
+	instance.economy_mode=false
+	instance._handle_overview_click(home_identity.get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_tab_rect(screen,3).get_center())
+	instance._handle_overview_click(SettlementUILayout.overview_quick_rect(screen,0).get_center())
+	if instance.overview_visible or not instance.workforce_mode:
+		push_error("SMOKE: DPN Command Center WORKFORCE action did not open actual staffing screen")
+		quit(1)
+		return
+	instance.workforce_mode=false
 	# The overview smoke flow intentionally expanded objectives; reset to the
 	# initial collapsed state before checking the F3 open/close regressions.
 	instance.field_directives_visible = false
