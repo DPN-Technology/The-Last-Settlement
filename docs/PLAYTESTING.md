@@ -1,3 +1,21 @@
+# WINDOWS GRAPHICS FIX / RED DIAGONAL STREAKS
+
+**Default graphics changed:** The newest PR #6 development export now uses **OpenGL Compatibility** instead of Vulkan Forward+, specifically to work around GPU/driver-dependent long diagonal-line artifacts on Windows. Source-backed UI graphics no longer uses Godot's raw CanvasItem `draw_line`/`draw_polyline` path in `main.gd`, `dpn_ui_skin.gd` or `region_atlas.gd`. Decorative and interactive segments use finite-coordinate-validated, bounded fill geometry instead. The DPN black/red theme and all hitboxes remain in place.
+
+**Which launcher:** Download the latest `TheLastSettlement-Windows-Playtest-Direct` and extract it completely. Run **`Launch-TheLastSettlement.cmd`** for default SAFE OpenGL. **`Launch-TheLastSettlement-HighGraphics.cmd`** runs Vulkan Forward+ only for an A/B test if required. Do not keep the EXE from an older run next to the new PCK.
+
+**F8 now produces 3 files in the opened screenshots folder**, all using a shared timestamp:
+
+- `last-settlement-<timestamp>-FULL.png` — direct rendered gameplay (3D plus HUD).
+- `last-settlement-<timestamp>-3D.png` — underlying 3D world frame, without HUD.
+- `last-settlement-<timestamp>-GRAPHICS.txt` — actual runtime renderer, OS, image dimensions.
+
+If streaks appear in BOTH images, investigate 3D renderer/shader/graphics path. If only FULL, investigate UI compositor. If neither but they appear on the physical monitor, it is not a streak drawn into Godot's screenshot; check Windows display path/cable/monitor/driver or moiré from phone photography. This distinction is essential to avoid repeatedly changing unrelated gameplay code. Attach the PNGs (not photos) if the issue persists; neither an automated headless gate nor code inspection can certify a user's specific monitor.
+
+**CI regression protection:** smoke requires OpenGL preview default and rejects reintroduced native raw canvas line/polyline calls in three major rendering files. The stable `main` release remains unchanged; the visual fix is in the open Windows playtest PR until approved.
+
+---
+
 # New playtest: Geographic Atlas, Settlement Minimap, Real Operations Dashboard
 
 This PR build responds to the latest player screenshots showing a plain circular radar, no settlement minimap, large unused menu regions, and long red/white diagonal streaks across the monitor.
