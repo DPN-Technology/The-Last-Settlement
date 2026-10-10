@@ -38,6 +38,10 @@ static func navbar_rect(size: Vector2, index: int) -> Rect2:
 	var unit := (size.x - 22.0 - GAP * 8.0) / 9.0
 	return Rect2(11.0 + float(index) * (unit + GAP), size.y - 44.0, unit, 36.0)
 
+# Shared close icon target on every major command panel.
+static func command_close_rect(panel: Rect2) -> Rect2:
+	return Rect2(panel.end.x-46.0,panel.position.y+7.0,34.0,29.0)
+
 static func side_panel(size: Vector2, preferred_width: float, top_offset: float = 8.0, reserve_bottom: float = 10.0) -> Rect2:
 	var width := minf(preferred_width, maxf(230.0, size.x - 28.0))
 	var y := TOP_H + top_offset
