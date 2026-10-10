@@ -18,6 +18,27 @@ func _smoke() -> void:
 		quit(1)
 		return
 	var sim: SettlementSimulation = instance.sim
+	# The DPN command skin and all nine physical dock stations are checked
+	# along with the existing mouse-action tests below. This is an integration
+	# gate, not a claim that headless rendering proves visual excellence.
+	if DPNUISkin.ICONS.size()!=9 or DPNUISkin.RED!=Color("#e2374c") or DPNUISkin.BLACK!=Color("#07080c"):
+		push_error("SMOKE: DPN crimson/black shared command skin is missing")
+		quit(1)
+		return
+	for visual_size in [Vector2(960,720),Vector2(1024,600),Vector2(1280,720),Vector2(1366,768),Vector2(1920,1080)]:
+		var nav_last_right := 0.0
+		for n in range(9):
+			var dock := SettlementUILayout.navbar_rect(visual_size,n)
+			if dock.position.x<nav_last_right or dock.end.x>visual_size.x or dock.end.y>visual_size.y or dock.position.y<visual_size.y-SettlementUILayout.BOTTOM_H:
+				push_error("SMOKE: DPN command dock icon/button geometry overflows at "+str(visual_size))
+				quit(1)
+				return
+			nav_last_right=dock.end.x
+		for chip in SettlementUILayout.resource_rects(visual_size):
+			if chip.position.x<0 or chip.end.x>visual_size.x or chip.position.y<0 or chip.end.y>SettlementUILayout.TOP_H:
+				push_error("SMOKE: DPN top telemetry chip does not fit at "+str(visual_size))
+				quit(1)
+				return
 	if sim.get_alive_citizens().size() < 1 or sim.buildings.size() < 5:
 		push_error("SMOKE: Starting settlement lacks survivors or buildings")
 		quit(1)
