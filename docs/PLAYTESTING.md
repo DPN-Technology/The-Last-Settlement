@@ -1,3 +1,15 @@
+# RED STREAKS — PLAYER F8 CAPTURES PROVED UI-ONLY (OCTOBER 10)
+
+The player supplied **paired original F8 screenshots** from the same frame. The long diagonal crimson streaks are present in `-FULL.png` but **absent** from `-3D.png`. This is direct evidence that the artifact is introduced by the Godot CanvasItem UI/compositing layer, not world materials, terrain, 3D lighting or GPU-rendered 3D models. Earlier theories that blamed monitor photography are superseded by these actual saved PNGs.
+
+**Fix candidate:** `DPNUISkin.stroke()` now draws only bounded, positive-size filled rectangles (horizontal/vertical strips and point-sampled diagonal icons). It no longer constructs four-point `CanvasItem.draw_colored_polygon` strokes. All remaining frame, button, minimap, status and cartography border outlines were converted from the native outline primitive to the new `DPNUISkin.outline()` (four filled strips). The existing DPN black-and-red theme, all nine command stations, information layout and user input hitboxes remain intact. A smoke regression rejects native line, polyline, polygon and outline calls in the three primary UI source files.
+
+**New fallback A/B test:** Press **Ctrl+F10** to toggle off decorative strokes and frame outlines *without hiding actual UI content or changing controls*. Press again to restore. This temporarily affects the current game session only. F8 captures now write whether the decoration is in SAFE FILLED RECTS or DISABLED mode into the accompanying `-GRAPHICS.txt`. Plain F10 is still the existing updater shortcut.
+
+**Visual acceptance:** Download a Windows playtest artifact from the **latest successful CI head**, extract it into a NEW folder (keep its EXE and PCK together), and start with `Launch-TheLastSettlement.cmd`. Look at the initial settlement and open Build, Nation, Region, and Industry. If **no red streaks** are visible, capture and provide a normal F8 `-FULL.png`. If streaks persist, press Ctrl+F10 and capture a second F8 screenshot; provide the two `-FULL.png` files and their corresponding graphics reports. If the lines disappear only after Ctrl+F10, that conclusively isolates the remaining optional decorative geometry. Do not merge PR #6 solely because headless CI succeeds; the user must verify the Windows rendering.
+
+---
+
 # WINDOWS GRAPHICS FIX / RED DIAGONAL STREAKS
 
 **Default graphics changed:** The newest PR #6 development export now uses **OpenGL Compatibility** instead of Vulkan Forward+, specifically to work around GPU/driver-dependent long diagonal-line artifacts on Windows. Source-backed UI graphics no longer uses Godot's raw CanvasItem `draw_line`/`draw_polyline` path in `main.gd`, `dpn_ui_skin.gd` or `region_atlas.gd`. Decorative and interactive segments use finite-coordinate-validated, bounded fill geometry instead. The DPN black/red theme and all hitboxes remain in place.
