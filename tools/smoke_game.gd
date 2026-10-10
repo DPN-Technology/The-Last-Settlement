@@ -68,6 +68,48 @@ func _smoke() -> void:
 		push_error("SMOKE: Construction control did not activate")
 		quit(1)
 		return
+	# Exterior navigation must keep physical building footprints solid. The
+	# current production game does not yet simulate walkable interiors.
+	var test_buildings: Array[Dictionary] = [
+		{"name":"Blocking Shelter","type":"housing","position":Vector2(200,200),"size":Vector2(100,80)},
+		{"name":"Test Farm","type":"farm","position":Vector2(360,200),"size":Vector2(100,80)}
+	]
+	var crossing_a := Vector2(100,200)
+	var crossing_b := Vector2(300,200)
+	if SettlementNavigation.valid_step(crossing_a,crossing_b,test_buildings):
+		push_error("SMOKE: Solid housing wall can still be walked through")
+		quit(1)
+		return
+	var path := SettlementNavigation.route(crossing_a,crossing_b,test_buildings)
+	if path.is_empty():
+		push_error("SMOKE: Navigation did not route around occupied shelter")
+		quit(1)
+		return
+	var nav_from := crossing_a
+	for waypoint in path:
+		if not SettlementNavigation.valid_step(nav_from,waypoint,test_buildings):
+			push_error("SMOKE: Navigation waypoint crosses a building wall")
+			quit(1)
+			return
+		nav_from = waypoint
+	if nav_from.distance_to(crossing_b)>1.0:
+		push_error("SMOKE: Navigation fails to reach safe outdoor destination")
+		quit(1)
+		return
+	var doorway := SettlementNavigation.exterior_entry(test_buildings[0])
+	if doorway.y >= 160.0 or SettlementNavigation.collision_rects(test_buildings)[0].has_point(doorway):
+		push_error("SMOKE: Shelter visitor target is inside a solid building")
+		quit(1)
+		return
+	var spawn_inside := SettlementNavigation.resolve_walkable(Vector2(200,200),test_buildings)
+	if SettlementNavigation.collision_rects(test_buildings)[0].has_point(spawn_inside):
+		push_error("SMOKE: Saved survivor inside shelter cannot reach exterior")
+		quit(1)
+		return
+	if SettlementNavigation.exterior_entry(test_buildings[1]) != Vector2(360,200):
+		push_error("SMOKE: Outdoor farm workers cannot reach farm rows")
+		quit(1)
+		return
 	# The paused simulation must not animate living survivors in the background.
 	var snapshot: Vector2 = Vector2(sim.citizens[0]["position"])
 	instance._process(0.2)
