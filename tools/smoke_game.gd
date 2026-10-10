@@ -825,6 +825,38 @@ func _smoke() -> void:
 		quit(1)
 		return
 	sim.blueprints.erase(held_blueprint)
+	# The redesigned personnel command makes both shift and duty buttons real,
+	# without requiring a second survivor inspector to change assignments.
+	var old_roster_shift := str(roster[0]["shift"])
+	instance._handle_workforce_click(SettlementUILayout.workforce_duty_control(screen,0).get_center())
+	if str(roster[0]["shift"])==old_roster_shift:
+		push_error("SMOKE: DPN Workforce SHIFT button does not change actual survivor shift")
+		quit(1)
+		return
+	var prior_duty := sim.is_selected_work_enabled(roster[0])
+	instance._handle_workforce_click(SettlementUILayout.workforce_duty_control(screen,1).get_center())
+	if sim.is_selected_work_enabled(roster[0])==prior_duty:
+		push_error("SMOKE: DPN Workforce DUTY control is cosmetic rather than actionable")
+		quit(1)
+		return
+	instance._handle_workforce_click(SettlementUILayout.workforce_duty_control(screen,1).get_center())
+	if sim.is_selected_work_enabled(roster[0])!=prior_duty:
+		push_error("SMOKE: Workforce duty cannot be restored through command controls")
+		quit(1)
+		return
+	# Suspending a construction worker must unclaim their worksite for peers.
+	roster[0]["job"]="Builder"
+	roster[0]["work_priority"]["Builder"]=3
+	roster[0]["target_blueprint_id"]=9003
+	var off_duty_plan: Dictionary={"id":9003,"assigned_builder":int(roster[0]["id"])}
+	sim.blueprints.append(off_duty_plan)
+	instance._handle_workforce_click(SettlementUILayout.workforce_duty_control(screen,1).get_center())
+	if sim.is_selected_work_enabled(roster[0]) or int(off_duty_plan["assigned_builder"])!=0 or int(roster[0]["target_blueprint_id"])!=0:
+		push_error("SMOKE: Off-duty Builder left a blocked reserved blueprint")
+		quit(1)
+		return
+	sim.blueprints.erase(off_duty_plan)
+	sim.assign_citizen_job(roster[0],"Engineer")
 	# Children and away teams must never be silently reassigned.
 	var second_person: Dictionary=roster[1]
 	var old_age: int=int(second_person["age"])
@@ -864,6 +896,11 @@ func _smoke() -> void:
 		for action_i in range(3):
 			if not personnel_panel.encloses(SettlementUILayout.workforce_action(target_size,action_i)):
 				push_error("SMOKE: Workforce page action falls outside modal")
+				quit(1)
+				return
+		for control_i in range(2):
+			if not personnel_panel.encloses(SettlementUILayout.workforce_duty_control(target_size,control_i)):
+				push_error("SMOKE: DPN workforce shift/duty control falls outside modal")
 				quit(1)
 				return
 	# Keyboard opens and closes the same command, not a second UI state.
