@@ -1,3 +1,24 @@
+# DPN SETTLEMENT COMMAND CENTER — FOUR-PAGE TACTICAL BRIEFING
+
+The upper-left DPN identity is now an entry point to a **functional four-page command center** (not the old narrow textual "Your Settlement" popup). This upgrade retains the existing player's real 3D world view and red/black DPN identity while replacing flat prose with actual simulation readings and useful navigation.
+
+## Pages
+
+| Tab | Live information | Clickable game destinations |
+| --- | --- | --- |
+| **Command** | Settlement population, grid balance, morale, active construction; outstanding directives, material supplies, weather forecasts, latest events | Goals, Build, Region |
+| **Utilities** | Generator output versus demand, battery charge, water reserves, sanitation level; food/meals and medical shortage intelligence | Inspect Power generator, inspect Water purifier, Build |
+| **Industry** | Real credits, warehouse pressure, production efficiency, open orders and progress, raw input stocks, caravans and bottleneck reason | Open actual Workshop queue, Trade market, Region |
+| **People** | Residents, available duties, adult labor, unwell residents, shift availability, distribution across Farmer/Engineer/Builder/Medic/Scavenger/Guard/Cook/Hauler jobs | Workforce assignment, Governance law planning, Incident Channel |
+
+**Navigation:** click the DPN lightning/identity area; switch among four tabs; inspect the four telemetry cards and scroll-free priority rows; click any intelligence row or the three contextual quick-action buttons to open its associated *real* management system. Original lower commands **OPEN BUILD**, **SHOW GOALS**, and **CLOSE** remain fully functional. Click outside or press Escape to dismiss without selecting terrain. All dashboard data is read-only, computed from the existing simulation; interacting with a linked action uses the underlying actual in-game control.
+
+The command center now uses a larger 682×624 maximum panel with responsive shrinking at smaller windows; all tab, metric, row and button placements come from `SettlementUILayout` to keep drawn controls and click hitboxes aligned. It does not alter save data, 3D assets, weather, or the fixed cached-raster HUD rendering path that solved the Windows red streaks.
+
+**Windows playtest:** at 1280×720, 1366×768 and native resolution, open all four tabs; ensure the last visible intelligence row does not touch the quick-action row or legacy footer. Click an Industry order row to open the real Workshop, and click a People action to open the real Workforce. Verify the CLOSE button, outside click and Escape work, and that merely changing tabs does not change resource totals or issue manufacturing commands.
+
+---
+
 # GOVERNANCE: POLICY OUTCOME PREVIEW
 
 The Governance page now shows the **current law, next proposed law, projected average citizen-loyalty change, and number of residents whose loyalty would fall**. These values come from a side-effect-free calculation using the same reactions as the actual `CHANGE` action. The preview does not change the active law, write a save, or consume resources. Clicking `CHANGE` continues to apply the actual law and publishes an event. Test all five laws (Rationing, Security, Labor, Justice, Speech), compare the proposed option to the new current option after a change, and verify the predicted loyalty reaction matches the actual change. The automated smoke checks this end-to-end for Speech.
