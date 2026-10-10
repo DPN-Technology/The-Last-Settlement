@@ -39,6 +39,27 @@ func _smoke() -> void:
 				push_error("SMOKE: DPN top telemetry chip does not fit at "+str(visual_size))
 				quit(1)
 				return
+		# Buttons were overlapping at the right edge of the command dock.
+		for control_i in range(4):
+			var speed := SettlementUILayout.time_control(visual_size,control_i)
+			if speed.position.x<0.0 or speed.end.x>visual_size.x or speed.position.y<visual_size.y-SettlementUILayout.BOTTOM_H or speed.end.y>SettlementUILayout.navbar_rect(visual_size,0).position.y:
+				push_error("SMOKE: speed control overlaps the full-width navigation dock")
+				quit(1)
+				return
+		var catalog := SettlementUILayout.build_palette(visual_size,0)
+		var visible := SettlementUILayout.palette_rows(visual_size,16)
+		for row_i in range(visible):
+			var build_row := SettlementUILayout.build_row_rect(visual_size,row_i)
+			if not catalog.encloses(build_row) or build_row.end.y>=catalog.end.y-108.0:
+				push_error("SMOKE: larger build catalog entries obscure selected blueprint details")
+				quit(1)
+				return
+		for site_i in range(6):
+			var site_row := SettlementUILayout.region_site_row(visual_size,site_i)
+			if site_row.end.y>visual_size.y-SettlementUILayout.BOTTOM_H:
+				push_error("SMOKE: field-intelligence site row escapes game viewport")
+				quit(1)
+				return
 	if sim.get_alive_citizens().size() < 1 or sim.buildings.size() < 5:
 		push_error("SMOKE: Starting settlement lacks survivors or buildings")
 		quit(1)
