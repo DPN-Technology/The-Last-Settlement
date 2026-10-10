@@ -58,6 +58,22 @@ static func stroke(canvas: CanvasItem, point_a: Vector2, point_b: Vector2, tint:
 		var pos := point_a+delta*(float(i)/float(count))
 		canvas.draw_rect(Rect2(pos-Vector2.ONE*width*0.5,Vector2.ONE*width),tint,true)
 
+# A rectangle border is four positive-size filled strips, never a
+# native outline/line primitive. Kept separate from stroke so button/hitbox
+# sizing remains unchanged even if cosmetic strokes are disabled.
+static func outline(canvas: CanvasItem, rect: Rect2, tint: Color, thickness: float = 1.0) -> void:
+	if diagnostic_minimal_strokes:
+		return
+	if not is_finite(rect.position.x) or not is_finite(rect.position.y) or not is_finite(rect.size.x) or not is_finite(rect.size.y):
+		return
+	if rect.size.x<1.0 or rect.size.y<1.0 or rect.size.x>4096.0 or rect.size.y>4096.0:
+		return
+	var t := minf(clampf(thickness,1.0,6.0),minf(rect.size.x,rect.size.y)*0.5)
+	canvas.draw_rect(Rect2(rect.position,Vector2(rect.size.x,t)),tint,true)
+	canvas.draw_rect(Rect2(rect.position+Vector2(0.0,rect.size.y-t),Vector2(rect.size.x,t)),tint,true)
+	canvas.draw_rect(Rect2(rect.position,Vector2(t,rect.size.y)),tint,true)
+	canvas.draw_rect(Rect2(rect.position+Vector2(rect.size.x-t,0.0),Vector2(t,rect.size.y)),tint,true)
+
 static func arc(canvas: CanvasItem, center: Vector2, radius: float, from_radians: float, to_radians: float, point_count: int, tint: Color, thickness: float = 1.0) -> void:
 	if not is_finite(radius) or radius<=0.0 or radius>1200.0:
 		return
@@ -76,8 +92,8 @@ static func frame(canvas: CanvasItem, rect: Rect2, pulse: float = 0.0, selected:
 	canvas.draw_rect(inner,PANEL)
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,3),Vector2(rect.size.x-6,32)),Color("#1d1018"))
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,35),Vector2(4,maxf(0.0,rect.size.y-39))),Color("#3a1621",0.56))
-	canvas.draw_rect(rect,Color("#61313f"),false,1.0)
-	canvas.draw_rect(inner,Color("#2c1b27"),false,1.0)
+	outline(canvas,rect,Color("#61313f"),1.0)
+	outline(canvas,inner,Color("#2c1b27"),1.0)
 	stroke(canvas,Vector2(rect.position.x+4,rect.position.y+35),Vector2(rect.end.x-4,rect.position.y+35),Color("#7f2838",0.85),1.0)
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,2),Vector2(maxf(1.0,rect.size.x-6),2)),red)
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,4),Vector2(3,28)),RED)
@@ -126,7 +142,7 @@ static func button(canvas: CanvasItem, rect: Rect2, label: String, hovered: bool
 		accent=Color("#38303b")
 	canvas.draw_rect(rect,Color("#07080c"))
 	canvas.draw_rect(rect.grow(-1),fill)
-	canvas.draw_rect(rect,accent,false,1.0)
+	outline(canvas,rect,accent,1.0)
 	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,maxf(1.0,rect.size.y-4))),accent)
 	stroke(canvas,rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#c34b5f",0.54 if highlighted else 0.21),1.0)
 	stroke(canvas,Vector2(rect.position.x+8,rect.end.y-3),Vector2(rect.end.x-8,rect.end.y-3),accent if highlighted else Color("#44303a"),1.0)
@@ -140,7 +156,7 @@ static func button(canvas: CanvasItem, rect: Rect2, label: String, hovered: bool
 static func list_row(canvas: CanvasItem, rect: Rect2, active: bool, hovered: bool, danger: bool = false) -> void:
 	var fill := Color("#34131d") if active else (Color("#28202a") if hovered else Color("#101118"))
 	canvas.draw_rect(rect,fill)
-	canvas.draw_rect(rect,Color("#79404b") if active else Color("#302a35"),false,1.0)
+	outline(canvas,rect,Color("#79404b") if active else Color("#302a35"),1.0)
 	canvas.draw_rect(Rect2(rect.position,Vector2(3,rect.size.y)),RED if active or danger else Color("#59313c"))
 	if hovered:
 		stroke(canvas,Vector2(rect.position.x+7,rect.end.y-2),Vector2(rect.end.x-7,rect.end.y-2),Color("#e44057",0.53),1.0)
@@ -149,7 +165,7 @@ static func meter(canvas: CanvasItem, rect: Rect2, value: float, severity: Color
 	var fraction := clampf(value,0.0,1.0)
 	canvas.draw_rect(rect,Color("#29202b"))
 	canvas.draw_rect(Rect2(rect.position,Vector2(rect.size.x*fraction,rect.size.y)),severity)
-	canvas.draw_rect(rect,Color("#69404b"),false,1.0)
+	outline(canvas,rect,Color("#69404b"),1.0)
 	for i in range(1,10):
 		var x := rect.position.x+rect.size.x*float(i)/10.0
 		stroke(canvas,Vector2(x,rect.position.y),Vector2(x,rect.end.y),Color("#07080c",0.6),1.0)
@@ -158,7 +174,7 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 	var center := at+Vector2(8,8)
 	match index:
 		0:
-			canvas.draw_rect(Rect2(center-Vector2(5,2),Vector2(10,9)),color,false,1.2)
+			outline(canvas,Rect2(center-Vector2(5,2),Vector2(10,9)),color,1.2)
 			stroke(canvas,center+Vector2(-7,-2),center+Vector2(0,-7),color,1.2)
 			stroke(canvas,center+Vector2(0,-7),center+Vector2(7,-2),color,1.2)
 		1:
@@ -167,10 +183,10 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 			stroke(canvas,center+Vector2(0,-9),center+Vector2(0,9),color,1.2)
 		2:
 			for i in range(3):
-				canvas.draw_rect(Rect2(center+Vector2(-6+float(i)*5.0,-4),Vector2(3,10)),color,false,1)
+				outline(canvas,Rect2(center+Vector2(-6+float(i)*5.0,-4),Vector2(3,10)),color,1)
 			stroke(canvas,center+Vector2(-8,-6),center+Vector2(8,-6),color,1.3)
 		3:
-			canvas.draw_rect(Rect2(center+Vector2(-7,-2),Vector2(14,9)),color,false,1.3)
+			outline(canvas,Rect2(center+Vector2(-7,-2),Vector2(14,9)),color,1.3)
 			stroke(canvas,center+Vector2(-7,-2),center+Vector2(-2,-6),color,1)
 			stroke(canvas,center+Vector2(-2,-6),center+Vector2(1,-2),color,1)
 			stroke(canvas,center+Vector2(1,-2),center+Vector2(5,-6),color,1)
@@ -184,12 +200,12 @@ static func nav_icon(canvas: CanvasItem, at: Vector2, index: int, color: Color) 
 			stroke(canvas,center+Vector2(-7,0),center+Vector2(7,0),color,1)
 			stroke(canvas,center+Vector2(0,-7),center+Vector2(0,7),color,1)
 		6,7:
-			canvas.draw_rect(Rect2(center-Vector2(6,6),Vector2(12,12)),color,false,1.3)
+			outline(canvas,Rect2(center-Vector2(6,6),Vector2(12,12)),color,1.3)
 			stroke(canvas,center+Vector2(0,4 if index==6 else -4),center+Vector2(0,-4 if index==6 else 4),color,1.4)
 			stroke(canvas,center+Vector2(-3,1 if index==6 else -1),center+Vector2(0,-4 if index==6 else 4),color,1.2)
 			stroke(canvas,center+Vector2(3,1 if index==6 else -1),center+Vector2(0,-4 if index==6 else 4),color,1.2)
 		8:
-			canvas.draw_rect(Rect2(center-Vector2(6,7),Vector2(12,14)),color,false,1.2)
+			outline(canvas,Rect2(center-Vector2(6,7),Vector2(12,14)),color,1.2)
 			stroke(canvas,center+Vector2(-3,-2),center+Vector2(3,-2),color,1)
 			stroke(canvas,center+Vector2(-3,2),center+Vector2(3,2),color,1)
 
@@ -213,7 +229,7 @@ static func nav_station(canvas: CanvasItem, rect: Rect2, index: int, label: Stri
 static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: String, fraction: float, severity: Color, hover: bool) -> void:
 	# Compact instrument: prominent value, restrained diagnostics and truthful severity.
 	canvas.draw_rect(rect,Color("#25131e") if hover else Color("#0b0e14"))
-	canvas.draw_rect(rect,Color("#bb5062") if hover else Color("#4b2837"),false,1.0)
+	outline(canvas,rect,Color("#bb5062") if hover else Color("#4b2837"),1.0)
 	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,rect.size.y-4)),severity)
 	stroke(canvas,rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#aa394d",0.50 if hover else 0.23),1.0)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),11,MUTED)
@@ -226,7 +242,7 @@ static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: St
 # Real-status cards are designed for spare screen area, not invented stats.
 static func metric_card(canvas: CanvasItem, rect: Rect2, caption: String, value: String, detail: String, warning: bool = false) -> void:
 	canvas.draw_rect(rect,Color("#171017"))
-	canvas.draw_rect(rect,Color("#57303c"),false,1.0)
+	outline(canvas,rect,Color("#57303c"),1.0)
 	canvas.draw_rect(Rect2(rect.position,Vector2(3.0,rect.size.y)),AMBER if warning else RED)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,16),caption,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,10,MUTED)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(11,39),value,HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-20,19,AMBER if warning else TEXT)
