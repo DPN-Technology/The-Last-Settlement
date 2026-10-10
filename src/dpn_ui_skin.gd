@@ -134,22 +134,14 @@ static func backdrop(canvas: CanvasItem, size: Vector2, seconds: float) -> void:
 
 
 static func button(canvas: CanvasItem, rect: Rect2, label: String, hovered: bool, active: bool = false, dangerous: bool = false, enabled: bool = true, small: bool = false) -> void:
-	var highlighted := enabled and (hovered or active)
-	var accent := RED if dangerous or active else (Color("#e2606e") if hovered else Color("#70404d"))
-	var fill := Color("#36121e") if active else (Color("#28131d") if hovered else SURFACE)
-	if not enabled:
-		fill=Color("#101017")
-		accent=Color("#38303b")
-	canvas.draw_rect(rect,Color("#07080c"))
-	canvas.draw_rect(rect.grow(-1),fill)
-	outline(canvas,rect,accent,1.0)
-	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,maxf(1.0,rect.size.y-4))),accent)
-	stroke(canvas,rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#c34b5f",0.54 if highlighted else 0.21),1.0)
-	stroke(canvas,Vector2(rect.position.x+8,rect.end.y-3),Vector2(rect.end.x-8,rect.end.y-3),accent if highlighted else Color("#44303a"),1.0)
-	# Angular highlighted corners are also visible on keyboard-selected actions.
-	if highlighted:
-		stroke(canvas,rect.position+Vector2(2,10),rect.position+Vector2(10,2),accent,1.3)
-		stroke(canvas,rect.end-Vector2(2,10),rect.end-Vector2(10,2),accent,1.3)
+	# Issue #9: one cached bitmap surface instead of many native 2D strokes.
+	# Shared action controls retain their readable live labels and hitboxes.
+	var selected := active or dangerous
+	var texture := _nav_background(selected,hovered and enabled)
+	if texture!=null:
+		canvas.draw_texture_rect(texture,rect,false,Color(1.0,1.0,1.0,0.43) if not enabled else Color.WHITE)
+	else:
+		canvas.draw_rect(rect,Color("#27151c") if selected else SURFACE)
 	var color := TEXT if enabled else Color("#76686f")
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,rect.size.y*0.5+(3.2 if small else 4.0)),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(6.0,rect.size.x-17.0),11 if small else 12,color)
 
