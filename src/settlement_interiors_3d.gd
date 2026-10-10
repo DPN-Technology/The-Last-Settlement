@@ -48,6 +48,55 @@ static func _cabinet(room: Node3D, pos: Vector3, mats: Dictionary) -> void:
 	box(room,"CabinetFace",pos+Vector3(0,1.10,-0.36),Vector3(0.82,1.72,0.04),mats["darkmetal"])
 	box(room,"CabinetHandle",pos+Vector3(0.30,1.1,-0.39),Vector3(0.07,0.30,0.07),mats["rooflight"])
 
+# A second pass adds facility-specific staging. Props occupy peripheral zones
+# and are visual only until furniture-aware navigation ships in issue #8.
+static func _crate_shelf(room: Node3D, at: Vector3, mats: Dictionary) -> void:
+	for side in [-1.0,1.0]:
+		box(room,"ShelfPost",at+Vector3(side*0.76,1.09,0),Vector3(0.10,2.16,0.65),mats["steel"])
+	for tier in range(3):
+		var y := 0.37+float(tier)*0.65
+		box(room,"ShelfDeck",at+Vector3(0,y,0),Vector3(1.72,0.10,0.76),mats["darkmetal"])
+		box(room,"StoredSupplies",at+Vector3(0,y+0.23,0),Vector3(1.34,0.39,0.52),mats["canvas"])
+
+static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
+	var x := size.x*0.5
+	var z := size.y*0.5
+	var color: Material=mats["clinic"] if kind=="medical" else (mats["rust"] if kind in ["industry","storage"] else (mats["blue"] if kind in ["water","purifier","water_pump","water_tank","sewage"] else mats["olive"]))
+	for side in [-1.0,1.0]:
+		box(room,"FloorZone",Vector3(side*x*0.48,0.298,0),Vector3(maxf(0.60,x*0.44),0.015,size.y*0.70),mats["foundation"])
+		box(room,"RoomZoneStripe",Vector3(side*x*0.24,0.311,0),Vector3(0.10,0.020,size.y*0.66),color)
+	for depth in [-0.29,0.31]:
+		box(room,"CeilingLightRail",Vector3(0,2.75,depth*size.y),Vector3(minf(4.2,x),0.12,0.21),mats["rooflight"])
+		box(room,"LightDiffuser",Vector3(0,2.68,depth*size.y),Vector3(minf(3.9,x),0.04,0.14),mats["glow"])
+	match kind:
+		"housing":
+			for side in [-1.0,1.0]:
+				_crate_shelf(room,Vector3(side*x*0.68,0,z*0.72),mats)
+				box(room,"FootLocker",Vector3(side*x*0.66,0.43,-z*0.40),Vector3(1.10,0.73,0.70),mats["olive"])
+			box(room,"DiningBench",Vector3(0,0.61,z*0.36),Vector3(2.2,0.16,0.75),mats["rust"])
+		"medical":
+			for side in [-1.0,1.0]:
+				var cx := side*x*0.34
+				cylinder(room,"IVStand",Vector3(cx,1.15,z*0.23),0.042,2.16,mats["steel"])
+				box(room,"IVSupport",Vector3(cx,2.15,z*0.23),Vector3(0.50,0.08,0.09),mats["steel"])
+				box(room,"FluidBag",Vector3(cx+0.18,1.83,z*0.23),Vector3(0.22,0.42,0.18),mats["clinic"])
+				_crate_shelf(room,Vector3(side*x*0.68,0,z*0.73),mats)
+		"industry","storage":
+			for side in [-1.0,1.0]:
+				_crate_shelf(room,Vector3(side*x*0.66,0,z*0.72),mats)
+				box(room,"SupplyPallet",Vector3(side*x*0.61,0.28,-z*0.43),Vector3(1.88,0.17,1.25),mats["canvas"])
+				box(room,"PalletLoad",Vector3(side*x*0.61,0.71,-z*0.43),Vector3(1.43,0.68,0.98),mats["steel"])
+		"command":
+			for side in [-1.0,1.0]:
+				box(room,"MissionBoard",Vector3(side*x*0.69,1.60,z*0.69),Vector3(1.90,1.22,0.14),mats["darkmetal"])
+				box(room,"MissionMap",Vector3(side*x*0.69,1.60,z*0.58),Vector3(1.65,0.95,0.045),mats["glass"])
+			_crate_shelf(room,Vector3(x*0.22,0,z*0.75),mats)
+		_:
+			for side in [-1.0,1.0]:
+				_crate_shelf(room,Vector3(side*x*0.68,0,z*0.73),mats)
+				box(room,"MachineServicePanel",Vector3(side*x*0.59,1.05,-z*0.34),Vector3(1.24,1.33,0.40),mats["steel"])
+				box(room,"StatusDisplay",Vector3(side*x*0.59,1.41,-z*0.56),Vector3(0.86,0.40,0.05),mats["glass"])
+
 static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> Node3D:
 	var room := Node3D.new()
 	room.name="InteriorFurnishings"
@@ -99,12 +148,13 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 			for side in [-1.0,1.0]:
 				_cabinet(room,Vector3(side*hx*0.65,0,size.y*0.19),mats)
 			_workbench(room,Vector3(0,0,size.y*0.30),mats)
+	_stage_rooms(room,kind,size,mats)
 	# Restrict internal light to revealed interiors; no glowing exterior boxes.
 	var light := OmniLight3D.new()
 	light.name="InteriorWorkLight"
 	light.position=Vector3(0,2.72,0)
 	light.light_color=Color("#f6cda3")
-	light.light_energy=0.55
+	light.light_energy=0.82
 	light.omni_range=13.0
 	light.shadow_enabled=false
 	room.add_child(light)

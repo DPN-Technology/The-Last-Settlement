@@ -1584,6 +1584,42 @@ func _smoke() -> void:
 			return
 	instance.roof_view_mode=visible_roof_mode
 	instance.settlement_world._update_roof_views(sim,{}, {},visible_roof_mode)
+	# Check readable 3D facility labels, staging and true camera follow.
+	var markers := 0
+	var staged := 0
+	for structure in world.structure_layer.get_children():
+		if structure.get_node_or_null("FacilityNameMarker")!=null and structure.get_node_or_null("ExteriorDoorLight")!=null:
+			markers+=1
+		var room: Node3D=structure.get_node_or_null("InteriorFurnishings") as Node3D
+		if room!=null and room.get_node_or_null("RoomZoneStripe")!=null and room.get_node_or_null("CeilingLightRail")!=null:
+			staged+=1
+	if markers<6 or staged<6:
+		push_error("SMOKE: named facilities, entry lights or staged interiors missing")
+		quit(1)
+		return
+	var snapshot := sim.resources.duplicate(true)
+	var actor: Dictionary=sim.get_settlement_citizens()[0]
+	instance.selected_citizen=actor
+	instance.build_mode=false
+	instance.civilization_mode=false
+	instance._toggle_camera_follow()
+	if instance.camera_follow_citizen_id!=int(actor["id"]):
+		push_error("SMOKE: follow command did not select survivor")
+		quit(1)
+		return
+	world.focus_game(Vector2(700,380))
+	instance._update_camera_follow(1.0)
+	if world.focus.distance_to(world.world_position(Vector2(actor["position"])))>0.05:
+		push_error("SMOKE: follow camera did not center on actual position")
+		quit(1)
+		return
+	instance._toggle_camera_follow()
+	if instance.camera_follow_citizen_id!=0 or sim.resources!=snapshot:
+		push_error("SMOKE: unfollow did not stop or changed resources")
+		quit(1)
+		return
+	instance.selected_citizen={}
+	world.focus_game(Vector2(700,380))
 	# Quick-start cards are real clickable navigation, not a tutorial-only
 	# text wall. Shared hitboxes must stay inside the modal on typical PCs.
 	for display_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:

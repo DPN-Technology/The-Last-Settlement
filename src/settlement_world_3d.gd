@@ -232,7 +232,7 @@ func _create_environment() -> void:
 	world_environment.ambient_light_energy = 0.24
 	world_environment.reflected_light_source = Environment.REFLECTION_SOURCE_BG
 	world_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	world_environment.tonemap_exposure = 0.69
+	world_environment.tonemap_exposure = 0.87
 	world_environment.fog_enabled = true
 	world_environment.fog_light_color = Color("#5c615b")
 	world_environment.fog_density = 0.00095
@@ -263,11 +263,11 @@ func _update_daylight(hour: float) -> void:
 	var solar := sin((hour - 6.0) / 12.0 * PI)
 	var daylight := clampf(solar, 0.0, 1.0)
 	var twilight := clampf(1.0 - absf(hour - 18.0) / 3.5, 0.0, 1.0)
-	light.light_energy = lerpf(0.03, 0.83, daylight)
+	light.light_energy = lerpf(0.04, 1.06, daylight)
 	light.light_color = Color("#f5c293").lerp(Color("#e0e6ea"), daylight * 0.64)
 	light.rotation_degrees = Vector3(-18.0 - daylight * 53.0, 35.0 + hour * 4.0, -3.0)
-	world_environment.ambient_light_energy = lerpf(0.095, 0.25, daylight)
-	world_environment.background_energy_multiplier = lerpf(0.09, 0.25, daylight)
+	world_environment.ambient_light_energy = lerpf(0.13, 0.41, daylight)
+	world_environment.background_energy_multiplier = lerpf(0.13, 0.35, daylight)
 	world_environment.ambient_light_color = Color("#35465c").lerp(Color("#82939a"), daylight)
 	world_environment.fog_light_color = Color("#202d36").lerp(Color("#6c6d63"), daylight)
 	sky_material.sky_top_color = Color("#0d1b2a").lerp(Color("#3b5566"), daylight)
@@ -286,8 +286,8 @@ func _update_weather_environment(sim: SettlementSimulation) -> void:
 	world_environment.fog_density=lerpf(0.00095,0.0085,dust_strength)
 	world_environment.fog_light_color=base_fog.lerp(Color("#8e7154"),dust_strength*0.75)
 	sky_material.sky_horizon_color=base_horizon.lerp(Color("#8e6c52"),dust_strength*0.75)
-	world_environment.ambient_light_energy=lerpf(0.095,0.25,daylight)*(1.0-0.20*dust_strength)
-	light.light_energy=lerpf(0.03,0.83,daylight)*(1.0-0.28*dust_strength)
+	world_environment.ambient_light_energy=lerpf(0.13,0.41,daylight)*(1.0-0.20*dust_strength)
+	light.light_energy=lerpf(0.04,1.06,daylight)*(1.0-0.28*dust_strength)
 
 func _box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var obj := MeshInstance3D.new()
@@ -477,6 +477,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 	_update_roof_views(sim,selected_building,selected_citizen,roof_mode)
 	_animate_entry_doors(sim,delta)
 	_update_daylight(sim.hour)
+	_update_facility_lamps(sim)
 	_update_weather_environment(sim)
 	weather_effects.update_weather(sim.weather_simulation.condition,sim.weather_simulation.intensity,focus,delta,sim.paused)
 	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)) and not sim.paused)
@@ -578,6 +579,7 @@ func _build_structure(b: Dictionary) -> void:
 	SettlementArchitecture3D.facade(group, type, size, body_height, body_mat, materials)
 	# Physical furniture remains inside the shell; roofs can reveal it on demand.
 	SettlementInteriors3D.populate(group,type,size,materials)
+	SettlementWorldReadability3D.decorate(group,b,size,body_height,materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
@@ -627,6 +629,17 @@ func _build_structure(b: Dictionary) -> void:
 	for detail in group.get_children():
 		if detail is MeshInstance3D and detail.position.y>body_height+0.46:
 			detail.set_meta("cutaway_roof",true)
+
+func _update_facility_lamps(sim: SettlementSimulation) -> void:
+	var day := clampf(sin((sim.hour-6.0)/12.0*PI),0.0,1.0)
+	var darkness := clampf(1.0-day*2.0,0.0,1.0)
+	var powered := bool(sim.utility_state.get("power_online",true))
+	for group in structure_layer.get_children():
+		if group.is_queued_for_deletion():
+			continue
+		var lamp := group.get_node_or_null("ExteriorDoorLight") as OmniLight3D
+		if lamp!=null:
+			lamp.light_energy=(0.07+0.82*darkness) if powered else 0.0
 
 func _update_roof_views(sim: SettlementSimulation, selected_building: Dictionary, selected_citizen: Dictionary, roof_mode: int) -> void:
 	cutaway_views=0

@@ -50,6 +50,7 @@ var zoom := 1.04
 var dragging := false
 var drag_origin := Vector2.ZERO
 var selected_citizen: Dictionary = {}
+var camera_follow_citizen_id := 0
 var selected_building: Dictionary = {}
 var pending_demolition_key := ""
 var selected_blueprint: Dictionary = {}
@@ -121,6 +122,7 @@ func _process(delta: float) -> void:
 	sim.check_field_objectives()
 	if not sim.paused:
 		_update_citizens(delta)
+	_update_camera_follow(delta)
 	if playtest_notice_seconds > 0.0:
 		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
 	settlement_world.sync(sim, selected_building, selected_citizen, build_mode, mouse_world, sim.get_build_catalog()[build_catalog_index], build_rotated, delta, roof_view_mode)
@@ -2222,6 +2224,29 @@ func _handle_objective_click(position: Vector2) -> bool:
 		sim.speed = 4.0
 	return true
 
+func _update_camera_follow(delta: float) -> void:
+	if camera_follow_citizen_id==0:
+		return
+	var c := sim.get_citizen_by_id(camera_follow_citizen_id)
+	if c.is_empty() or not bool(c.get("alive",false)) or bool(c.get("on_expedition",false)):
+		camera_follow_citizen_id=0
+		return
+	var target := settlement_world.world_position(Vector2(c["position"]))
+	settlement_world.focus=settlement_world.focus.lerp(target,clampf(delta*3.8,0.0,1.0))
+	settlement_world._position_camera()
+
+func _toggle_camera_follow() -> void:
+	if selected_citizen.is_empty():
+		return
+	var ident := int(selected_citizen["id"])
+	camera_follow_citizen_id=0 if camera_follow_citizen_id==ident else ident
+	if camera_follow_citizen_id!=0:
+		_focus_world_position(Vector2(selected_citizen["position"]))
+		playtest_notice="CAMERA FOLLOW  /  "+str(selected_citizen["name"]).to_upper()
+	else:
+		playtest_notice="CAMERA FOLLOW RELEASED  /  FREE PAN"
+	playtest_notice_seconds=4.5
+
 func _focus_world_position(world: Vector2) -> void:
 	settlement_world.focus_game(world)
 
@@ -2729,7 +2754,7 @@ func _draw_citizen_panel(c: Dictionary) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 328), "TRAIT: %s" % str(c["trait"]), HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 346), "SKILLS   BUILD %d   MED %d   FARM %d" % [int(c["skills"]["construction"]), int(c["skills"]["medicine"]), int(c["skills"]["farming"])], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, MUTED)
 	draw_string(ThemeDB.fallback_font, Vector2(x + 18, y + 364), "ON DUTY: %s    PRIORITY: %d" % ["YES" if sim.is_selected_work_enabled(c) else "NO", int(c["work_priority"].get(c["job"], 3))], HORIZONTAL_ALIGNMENT_LEFT, w - 36, 11, GOOD if sim.is_selected_work_enabled(c) else WARN)
-	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+385),"Manage job roles: PEOPLE metric or F6",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+385),("F FOLLOWING  /  press F to release" if camera_follow_citizen_id==int(c["id"]) else "F FOLLOW SURVIVOR  /  F6 WORKFORCE"),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,GOOD)
 	var action_y := y + h - 57.0
 	var labels := ["[T] SHIFT", "[P] PRIORITY", "[W] DUTY"]
 	for i in range(3):
@@ -2853,9 +2878,13 @@ func _draw_building_panel(b: Dictionary) -> void:
 	if utility=="":
 		utility=str(b.get("type",""))
 	var workers := 0
+	var occupants := 0
+	var inside_bounds := Rect2(Vector2(b["position"])-Vector2(b["size"])*0.5,Vector2(b["size"]))
 	for citizen in sim.get_settlement_citizens():
 		if str(citizen.get("target_building",""))==str(b.get("type","")) and bool(citizen.get("alive",false)):
 			workers += 1
+		if inside_bounds.has_point(Vector2(citizen["position"])):
+			occupants += 1
 	_draw_ui_panel(bounds,ACCENT)
 	draw_rect(Rect2(x+14,y+13,4,21),ACCENT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+29),"FACILITY  /  BUILDING MANAGEMENT",HORIZONTAL_ALIGNMENT_LEFT,w-43,14,TEXT)
@@ -2864,7 +2893,7 @@ func _draw_building_panel(b: Dictionary) -> void:
 	_draw_meter(Vector2(x+18,y+111),w-36.0,"BUILDING CONDITION",condition)
 	var is_damaged := condition<65.0
 	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+149),"Status: "+("Repairs needed" if is_damaged else "Operating"),HORIZONTAL_ALIGNMENT_LEFT,w-35,12,WARN if is_damaged else GOOD)
-	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+170),"Workers assigned: "+str(workers),HORIZONTAL_ALIGNMENT_LEFT,w-38,11,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+170),"Assigned: %d   Inside now: %d   [F] Focus" % [workers,occupants],HORIZONTAL_ALIGNMENT_LEFT,w-38,11,TEXT)
 	var description := SettlementCommandCatalog.purpose(str(b["type"]))
 	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+193),description,HORIZONTAL_ALIGNMENT_LEFT,w-36,10,MUTED)
 	var type_name := str(b["type"])
@@ -2898,6 +2927,7 @@ func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> voi
 func _select_at(screen_pos: Vector2) -> void:
 	var world := _screen_to_world(screen_pos)
 	selected_blueprint = {}
+	camera_follow_citizen_id=0
 	var nearest: Dictionary = {}
 	var nearest_distance := 18.0 / zoom
 	for c in sim.citizens:
@@ -3086,6 +3116,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_F8:
 				_capture_game_screenshot()
 			KEY_HOME:
+				camera_follow_citizen_id=0
 				_focus_world_position(Vector2(700, 380))
 			KEY_W:
 				if not selected_citizen.is_empty():
@@ -3191,6 +3222,10 @@ func _unhandled_input(event: InputEvent) -> void:
 					var definition := sim.get_build_catalog()[build_catalog_index]
 					if definition["type"] == "wall" or definition["type"] == "door" or definition["type"] == "pipe":
 						build_rotated = not build_rotated
+				elif not selected_citizen.is_empty():
+					_toggle_camera_follow()
+				elif not selected_building.is_empty():
+					_focus_world_position(Vector2(selected_building["position"]))
 			KEY_K:
 				economy_mode = not economy_mode
 				governance_mode = false

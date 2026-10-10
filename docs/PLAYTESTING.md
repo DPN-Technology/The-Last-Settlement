@@ -1,3 +1,13 @@
+# WORLD READABILITY AND CAMERA FOLLOW — OCTOBER 10 PLAYTEST
+
+The screenshots show a working 3D roof cutaway but very dark mornings, repetitive rooms and hard-to-locate survivors. This focused pass brightens genuine clear-weather daylight (storms and darkness still apply), stages distinct color-coded working zones and shelves/equipment inside existing real rooms, and adds facility name signage and low-cost powered door lamps in the 3D world. The exterior models, normal collision routes, save format and safe red-line-free HUD renderer remain unchanged.
+
+Select a survivor and press F to follow them through the camp and doorway; F again releases the camera. Home resets the camp camera. Select a building and press F to focus it. Construction rotation and civilization F controls keep their existing precedence. The facility inspector shows assigned workers plus the number physically inside the building footprint. In-game smoke verifies visible staging, live 3D labels, and no resource changes from camera actions.
+
+Windows visual acceptance still required: evaluate Day 1 08:35 in clear weather, compare the updated FULL and 3D screenshots with the original user captures, press Tab to see all rooms, observe survivor movement with F follow, and check that a dust storm/night still feel dangerous. Facility props are presentation meshes rather than physics blockers; advanced room occupancy, furniture navmesh, and lifelike animation remain tracked separately.
+
+---
+
 # PLAYABLE 3D INTERIORS — ISSUE #8 FIRST FIDELITY SLICE
 
 This development build starts connecting building realism to actual survivor movement, not just decorative building models.
