@@ -921,14 +921,46 @@ func _draw_economy_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+376),"Requires: "+_format_recipe_items(recipe.get("input",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+394),"Produces: "+_format_recipe_items(recipe.get("output",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,GOOD)
 	draw_line(Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#613641"),1)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+424),"PRODUCTION QUEUE  /  %d BATCHES" % eco.production_queue.size(),HORIZONTAL_ALIGNMENT_LEFT,w-34,11,ACCENT)
-	var last_y := area.end.y - 94.0
-	var y_row := y+444.0
-	for item in eco.production_queue:
-		if y_row>last_y:
+	# Operational dashboards only appear when they fit above real action keys.
+	# Their telemetry is taken from the economy simulation, never fake charts.
+	var live_batches := eco.get_open_batches()
+	var queued := 0
+	var working := 0
+	for batch in live_batches:
+		if str(batch.get("status",""))=="working":
+			working+=1
+		else:
+			queued+=1
+	var can_show_metrics := area.size.y>=580.0
+	var queue_top := y+444.0
+	if can_show_metrics:
+		var metric_w := (w-47.0)/3.0
+		var reports := [
+			["STORAGE","%.0f%%" % (100.0*eco.warehouse_used/maxf(1.0,eco.warehouse_capacity)),"Warehouse fill"],
+			["OUTPUT","%.0f%%" % (eco.production_efficiency*100.0),"Line efficiency"],
+			["RUNNING",str(working),"Queued "+str(queued)]
+		]
+		for i in range(3):
+			var report: Array=reports[i]
+			DPNUISkin.metric_card(self,Rect2(x+17.0+float(i)*(metric_w+6.0),y+416.0,metric_w,61.0),str(report[0]),str(report[1]),str(report[2]),i==1 and eco.production_efficiency<0.4)
+		queue_top=y+489.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,queue_top+12.0),"MANUFACTURING ORDERS   /   %d ACTIVE" % live_batches.size(),HORIZONTAL_ALIGNMENT_LEFT,w-34,12,ACCENT)
+	var last_y := area.end.y - 91.0
+	var y_row := queue_top+23.0
+	for batch in live_batches:
+		if y_row+33.0>last_y:
 			break
-		draw_string(ThemeDB.fallback_font,Vector2(x+20,y_row),str(item["recipe"])+"  /  "+str(item["status"]).capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,TEXT)
-		y_row += 17.0
+		var row := Rect2(x+18,y_row,w-36.0,30.0)
+		var status := str(batch.get("status","queued"))
+		var definition: Dictionary=eco.recipes.get(str(batch.get("recipe","")),{})
+		var completion := clampf(float(batch.get("progress",0.0))/maxf(1.0,float(definition.get("work",1.0))),0.0,1.0)
+		DPNUISkin.list_row(self,row,false,false)
+		draw_string(ThemeDB.fallback_font,row.position+Vector2(11,18),str(batch.get("recipe","Unknown")),HORIZONTAL_ALIGNMENT_LEFT,row.size.x-125.0,12,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(row.end.x-110.0,row.position.y+18.0),status.to_upper()+"  %.0f%%" % (completion*100.0),HORIZONTAL_ALIGNMENT_RIGHT,99.0,11,GOOD if status=="working" else MUTED)
+		DPNUISkin.meter(self,Rect2(row.position+Vector2(8.0,row.size.y-5.0),Vector2(row.size.x-16.0,3.0)),completion,ACCENT)
+		y_row+=34.0
+	if live_batches.is_empty() and y_row+20.0<last_y:
+		draw_string(ThemeDB.fallback_font,Vector2(x+20,y_row+14),"No active orders. Open Workshop Control to start production.",HORIZONTAL_ALIGNMENT_LEFT,w-36,11,MUTED)
 
 
 func _workshop_selected_batch() -> Dictionary:
