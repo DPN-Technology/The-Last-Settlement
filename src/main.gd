@@ -618,15 +618,15 @@ func _draw_world_map() -> void:
 	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#100d12ee"))
 	draw_rect(Rect2(12,SettlementUILayout.TOP_H+58,220,vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-66),Color("#613541"),false,1)
 	var discovered := sim.world_simulation.get_discovered_locations()
-	var site_rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/29.0)))
+	var site_rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/32.0)))
 	for i in range(site_rows):
 		var entry: Dictionary = discovered[i]
 		var r := SettlementUILayout.region_site_row(vp,i)
 		var selected := int(entry["id"]) == selected_world_location_id
 		var risk := float(entry.get("danger",0.0))
 		DPNUISkin.list_row(self,r,selected,r.has_point(get_local_mouse_position()),risk>0.50)
-		draw_string(ThemeDB.fallback_font,r.position+Vector2(8,17),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,r.size.x-44,10,TEXT if selected else MUTED)
-		draw_string(ThemeDB.fallback_font,r.position+Vector2(r.size.x-34,17),"%d%%" % int(risk*100.0),HORIZONTAL_ALIGNMENT_RIGHT,28,9,WARN if risk<0.5 else BAD)
+		draw_string(ThemeDB.fallback_font,r.position+Vector2(8,20),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,r.size.x-44,12,TEXT if selected else MUTED)
+		draw_string(ThemeDB.fallback_font,r.position+Vector2(r.size.x-34,20),"%d%%" % int(risk*100.0),HORIZONTAL_ALIGNMENT_RIGHT,28,11,WARN if risk<0.5 else BAD)
 	if discovered.size()>site_rows:
 		draw_string(ThemeDB.fallback_font,Vector2(22,vp.y-SettlementUILayout.BOTTOM_H-15),"%d sites visible  /  %d discovered" % [site_rows,discovered.size()],HORIZONTAL_ALIGNMENT_LEFT,200,10,WARN)
 	# Normalized projection shared with _world_map_select; all nodes remain
@@ -776,7 +776,7 @@ func _handle_region_click(position: Vector2) -> bool:
 				playtest_notice_seconds=5.0
 			return true
 	var discovered := sim.world_simulation.get_discovered_locations()
-	var rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/29.0)))
+	var rows := mini(discovered.size(),mini(12,int((vp.y-SettlementUILayout.TOP_H-SettlementUILayout.BOTTOM_H-97.0)/32.0)))
 	for i in range(rows):
 		if SettlementUILayout.region_site_row(vp,i).has_point(position):
 			selected_world_location_id = int(discovered[i]["id"])
@@ -999,7 +999,7 @@ func _draw_civilization_panel() -> void:
 	civilization_colony_project_index = clampi(civilization_colony_project_index,0,CIV_COLONY_PROJECTS.size()-1)
 	_draw_ui_panel(panel,ACCENT)
 	draw_rect(Rect2(x+13,y+12,4,24),ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+29),"NATION  /  CIVILIZATION RECOVERY",HORIZONTAL_ALIGNMENT_LEFT,w-50,16,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+29),"NATION  /  CIVILIZATION RECOVERY",HORIZONTAL_ALIGNMENT_LEFT,w-50,17,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+16,y+51),"Build settlements, establish supply routes and rebuild the region.",HORIZONTAL_ALIGNMENT_LEFT,w-32,11,MUTED)
 	for idx in range(CIVILIZATION_TABS.size()):
 		var box := SettlementUILayout.civilization_tab_rect(vp,idx)
@@ -1027,13 +1027,36 @@ func _draw_civilization_panel() -> void:
 				second_step = "Use Colonies, Logistics and Recovery tabs for real orders."
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+176),next_step,HORIZONTAL_ALIGNMENT_LEFT,max_width,12,TEXT)
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+197),second_step,HORIZONTAL_ALIGNMENT_LEFT,max_width,11,GOOD)
-			draw_string(ThemeDB.fallback_font,Vector2(left,top+242),"FOUNDED COMMUNITIES",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,ACCENT)
+			draw_string(ThemeDB.fallback_font,Vector2(left,top+242),"FOUNDED COMMUNITIES",HORIZONTAL_ALIGNMENT_LEFT,max_width,13,ACCENT)
 			var ry := top+263.0
 			for settlement in settlements:
 				if ry>panel.end.y-112:
 					break
 				draw_string(ThemeDB.fallback_font,Vector2(left,ry),str(settlement["name"])+"  •  "+str(settlement["status"]).capitalize()+"  •  Population "+str(settlement["population"]),HORIZONTAL_ALIGNMENT_LEFT,max_width,12,TEXT)
 				ry += 24.0
+			# Fill formerly unused space with actual regional intelligence.
+			# Omit on small screens rather than colliding with action buttons.
+			if panel.size.y>=535.0 and ry<top+323.0:
+				var metrics_y := top+323.0
+				var metric_w := (max_width-16.0)/3.0
+				var metrics := [
+					["DISCOVERED",str(sim.world_simulation.get_discovered_locations().size()),"Regional sites"],
+					["READY TO FOUND",str(foundable.size()),"Secured locations"],
+					["FIELD TEAMS",str(sim.world_simulation.get_active_expeditions().size()),"Active expeditions"]
+				]
+				for metric_i in range(metrics.size()):
+					var metric: Array=metrics[metric_i]
+					DPNUISkin.metric_card(self,Rect2(left+float(metric_i)*(metric_w+8.0),metrics_y,metric_w,62.0),str(metric[0]),str(metric[1]),str(metric[2]),metric_i==1 and foundable.is_empty())
+			if panel.size.y>=690.0:
+				draw_string(ThemeDB.fallback_font,Vector2(left,top+423),"LATEST SETTLEMENT OPERATIONS",HORIZONTAL_ALIGNMENT_LEFT,max_width,13,ACCENT)
+				for event_i in range(mini(3,sim.events.size())):
+					var event: Dictionary=sim.events[event_i]
+					var event_y := top+455.0+float(event_i)*45.0
+					if event_y>panel.end.y-96.0:
+						break
+					DPNUISkin.list_row(self,Rect2(left,event_y-19.0,max_width,41.0),false,false)
+					draw_string(ThemeDB.fallback_font,Vector2(left+12,event_y),str(event.get("title","System event")),HORIZONTAL_ALIGNMENT_LEFT,max_width-24,12,TEXT)
+					draw_string(ThemeDB.fallback_font,Vector2(left+12,event_y+16),str(event.get("body","")),HORIZONTAL_ALIGNMENT_LEFT,max_width-24,10,MUTED)
 		1:
 			draw_string(ThemeDB.fallback_font,Vector2(left,top),"SETTLEMENT MANAGEMENT",HORIZONTAL_ALIGNMENT_LEFT,max_width,15,TEXT)
 			if not settlements.is_empty():
@@ -1141,7 +1164,7 @@ func _draw_faction_panel() -> void:
 	faction_index = clampi(faction_index,0,maxi(0,visible.size()-1))
 	_draw_ui_panel(panel,ACCENT)
 	draw_rect(Rect2(x+14,y+12,4,22),ACCENT)
-	draw_string(ThemeDB.fallback_font,Vector2(x+26,y+30),"FACTIONS   /   REGIONAL DIPLOMACY",HORIZONTAL_ALIGNMENT_LEFT,w-39,15,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+26,y+30),"FACTIONS   /   REGIONAL DIPLOMACY",HORIZONTAL_ALIGNMENT_LEFT,w-39,17,TEXT)
 	if visible.is_empty():
 		var relay := sim.world_simulation.get_location_by_id(3)
 		var restored := bool(relay.get("restored",false))
@@ -1159,7 +1182,20 @@ func _draw_faction_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+344),"RELAY STATUS",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+370),"North Ridge Relay: "+("ONLINE" if restored else "AWAITING REPAIRS"),HORIZONTAL_ALIGNMENT_LEFT,w-40,13,GOOD if restored else WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+393),"The restored relay extends radio coverage by 140 units.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
-		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+432),"Use FIND RELAY below to select the actual site.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,GOOD)
+		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+432),"Use FIND RELAY below to select the actual site.",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,GOOD)
+		# Read-only live radio status fills the unused command canvas.
+		if panel.size.y>=550.0:
+			var card_y := y+449.0
+			var card_w := (w-47.0)/3.0
+			var active_teams := sim.world_simulation.get_active_expeditions().size()
+			var readings := [
+				["SITES",str(known),"Mapped"],
+				["FIELD TEAMS",str(active_teams),"Deployed"],
+				["RELAY","ONLINE" if restored else "OFFLINE","North Ridge"]
+			]
+			for metric_i in range(readings.size()):
+				var reading: Array=readings[metric_i]
+				DPNUISkin.metric_card(self,Rect2(x+17.0+float(metric_i)*(card_w+6.0),card_y,card_w,52.0),str(reading[0]),str(reading[1]),str(reading[2]),metric_i==2 and not restored)
 		return
 	var count := visible.size()
 	var gap := 5.0
@@ -1441,7 +1477,7 @@ func _draw_hud() -> void:
 		summary = "Day %d  •  %02d:%02d  |  Weather: %s  |  Materials: %.0f  |  Projects: %d  |  Power: %.0f / %.0f  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,float(sim.resources["materials"]),sim.blueprints.size(),float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),battery_percent]
 	elif vp.x < 920.0:
 		summary = "Day %d  •  %02d:%02d  |  %s  |  Projects: %d" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,sim.blueprints.size()]
-	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-175,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(15,69),summary,HORIZONTAL_ALIGNMENT_LEFT,vp.x-175,11,MUTED)
 	var attention := _settlement_attention()
 	var warning := Rect2(vp.x-158,54.0,154.0,24.0)
 	DPNUISkin.button(self,warning,str(attention[0]),warning.has_point(get_local_mouse_position()),false,str(attention[0]) in ["STORM: TAKE COVER","NO SURVIVORS","POWER SHORTFALL","CHECK FOOD","CHECK WATER"],true,true)
@@ -1463,7 +1499,7 @@ func _draw_hud() -> void:
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
 	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#08080deb"))
 	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),ACCENT,1.4)
-	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-46),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-255,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-45),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-270,11,MUTED)
 	_draw_time_controls()
 	_draw_toolbar()
 	if hovered >= 0:
@@ -1663,7 +1699,7 @@ func _draw_build_palette() -> void:
 	var first := SettlementUILayout.palette_first(active_local,indices.size(),rows)
 	_draw_ui_panel(rect,ACCENT)
 	draw_rect(Rect2(rect.position+Vector2(10,7),Vector2(4,18)),ACCENT)
-	draw_string(ThemeDB.fallback_font,rect.position+Vector2(20,22),"CONSTRUCTION  /  BUILD MENU",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-29,14,TEXT)
+	draw_string(ThemeDB.fallback_font,rect.position+Vector2(20,23),"CONSTRUCTION  /  BUILD MENU",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-29,16,TEXT)
 	draw_string(ThemeDB.fallback_font,rect.position+Vector2(12,48),"Available materials: %.0f   •   %d projects queued" % [float(sim.stockpiles["industry"].get("materials",0.0)),sim.blueprints.size()],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-23,11,MUTED)
 	for j in range(SettlementCommandCatalog.CATEGORIES.size()):
 		var box := SettlementUILayout.build_category_rect(vp,j)
@@ -1682,8 +1718,8 @@ func _draw_build_palette() -> void:
 		var active := indices[idx] == build_catalog_index
 		var affordable := SettlementCommandCatalog.can_afford(entry,float(sim.stockpiles["industry"].get("materials",0.0)))
 		DPNUISkin.list_row(self,box,active,box.has_point(get_local_mouse_position()))
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(9,18),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-94,12,TEXT if affordable else MUTED)
-		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x-85,18),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,80,10,GOOD if affordable else BAD)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(11,21),str(entry["name"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-94,13,TEXT if affordable else MUTED)
+		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x-85,21),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,80,12,GOOD if affordable else BAD)
 	var selected: Dictionary = catalog[build_catalog_index]
 	var divider_y := rect.end.y-108.0
 	draw_line(Vector2(rect.position.x+12,divider_y),Vector2(rect.end.x-12,divider_y),Color("#58616a"),1)
