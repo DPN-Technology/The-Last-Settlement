@@ -1,3 +1,11 @@
+# TERRAIN BIOME CONTRAST AND OUTPOST ANCHORING — OCTOBER 10
+
+Screenshot review after removing the intersecting horizon plane shows that the terrain remains too monochromatic, with scattered salvage pads inconsistent with the hill heights. This pass adds interpolated per-vertex soil/stone colors derived from actual terrain slope, elevation and slow spatial sediment noise; the standard baked albedo/normal material multiplies these colors. It also anchors the three exterior salvage-station roots to the same procedural terrain height used by the mountains and scatter. Decorative site geometry still has no collision and does not change simulation saves.
+
+Godot smoke tests now assert real per-vertex colors with non-trivial contrast, material color support, and physically grounded salvage-station placement. Windows visual signoff still required for texture contrast and dawn appearance; this remains transitional generated art rather than licensed photorealistic terrain meshes.
+
+---
+
 # OCTOBER 10 FOLLOW-UP: ARTIFICIAL POLYGON PATCHES ON HILLS
 
 New Windows screenshots confirm black void and UI notice overlap were greatly improved, but hills still show wide hard-edged patches and the map can appear to be endless uniform brown. Root cause in code: the previous "horizon fix" put a textured 1400m square PlaneMesh at y=-0.16 directly beneath the full heightfield. Procedural valleys sometimes dip below it, revealing the flat plane *on top* of the actual terrain from the camera. The horizon material was also mis-scaled by 175x in addition to its UVs, making it look visually uniform.

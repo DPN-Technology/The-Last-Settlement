@@ -1536,6 +1536,44 @@ func _smoke() -> void:
 		push_error("SMOKE: Generated ground triangles can still be backface-culled")
 		quit(1)
 		return
+	# Real terrain macro color must vary by slope in the actual vertex buffer,
+	# rather than masking the entire landscape with one flat brown material.
+	var visible_mesh: ArrayMesh=ground.mesh as ArrayMesh
+	var surface_data: Array=visible_mesh.surface_get_arrays(0)
+	var terrain_colors: PackedColorArray=surface_data[Mesh.ARRAY_COLOR]
+	if terrain_colors.size()<15000 or not ground_material.vertex_color_use_as_albedo:
+		push_error("SMOKE: physical terrain lacks gradient material vertex colors")
+		quit(1)
+		return
+	var low_luminance := 1.0
+	var high_luminance := 0.0
+	for index in range(0,terrain_colors.size(),97):
+		var level: float=terrain_colors[index].get_luminance()
+		low_luminance=minf(low_luminance,level)
+		high_luminance=maxf(high_luminance,level)
+	if high_luminance-low_luminance<0.055:
+		push_error("SMOKE: terrain still looks monochrome instead of slope-tinted")
+		quit(1)
+		return
+	var wreck_sites := 0
+	var wreck_layer: Node3D=world.terrain_layer.get_node_or_null("FidelityTerrainDressing") as Node3D
+	var topography_noise := FastNoiseLite.new()
+	topography_noise.seed=114722
+	topography_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	topography_noise.frequency=0.015
+	topography_noise.fractal_octaves=4
+	for site in wreck_layer.get_children():
+		if str(site.name).begins_with("AbandonedSalvagePoint"):
+			wreck_sites+=1
+			var floor_y: float=WastelandDetail.terrain_height(site.position.x,site.position.z,topography_noise)
+			if absf(site.position.y-floor_y)>0.02:
+				push_error("SMOKE: abandoned facility is floating above terrain")
+				quit(1)
+				return
+	if wreck_sites<3:
+		push_error("SMOKE: outer-world salvage environment sites disappeared")
+		quit(1)
+		return
 	var fallback_core := world.terrain_layer.get_node_or_null("GroundFailsafeSettlementCore") as MeshInstance3D
 	var fallback_outer := world.terrain_layer.get_node_or_null("GroundFailsafeOuter") as MeshInstance3D
 	if fallback_core == null or fallback_outer == null:

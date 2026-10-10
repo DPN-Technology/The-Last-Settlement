@@ -80,10 +80,15 @@ static func terrain(parent: Node3D, mats: Dictionary) -> Node3D:
 	scrub.radial_segments=6
 	scrub.rings=3
 	_multi(layer,"InstancedDryScrub",scrub,mats["olive"],480,911327)
+	var ruins_noise := FastNoiseLite.new()
+	ruins_noise.seed=114722
+	ruins_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	ruins_noise.frequency=0.015
+	ruins_noise.fractal_octaves=4
 	for at in [Vector3(-78,0,-46),Vector3(78,0,-43),Vector3(-82,0,46)]:
 		var post := Node3D.new()
 		post.name="AbandonedSalvagePoint"
-		post.position=at
+		post.position=Vector3(at.x,WastelandDetail.terrain_height(at.x,at.z,ruins_noise),at.z)
 		layer.add_child(post)
 		box(post,"ShatteredPad",Vector3(0,0.22,0),Vector3(6.8,0.37,5.5),mats["concrete"])
 		for side in [-1.0,1.0]:

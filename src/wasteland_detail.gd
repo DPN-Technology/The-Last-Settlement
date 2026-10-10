@@ -38,6 +38,24 @@ static func terrain_height(x: float, z: float, noise: FastNoiseLite) -> float:
 	var edge_fade := 1.0-smoothstep(119.0,158.0,radius)
 	return (waves + rocky + 0.4) * falloff * edge_fade
 
+# Macro material variation follows sculpted elevation and slope. Set as
+# interpolated mesh vertex color (not noisy per-pixel quads) so the ridges
+# read as pale weathered stone and low drainage reads as darker sediment.
+static func terrain_color(x: float, z: float, noise: FastNoiseLite) -> Color:
+	var height := terrain_height(x,z,noise)
+	var gradient_x := terrain_height(x+1.3,z,noise)-terrain_height(x-1.3,z,noise)
+	var gradient_z := terrain_height(x,z+1.3,noise)-terrain_height(x,z-1.3,noise)
+	var slope := clampf(Vector2(gradient_x,gradient_z).length()/5.0,0.0,1.0)
+	var bedrock := smoothstep(0.23,0.72,slope)
+	var exposed := smoothstep(0.9,4.5,absf(height))
+	var sediment := clampf(noise.get_noise_2d(x*0.38+29.0,z*0.38-17.0)*0.5+0.5,0.0,1.0)
+	var dust := Color("#f1e4cf")
+	var packed_clay := Color("#b3b2a7")
+	var limestone := Color("#f0efea")
+	var result := dust.lerp(packed_clay,0.25+sediment*0.28)
+	result=result.lerp(limestone,bedrock*0.73+exposed*0.13)
+	return result
+
 static func terrain_mesh() -> ArrayMesh:
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -63,6 +81,7 @@ static func terrain_mesh() -> ArrayMesh:
 			# Winding is upward facing: b/c winding yields positive Y.
 			for v in [a,c,b,b,c,d]:
 				tool.set_uv(Vector2((v.x + 160.0)/8.0,(v.z + 160.0)/8.0))
+				tool.set_color(terrain_color(v.x,v.z,noise))
 				tool.add_vertex(v)
 	# Deduplicate shared positions/UVs before normal generation so hill
 	# gradients shade smoothly across triangle boundaries, not as flat slabs.

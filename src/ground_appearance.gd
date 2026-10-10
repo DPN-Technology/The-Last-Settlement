@@ -66,7 +66,8 @@ static func new_ground_material() -> StandardMaterial3D:
 	mat.normal_enabled = true
 	mat.normal_texture = ImageTexture.create_from_image(bake_normal_image(color_image))
 	mat.normal_scale = 0.62
-	mat.albedo_color = Color("#cac2b2")
+	mat.albedo_color = Color("#e1d7c6")
+	mat.vertex_color_use_as_albedo = true
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mat.uv1_scale = Vector3.ONE
 	mat.roughness = 0.97
