@@ -787,6 +787,28 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: faction relay discovery, nation tabs/policies/recovery, honest HUD, 3D rigs, and save/load")
+	# Quick-start cards are real clickable navigation, not a tutorial-only
+	# text wall. Shared hitboxes must stay inside the modal on typical PCs.
+	for display_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
+		var guide_bounds := SettlementUILayout.guide_rect(display_size)
+		for i in range(6):
+			if not guide_bounds.encloses(SettlementUILayout.guide_lesson_rect(display_size,i)):
+				push_error("SMOKE: Clickable guide card outside viewport: "+str(i))
+				quit(1)
+				return
+	var mode_names := ["overview_visible","build_mode","world_map_mode","governance_mode","economy_mode","civilization_mode"]
+	for i in range(6):
+		instance.help_mode=true
+		if not instance._handle_guide_click(SettlementUILayout.guide_lesson_rect(screen,i).get_center()):
+			push_error("SMOKE: Quick-start lesson does not accept mouse click")
+			quit(1)
+			return
+		if instance.help_mode or not bool(instance.get(mode_names[i])):
+			push_error("SMOKE: Quick-start lesson failed to open live gameplay: "+mode_names[i])
+			quit(1)
+			return
+	instance.help_mode=false
+	instance.civilization_mode=false
+	print("PLAYTEST SMOKE PASS: collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
 	instance.queue_free()
 	quit(0)
