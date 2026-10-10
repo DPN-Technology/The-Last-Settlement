@@ -123,13 +123,16 @@ func _process(delta: float) -> void:
 		_update_citizens(delta)
 	if playtest_notice_seconds > 0.0:
 		playtest_notice_seconds = maxf(0.0, playtest_notice_seconds - delta)
-	settlement_world.sync(sim, selected_building, selected_citizen, build_mode, mouse_world, sim.get_build_catalog()[build_catalog_index], build_rotated, delta)
+	settlement_world.sync(sim, selected_building, selected_citizen, build_mode, mouse_world, sim.get_build_catalog()[build_catalog_index], build_rotated, delta, roof_view_mode)
 	queue_redraw()
 
 # Paths are transient gameplay state and must not expand the save schema.
 var citizen_paths: Dictionary = {}
 # Non-persistent occupant states: old saved games remain compatible.
 var interior_visits: Dictionary = {}
+# 0 = reveal selected, 1 = reveal every building, 2 = closed roof silhouettes.
+var roof_view_mode := 0
+const ROOF_VIEW_LABELS := ["SELECTED","ALL INTERIORS","EXTERIORS"]
 var navigation_revision := ""
 
 func _navigation_layout_revision() -> String:
@@ -2772,6 +2775,9 @@ func _handle_inspector_click(position: Vector2) -> bool:
 				return true
 		return Rect2(x, y, 350, h).has_point(position)
 	if not selected_building.is_empty():
+		if pending_demolition_key!=_facility_key(selected_building) and _facility_roof_button().has_point(position):
+			_cycle_roof_view()
+			return true
 		for index in range(3):
 			if SettlementUILayout.facility_action(vp,index).has_point(position):
 				_apply_facility_action(index)
@@ -2826,6 +2832,15 @@ func _apply_facility_action(index: int) -> bool:
 		return true
 	return false
 
+func _cycle_roof_view() -> void:
+	roof_view_mode=(roof_view_mode+1)%ROOF_VIEW_LABELS.size()
+	playtest_notice="INTERIOR VISIBILITY  /  "+str(ROOF_VIEW_LABELS[roof_view_mode])
+	playtest_notice_seconds=5.0
+
+func _facility_roof_button() -> Rect2:
+	var area := SettlementUILayout.facility_inspector(get_viewport_rect().size)
+	return Rect2(area.position.x+16.0,area.position.y+270.0,area.size.x-32.0,29.0)
+
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
 	var bounds := SettlementUILayout.facility_inspector(vp)
@@ -2866,7 +2881,8 @@ func _draw_building_panel(b: Dictionary) -> void:
 	if pending_demolition_key==_facility_key(b):
 		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"CONFIRM SALVAGE  /  click again to demolish",HORIZONTAL_ALIGNMENT_LEFT,w-35,11,BAD)
 	else:
-		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"Manage this facility using the actions below.",HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
+		var roofs := _facility_roof_button()
+		DPNUISkin.button(self,roofs,"INTERIORS [TAB]  /  "+str(ROOF_VIEW_LABELS[roof_view_mode]),roofs.has_point(get_local_mouse_position()),roof_view_mode==1,false,true,true)
 	var labels := ["REPAIR [R]","CONFIRM" if pending_demolition_key==_facility_key(b) else "SALVAGE [X]","CLOSE"]
 	for index in range(3):
 		var button := SettlementUILayout.facility_action(vp,index)
@@ -3041,6 +3057,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if workforce_mode and event.keycode not in [KEY_F2,KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
 		match event.keycode:
+			KEY_TAB:
+				_cycle_roof_view()
 			KEY_F6:
 				_toggle_workforce()
 			KEY_F7:

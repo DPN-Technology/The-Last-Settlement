@@ -1,3 +1,17 @@
+# PLAYABLE 3D INTERIORS — ISSUE #8 FIRST FIDELITY SLICE
+
+This development build starts connecting building realism to actual survivor movement, not just decorative building models.
+
+- **Survivor route:** Outdoor obstacle-avoiding path → front steps → real door threshold → interior arrival → assigned indoor position. When a job or building target changes, the actor returns through the same threshold to outdoor routes instead of warping through walls. Access is derived from existing building footprints and resident IDs; existing campaign saves do not need migration.
+- **Physical doors:** Starting facility façades have a left-hinged 3D door leaf and a handle. The door swings open when a living, present citizen approaches and closes when the doorway clears. Exterior solid footprints continue to block normal pathfinding.
+- **Furnished interiors:** Housing contains beds and lockers, medical clinics contain cots and monitoring equipment, industry contains workbenches and machinery, command contains tables and radio consoles; utilities contain service equipment. They are placed as real meshes at world coordinates beneath detachable roof pieces.
+- **Roof controls:** Select a building to expose its interior automatically. Press **Tab**, or use **INTERIORS [TAB]** in the building inspector, to cycle **Selected / All Interiors / Exteriors**. Roof pieces are hidden, not demolished, so switching back preserves the outdoor silhouette. Press F8 to capture actual gameplay evidence.
+- **Honest scope:** Indoor jobs and doorway movement exist, but physical furniture collision, multiple-door layouts, smart door queues, per-room construction, skeletal animation blending, and occlusion-aware roof fades remain future Issue #8 tasks. Imported custom glTF structures need authored roof/door node metadata to participate in cutaway/hinge animation.
+
+**Windows acceptance:** Select Shelter A and zoom/orbit to inspect the beds. Open All Interiors and look for live survivors inside as they complete daily tasks. Watch an engineer approach the Generator doorway and a medic approach the Clinic; doors must swing and the actors should travel through instead of stopping on exterior steps. Change a resident's duty via Workforce and verify exiting through the front, then inspect indoors again. Check that no red UI streaks return, and that frame time and camera movement remain acceptable at 12+ residents.
+
+---
+
 # DPN QUICK COMMAND — CTRL+P LIVE SYSTEM FINDER
 
 **New on PR #6:** Press **Ctrl+P** from gameplay to open the session-only DPN Quick Command. Search for a real management screen, workshop, incident console or specific recovery blueprint. Use Up/Down, Enter, Escape, mouse row selection or scroll wheel. The compact panel overlays the world; input never passes through to construction placement or camera movement until it closes. Click the close X or dimmed backdrop to dismiss without changing the underlying game.

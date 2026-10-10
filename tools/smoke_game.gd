@@ -1541,6 +1541,49 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
+	# World-space interior props and animated door hinges must exist in the
+	# exported scene, with roof hiding limited to the chosen structure.
+	var has_interiors := 0
+	var has_cutaway_roofs := 0
+	var has_hinges := 0
+	for structure in instance.settlement_world.structure_layer.get_children():
+		if structure.get_node_or_null("InteriorFurnishings")!=null:
+			has_interiors+=1
+		if structure.get_node_or_null("EntryDoorPivot")!=null:
+			has_hinges+=1
+		for part in structure.get_children():
+			if part.has_meta("cutaway_roof"):
+				has_cutaway_roofs+=1
+	if has_interiors<6 or has_hinges<6 or has_cutaway_roofs<8:
+		push_error("SMOKE: Actual 3D furnished rooms, door hinges or cutaway roof meshes missing")
+		quit(1)
+		return
+	var visible_roof_mode := instance.roof_view_mode
+	instance.roof_view_mode=1
+	instance.settlement_world._update_roof_views(sim,{}, {},1)
+	var revealed := 0
+	for structure in instance.settlement_world.structure_layer.get_children():
+		var interior := structure.get_node_or_null("InteriorFurnishings")
+		if interior!=null and interior.visible:
+			revealed+=1
+			for part in structure.get_children():
+				if part.has_meta("cutaway_roof") and part.visible:
+					push_error("SMOKE: roof blocks open 3D furnished interior")
+					quit(1)
+					return
+	if revealed<6:
+		push_error("SMOKE: TAB All Interiors view cannot reveal actual buildings")
+		quit(1)
+		return
+	instance.settlement_world._update_roof_views(sim,{}, {},2)
+	for structure in instance.settlement_world.structure_layer.get_children():
+		var interior := structure.get_node_or_null("InteriorFurnishings")
+		if interior!=null and interior.visible:
+			push_error("SMOKE: Exterior roof mode left interior furniture exposed")
+			quit(1)
+			return
+	instance.roof_view_mode=visible_roof_mode
+	instance.settlement_world._update_roof_views(sim,{}, {},visible_roof_mode)
 	# Quick-start cards are real clickable navigation, not a tutorial-only
 	# text wall. Shared hitboxes must stay inside the modal on typical PCs.
 	for display_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:

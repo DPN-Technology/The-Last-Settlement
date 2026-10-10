@@ -3,7 +3,8 @@ extends RefCounted
 
 # The first actual modular facade pass. Uses wall spans, structural corners,
 # door openings and role-dependent roof volumes rather than monolithic boxes.
-# No navmesh/collision claim: Issue #8 owns walking through doors/walls.
+# Exterior solid shells, hinged doors, cutaway roofs and playable furnishing anchors.
+# Exterior navigation is preserved until a survivor reaches this actual doorway.
 
 static func box(parent: Node3D, name: String, at: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var obj := MeshInstance3D.new()
@@ -35,10 +36,13 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		for back in [-1.0,1.0]:
 			box(group,"StructuralPilaster",Vector3(side*(x-0.10),height*0.5+base,back*(z-0.12)),Vector3(0.30,height,0.30),post)
 	box(group,"DoorLintel",Vector3(0,base+door_height+(height-door_height)*0.5,-z),Vector3(door_width,height-door_height,0.29),wall_mat)
-	# Distinct door leaf recessed behind the wall plane, with inset handle.
-	var leaf := box(group,"RecessedEntryDoor",Vector3(0,door_height*0.5+base,-z+0.12),Vector3(door_width-0.12,door_height-0.07,0.11),mats["darkmetal"])
-	leaf.name = "EntryDoor"
-	box(group,"DoorHandle",Vector3(0.63,1.16,-z-0.03),Vector3(0.08,0.19,0.06),trim)
+	# Hinge on left jamb: the door is a real rotating leaf, not a flat decal.
+	var hinge := Node3D.new()
+	hinge.name="EntryDoorPivot"
+	hinge.position=Vector3(-door_width*0.5+0.08,base,-z+0.13)
+	group.add_child(hinge)
+	box(hinge,"EntryDoor",Vector3((door_width-0.12)*0.5,(door_height-0.07)*0.5,0),Vector3(door_width-0.12,door_height-0.07,0.11),mats["darkmetal"])
+	box(hinge,"DoorHandle",Vector3(door_width-0.35,1.04,-0.10),Vector3(0.08,0.19,0.06),trim)
 	box(group,"EntryStep",Vector3(0,0.16,-z-0.86),Vector3(door_width+1.1,0.19,1.75),mats["concrete"])
 	box(group,"EntryCanopy",Vector3(0,door_height+0.45,-z-0.73),Vector3(door_width+1.4,0.17,1.78),post)
 	# Real thickness and panel trim break up all four silhouettes.
@@ -58,13 +62,17 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		var px := -x*0.67 + float(i)*(size.x*0.45)
 		box(group,"VentShutter",Vector3(px,0.69,z+0.26),Vector3(0.85,0.26,0.11),mats["darkmetal"])
 
-	# Different rooflines read as fundamentally different buildings at zoom-out.
+	# Roof pieces are tagged individually and retain their original scene paths,
+	# so smoke tests and distinctive exterior silhouettes both continue working.
+	var roof_first := group.get_child_count()
 	if kind == "housing":
 		_pitched_shelter_roof(group,size,height,mats)
 	elif kind == "medical":
 		_clinic_roof(group,size,height,mats)
 	else:
 		_flat_service_roof(group,size,height,kind,mats)
+	for index in range(roof_first,group.get_child_count()):
+		group.get_child(index).set_meta("cutaway_roof",true)
 
 static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	# Real gabled shelter silhouette: significantly steeper than the initial

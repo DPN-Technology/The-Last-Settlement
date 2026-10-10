@@ -84,6 +84,7 @@ var industrial_yards: Array[Dictionary] = []
 var industry_cycle := 0.0
 var materials: Dictionary = {}
 var selected_key := ""
+var cutaway_views := 0
 var visual_time := 0.0
 
 func _ready() -> void:
@@ -467,12 +468,14 @@ func _layout_signature(sim: SettlementSimulation) -> String:
 		bits.append("plan:%s:%s" % [str(blueprint["id"]), str(blueprint["position"])])
 	return "|".join(bits)
 
-func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_citizen: Dictionary, build_mode: bool, mouse_world: Vector2, build_definition: Dictionary, rotated: bool, delta: float) -> void:
+func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_citizen: Dictionary, build_mode: bool, mouse_world: Vector2, build_definition: Dictionary, rotated: bool, delta: float, roof_mode: int = 0) -> void:
 	visual_time += delta
 	if cached_layout != _layout_signature(sim):
 		cached_layout = _layout_signature(sim)
 		_rebuild_structures(sim)
 	_update_people(sim, selected_citizen)
+	_update_roof_views(sim,selected_building,selected_citizen,roof_mode)
+	_animate_entry_doors(sim,delta)
 	_update_daylight(sim.hour)
 	_update_weather_environment(sim)
 	weather_effects.update_weather(sim.weather_simulation.condition,sim.weather_simulation.intensity,focus,delta,sim.paused)
@@ -540,6 +543,8 @@ func _build_structure(b: Dictionary) -> void:
 	group.position = p
 	group.name = str(b["name"])
 	structure_layer.add_child(group)
+	group.set_meta("building_key",SettlementNavigation.building_key(b))
+	group.set_meta("building_type",type)
 	var authored_scene := "res://assets/3d/structures/%s.glb" % type
 	if _try_authored_model(group, authored_scene, size):
 		# Exterior gameplay props remain active even after installing a licensed
@@ -571,6 +576,8 @@ func _build_structure(b: Dictionary) -> void:
 	# No solid monolithic cube: a four-sided shell with a front doorway,
 	# recessed access door, pitched/industrial roof and separate cladding.
 	SettlementArchitecture3D.facade(group, type, size, body_height, body_mat, materials)
+	# Physical furniture remains inside the shell; roofs can reveal it on demand.
+	SettlementInteriors3D.populate(group,type,size,materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
@@ -616,6 +623,59 @@ func _build_structure(b: Dictionary) -> void:
 		industrial_yards.append(SettlementIndustry3D.build(group,size,materials))
 	if float(b.get("condition",100.0)) < 60.0:
 		_box(group,Vector3(size.x*0.35,body_height+0.63,0),Vector3(2.0,0.17,1.1),materials["rust"])
+	# Roof-top vents, ducts and signage can otherwise float after cutaway.
+	for detail in group.get_children():
+		if detail is MeshInstance3D and detail.position.y>body_height+0.46:
+			detail.set_meta("cutaway_roof",true)
+
+func _update_roof_views(sim: SettlementSimulation, selected_building: Dictionary, selected_citizen: Dictionary, roof_mode: int) -> void:
+	cutaway_views=0
+	var focus_key := "" if selected_building.is_empty() else SettlementNavigation.building_key(selected_building)
+	var selected_location := Vector2.ZERO if selected_citizen.is_empty() else Vector2(selected_citizen["position"])
+	for group in structure_layer.get_children():
+		if group.is_queued_for_deletion() or not group.has_meta("building_key"):
+			continue
+		var key := str(group.get_meta("building_key"))
+		var reveal := roof_mode==1 or (roof_mode==0 and key==focus_key)
+		if roof_mode==0 and not selected_citizen.is_empty():
+			for b in sim.buildings:
+				if SettlementNavigation.building_key(b)==key:
+					var area := Rect2(Vector2(b["position"])-Vector2(b["size"])*0.5,Vector2(b["size"]))
+					reveal=reveal or area.has_point(selected_location)
+					break
+		if reveal:
+			cutaway_views+=1
+		for piece in group.get_children():
+			if piece.has_meta("cutaway_roof"):
+				piece.visible=not reveal
+		var furniture := group.get_node_or_null("InteriorFurnishings")
+		if furniture!=null:
+			furniture.visible=reveal
+
+func _animate_entry_doors(sim: SettlementSimulation, delta: float) -> void:
+	for b in sim.buildings:
+		if not SettlementNavigation._is_solid(b):
+			continue
+		var group: Node3D=null
+		var key := SettlementNavigation.building_key(b)
+		for candidate in structure_layer.get_children():
+			if not candidate.is_queued_for_deletion() and str(candidate.get_meta("building_key",""))==key:
+				group=candidate
+				break
+		if group==null:
+			continue
+		var hinge := group.get_node_or_null("EntryDoorPivot") as Node3D
+		if hinge==null:
+			continue
+		var doorstep := Vector2(SettlementNavigation.access_points(b,0)["threshold"])
+		var opening := false
+		for c in sim.citizens:
+			if not bool(c.get("alive",false)) or bool(c.get("on_expedition",false)):
+				continue
+			if Vector2(c["position"]).distance_squared_to(doorstep)<18.0*18.0:
+				opening=true
+				break
+		hinge.rotation.y=lerp_angle(hinge.rotation.y,-1.30 if opening else 0.0,clampf(delta*5.5,0.0,1.0))
 
 func _build_farm(group: Node3D, size: Vector2) -> void:
 	_box(group, Vector3(0,0.08,0),Vector3(size.x,0.17,size.y),materials["soil"])
