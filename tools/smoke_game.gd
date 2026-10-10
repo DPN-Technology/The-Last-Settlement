@@ -110,6 +110,45 @@ func _smoke() -> void:
 		push_error("SMOKE: Outdoor farm workers cannot reach farm rows")
 		quit(1)
 		return
+	# Facility management is a real repair work-order and a two-step
+	# demolition transaction, never one accidental click through a panel.
+	var repair_fixture: Dictionary = {"name":"Smoke Maintenance Shed","type":"storage","position":Vector2(1960,940),"size":Vector2(100,80),"condition":48.0,"capacity":2}
+	sim.buildings.append(repair_fixture)
+	instance.selected_building=repair_fixture
+	var order_count := sim.work_orders.size()
+	var inspector_size: Vector2 = instance.get_viewport_rect().size
+	if not instance._handle_inspector_click(SettlementUILayout.facility_action(inspector_size,0).get_center()):
+		push_error("SMOKE: Building Repair button is not clickable")
+		quit(1)
+		return
+	if sim.work_orders.size()!=order_count+1 or not instance._facility_repair_queued(repair_fixture):
+		push_error("SMOKE: Facility repair did not create an actual Builder work order")
+		quit(1)
+		return
+	instance._handle_inspector_click(SettlementUILayout.facility_action(inspector_size,0).get_center())
+	if sim.work_orders.size()!=order_count+1:
+		push_error("SMOKE: Clicking Repair twice created duplicate work orders")
+		quit(1)
+		return
+	instance._handle_inspector_click(SettlementUILayout.facility_action(inspector_size,1).get_center())
+	if not repair_fixture in sim.buildings or instance.pending_demolition_key=="":
+		push_error("SMOKE: One-click salvage illegally destroyed a facility")
+		quit(1)
+		return
+	var cancel_key := InputEventKey.new()
+	cancel_key.pressed=true
+	cancel_key.keycode=KEY_ESCAPE
+	instance._unhandled_input(cancel_key)
+	if instance.pending_demolition_key!="":
+		push_error("SMOKE: ESC cannot cancel building salvage confirmation")
+		quit(1)
+		return
+	instance._handle_inspector_click(SettlementUILayout.facility_action(inspector_size,1).get_center())
+	instance._handle_inspector_click(SettlementUILayout.facility_action(inspector_size,1).get_center())
+	if repair_fixture in sim.buildings or not instance.selected_building.is_empty():
+		push_error("SMOKE: Confirmed facility salvage did not remove building")
+		quit(1)
+		return
 	# The paused simulation must not animate living survivors in the background.
 	var snapshot: Vector2 = Vector2(sim.citizens[0]["position"])
 	instance._process(0.2)
