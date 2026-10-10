@@ -1209,6 +1209,110 @@ func _smoke() -> void:
 		quit(1)
 		return
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(workshop_save))
-	print("PLAYTEST SMOKE PASS: live 3D press equipment and survivor duties, real workshop order control, regional missions, navigation and save/load")
+	# Dynamic dust fronts must be a saved gameplay hazard, visible in 3D
+	# and actionable by the player even during a power-shortfall alert.
+	var weather: WeatherSimulation=sim.weather_simulation
+	if weather.condition!=WeatherSimulation.CLEAR or not weather.begin_storm(sim,0.8,4.0):
+		push_error("SMOKE: Weather failed to start a deterministic dust front")
+		quit(1)
+		return
+	if weather.power_factor()>=1.0 or weather.water_factor()>=1.0 or weather.remaining_hours(sim)<3.99:
+		push_error("SMOKE: Dust conditions do not impair real utilities or track duration")
+		quit(1)
+		return
+	world.sync(sim,{}, {},false,Vector2(700,450),sim.get_build_catalog()[0],false,0.2)
+	if world.weather_effects==null or world.weather_effects.dust==null or not world.weather_effects.dust.visible or world.weather_effects.dust.multimesh.instance_count<100:
+		push_error("SMOKE: Dust front missing its efficient visible 3D airborne volume")
+		quit(1)
+		return
+	if world.world_environment.fog_density<=0.002:
+		push_error("SMOKE: Active storm does not change environment visibility")
+		quit(1)
+		return
+	var saved_food: float=float(sim.resources["food"])
+	var saved_water: float=float(sim.resources["water"])
+	var saved_generated: float=float(sim.utility_state["power_generated"])
+	var saved_demand: float=float(sim.utility_state["power_demand"])
+	sim.resources["food"]=999.0
+	sim.resources["water"]=999.0
+	sim.utility_state["power_generated"]=0.0
+	sim.utility_state["power_demand"]=99.0
+	if str(instance._settlement_attention()[0])!="STORM: TAKE COVER":
+		push_error("SMOKE: Storm shelter alert hidden behind its own power penalty")
+		quit(1)
+		return
+	var storm_warning := Vector2(screen.x-80.0,66.0)
+	if not instance._handle_resource_chip_click(storm_warning) or not weather.shelter_in_place:
+		push_error("SMOKE: Storm shelter order cannot be issued via clickable warning")
+		quit(1)
+		return
+	var field_survivor: Dictionary=sim.get_settlement_citizens()[0]
+	field_survivor["job"]="Farmer"
+	field_survivor["age"]=30
+	field_survivor["health"]=95.0
+	field_survivor["injury"]=""
+	field_survivor["hunger"]=0.0
+	field_survivor["thirst"]=0.0
+	field_survivor["fatigue"]=0.0
+	field_survivor["stress"]=0.0
+	field_survivor["morale"]=90.0
+	field_survivor["shift"]="DAY"
+	field_survivor["incarcerated"]=false
+	field_survivor["on_expedition"]=false
+	var prior_hour: float=sim.hour
+	sim.hour=10.0
+	sim._choose_action(field_survivor)
+	if str(field_survivor["current_action"])!="Shelter: Dust Storm":
+		push_error("SMOKE: Shelter order did not stop exposed outdoor field duty")
+		quit(1)
+		return
+	var prior_harvest: float=float(sim.stockpiles["farm"]["food"])
+	sim._apply_citizen_work(field_survivor,2.0)
+	if not is_equal_approx(float(sim.stockpiles["farm"]["food"]),prior_harvest):
+		push_error("SMOKE: Sheltered farmer still produced crops outdoors")
+		quit(1)
+		return
+	if str(instance._settlement_attention()[0])!="SHELTER ACTIVE" or not instance._handle_resource_chip_click(storm_warning) or weather.shelter_in_place:
+		push_error("SMOKE: Storm shelter order cannot be safely released")
+		quit(1)
+		return
+	if not weather.set_shelter_order(sim,true):
+		push_error("SMOKE: Weather cannot reissue protection for save test")
+		quit(1)
+		return
+	var weather_save := "user://settlement-weather-smoke.json"
+	if not sim.save_game(weather_save):
+		push_error("SMOKE: Could not write storm-compatible settlement save")
+		quit(1)
+		return
+	weather.condition=WeatherSimulation.CLEAR
+	weather.intensity=0.0
+	weather.shelter_in_place=false
+	if not sim.load_game(weather_save) or sim.weather_simulation.condition!=WeatherSimulation.DUST_STORM or not sim.weather_simulation.shelter_in_place or not is_equal_approx(sim.weather_simulation.intensity,0.8):
+		push_error("SMOKE: Weather front or player shelter order did not survive save/load")
+		quit(1)
+		return
+	# A pre-weather v14 save has no weather key and must load safely.
+	var prior_json: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(weather_save))
+	prior_json.erase("weather")
+	var legacy_file := FileAccess.open(weather_save,FileAccess.WRITE)
+	legacy_file.store_string(JSON.stringify(prior_json))
+	legacy_file.close()
+	if not sim.load_game(weather_save) or sim.weather_simulation.condition!=WeatherSimulation.CLEAR or sim.weather_simulation.shelter_in_place:
+		push_error("SMOKE: Existing v14 saves without weather fail to load clearly")
+		quit(1)
+		return
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(weather_save))
+	world.sync(sim,{}, {},false,Vector2(700,450),sim.get_build_catalog()[0],false,0.2)
+	if world.weather_effects.dust.visible or world.world_environment.fog_density>0.002:
+		push_error("SMOKE: Airborne dust/fog persists when the storm ends")
+		quit(1)
+		return
+	sim.hour=prior_hour
+	sim.resources["food"]=saved_food
+	sim.resources["water"]=saved_water
+	sim.utility_state["power_generated"]=saved_generated
+	sim.utility_state["power_demand"]=saved_demand
+	print("PLAYTEST SMOKE PASS: storm hazards/shelter/save compatibility, live 3D atmosphere, 3D industrial animation, region and workforce gameplay")
 	instance.queue_free()
 	quit(0)
