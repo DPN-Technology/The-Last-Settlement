@@ -242,6 +242,12 @@ func _handle_panel_action_click(position: Vector2) -> bool:
 		var previous_law: String = str(sim.governance_simulation.laws[GOVERNANCE_LAWS[governance_law_index]])
 		var mode_industry := economy_mode
 		var mode_governance := governance_mode
+		var mode_faction := faction_mode
+		var mode_nation := civilization_mode
+		var action_name := str(action[0])
+		var previous_incident := "" if sim.events.is_empty() else str(sim.events[0].get("title",""))+" / "+str(sim.events[0].get("body",""))
+		if mode_faction and action_name == "FIND RELAY":
+			selected_world_location_id = 3
 		var event := InputEventKey.new()
 		event.keycode = int(action[1])
 		event.pressed = true
@@ -252,10 +258,20 @@ func _handle_panel_action_click(position: Vector2) -> bool:
 		elif mode_industry and str(action[0])=="QUEUE":
 			playtest_notice = "PRODUCTION ORDER ADDED" if sim.economy_simulation.production_queue.size()>previous_queue else "PRODUCTION ORDER UNAVAILABLE"
 			playtest_notice_seconds = 4.0
-		elif mode_governance and str(action[0])=="CHANGE":
+		elif mode_governance and action_name=="CHANGE":
 			var current := str(sim.governance_simulation.laws[GOVERNANCE_LAWS[governance_law_index]])
 			playtest_notice = "LAW UPDATED  /  "+current if current!=previous_law else "NO POLICY CHANGE"
 			playtest_notice_seconds = 4.0
+		elif mode_faction and action_name=="FIND RELAY":
+			playtest_notice = "NORTH RIDGE RELAY SELECTED  /  SEND A SALVAGE TEAM"
+			playtest_notice_seconds = 6.0
+		elif (mode_faction or mode_nation) and action_name not in ["PREV","NEXT","PREV SITE","NEXT SITE","PREV ROUTE","NEXT ROUTE","NEXT MODULE","NEXT PROJECT","CLOSE","EXPLORE REGION"]:
+			var latest_incident := "" if sim.events.is_empty() else str(sim.events[0].get("title",""))+" / "+str(sim.events[0].get("body",""))
+			if latest_incident != previous_incident:
+				playtest_notice = latest_incident
+			else:
+				playtest_notice = "NO CHANGE  /  CHECK SITE, SUPPLIES AND REQUIREMENTS"
+			playtest_notice_seconds = 5.0
 		return true
 	return false
 
@@ -268,6 +284,31 @@ func _handle_command_content_click(position: Vector2) -> bool:
 			if row.has_point(position):
 				governance_law_index = i
 				return true
+		return area.has_point(position)
+	if civilization_mode:
+		var frame := SettlementUILayout.side_panel(vp,620.0)
+		for i in range(CIVILIZATION_TABS.size()):
+			if SettlementUILayout.civilization_tab_rect(vp,i).has_point(position):
+				civilization_tab = i
+				return true
+		if civilization_tab == 3:
+			for i in range(CIV_RECOVERY_PROJECTS.size()):
+				var card := Rect2(frame.position+Vector2(21,164.0+float(i)*50.0),Vector2(frame.size.x-43.0,46.0))
+				if card.has_point(position):
+					civilization_recovery_project_index = i
+					return true
+		return frame.has_point(position)
+	if faction_mode:
+		var area := SettlementUILayout.side_panel(vp,480.0)
+		var visible := sim.faction_simulation.get_visible_factions(sim)
+		if not visible.is_empty():
+			var gap := 5.0
+			var width := (area.size.x-35.0-gap*float(visible.size()-1))/float(visible.size())
+			for i in range(visible.size()):
+				var box := Rect2(area.position+Vector2(17.0+float(i)*(width+gap),48.0),Vector2(width,34.0))
+				if box.has_point(position):
+					faction_index = i
+					return true
 		return area.has_point(position)
 	if economy_mode:
 		var area := SettlementUILayout.side_panel(vp,480.0)
