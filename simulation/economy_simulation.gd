@@ -180,7 +180,7 @@ func _update_production(sim:SettlementSimulation, sim_hours:float) -> void:
 		return
 	var workers:Array[Dictionary] = []
 	for c in sim.get_settlement_citizens():
-		if c["job"] in ["Engineer","Builder"] and not c.get("incarcerated",false) and bool(c.get("alive",false)) and int(c.get("age",0))>=18 and sim.is_selected_work_enabled(c) and sim._is_shift_active(c) and float(c.get("health",0.0))>=30.0:
+		if c["job"] in ["Engineer","Builder"] and not c.get("incarcerated",false) and bool(c.get("alive",false)) and int(c.get("age",0))>=18 and sim.is_selected_work_enabled(c) and sim._is_shift_active(c) and not str(c.get("current_action","")).begins_with("Shelter: ") and float(c.get("health",0.0))>=30.0:
 			workers.append(c)
 	if workers.is_empty():
 		bottleneck_reason = "NO INDUSTRIAL LABOR"
