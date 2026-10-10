@@ -202,6 +202,25 @@ func create_expedition(sim: SettlementSimulation, location_id: int, max_members:
 	sim.add_event("EXPEDITION DEPARTED","%d survivors departed for %s (%s route)." % [members.size(),str(destination["name"]),strategy],"intel")
 	return true
 
+# Recall is an explicit player command. The team turns around from its
+# current outbound position or from the search site, with no loot magically
+# awarded for an incomplete search and no refund for consumed provisions.
+func recall_expedition(sim: SettlementSimulation, expedition_id: int) -> bool:
+	for expedition in expeditions:
+		if int(expedition.get("id",-1))!=expedition_id:
+			continue
+		var stage := str(expedition.get("status",""))
+		if stage not in ["outbound","searching"]:
+			return false
+		expedition["return_distance"]=maxf(0.01,float(expedition.get("progress",0.0))) if stage=="outbound" else float(expedition["distance"])
+		expedition["recalled"]=true
+		expedition["status"]="returning"
+		expedition["progress"]=0.0
+		var target := get_location_by_id(int(expedition["destination_id"]))
+		sim.add_event("EXPEDITION RECALLED","Team %d is returning early from %s without further salvage." % [expedition_id,str(target.get("name","the field"))],"warning")
+		return true
+	return false
+
 func _update_outbound(sim: SettlementSimulation, expedition: Dictionary, sim_hours: float) -> void:
 	expedition["progress"] = float(expedition["progress"]) + float(expedition.get("travel_speed",42.0)) * sim_hours
 	if float(expedition["progress"]) >= float(expedition["distance"]):
@@ -221,7 +240,7 @@ func _update_searching(sim: SettlementSimulation, expedition: Dictionary, sim_ho
 
 func _update_returning(sim: SettlementSimulation, expedition: Dictionary, sim_hours: float) -> void:
 	expedition["progress"] = float(expedition["progress"]) + float(expedition.get("travel_speed",42.0)) * sim_hours
-	if float(expedition["progress"]) >= float(expedition["distance"]):
+	if float(expedition["progress"]) >= float(expedition.get("return_distance",expedition["distance"])):
 		_return_home(sim, expedition)
 
 func _resolve_encounter(sim: SettlementSimulation, expedition: Dictionary) -> void:
@@ -285,7 +304,7 @@ func _return_home(sim: SettlementSimulation, expedition: Dictionary) -> void:
 	sim.stockpiles["industry"]["materials"] = float(sim.stockpiles["industry"].get("materials",0.0)) + float(cargo.get("materials",0.0))
 	sim.stockpiles["industry"]["scrap"] = float(sim.stockpiles["industry"].get("scrap",0.0)) + float(cargo.get("scrap",0.0))
 	var location := get_location_by_id(int(expedition["destination_id"]))
-	sim.add_event("EXPEDITION RETURNED", "Team returned from %s with recovered supplies." % location["name"], "good")
+	sim.add_event("EXPEDITION RETURNED", "Team returned early from %s." % location["name"] if bool(expedition.get("recalled",false)) else "Team returned from %s with recovered supplies." % location["name"], "intel" if bool(expedition.get("recalled",false)) else "good")
 
 func get_location_by_id(id: int) -> Dictionary:
 	for location in locations:
