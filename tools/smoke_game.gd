@@ -25,6 +25,18 @@ func _smoke() -> void:
 		push_error("SMOKE: DPN crimson/black shared command skin is missing")
 		quit(1)
 		return
+	# Prevent the exact unsafe draw command family from creeping back into the
+	# Windows portable build while testing red diagonal line artifacts.
+	if str(ProjectSettings.get_setting("rendering/renderer/rendering_method",""))!="gl_compatibility":
+		push_error("SMOKE: Windows preview must default to compatibility renderer")
+		quit(1)
+		return
+	for source_path in ["res://src/main.gd","res://src/dpn_ui_skin.gd","res://src/region_atlas.gd"]:
+		var source_code := FileAccess.get_file_as_string(source_path)
+		if source_code.is_empty() or source_code.contains("draw_line(") or source_code.contains("draw_polyline("):
+			push_error("SMOKE: Unsafe raw canvas line primitives in "+source_path)
+			quit(1)
+			return
 	for visual_size in [Vector2(960,720),Vector2(1024,600),Vector2(1280,720),Vector2(1366,768),Vector2(1920,1080)]:
 		var nav_last_right := 0.0
 		for n in range(9):
