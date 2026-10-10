@@ -1514,7 +1514,7 @@ func _smoke() -> void:
 		var shell := structure.get_node_or_null("RearWall")
 		if shell == null:
 			continue
-		if structure.get_node_or_null("EntryDoor") == null:
+		if structure.get_node_or_null("EntryDoorPivot/EntryDoor") == null:
 			push_error("SMOKE: Building shell missing its real front access opening")
 			quit(1)
 			return
