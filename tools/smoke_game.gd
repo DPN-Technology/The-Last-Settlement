@@ -1600,6 +1600,29 @@ func _smoke() -> void:
 	instance.incident_page=0
 	instance.incident_selected_index=0
 	instance.incident_acknowledged.clear()
+	# Governance preview must be genuinely predictive and read-only, not a
+	# marketing label: apply exactly one law and compare actual mean delta.
+	var gov: GovernanceSimulation=sim.governance_simulation
+	var law_before := str(gov.laws["speech"])
+	var preview: Dictionary=gov.preview_next_law(sim,"speech")
+	if preview.is_empty() or str(gov.laws["speech"])!=law_before or str(preview["proposed"])==law_before:
+		push_error("SMOKE: Executive policy preview mutated the active law")
+		quit(1)
+		return
+	var citizens_before: Array[Dictionary]=sim.get_settlement_citizens()
+	var total_loyalty_before := 0.0
+	for citizen in citizens_before:
+		total_loyalty_before+=float(citizen["loyalty"])
+	gov.cycle_law(sim,"speech")
+	var total_loyalty_after := 0.0
+	for citizen in sim.get_settlement_citizens():
+		total_loyalty_after+=float(citizen["loyalty"])
+	var actual_delta := (total_loyalty_after-total_loyalty_before)/maxf(1.0,float(citizens_before.size()))
+	if str(gov.laws["speech"])!=str(preview["proposed"]) or absf(actual_delta-float(preview["loyalty_delta"]))>0.002:
+		push_error("SMOKE: Governance preview differs from real policy effects")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: real prospective governance policy impact verified against applied game state")
 	print("PLAYTEST SMOKE PASS: responsive F2 incident console, dismissals, filters, acknowledgements, route actions, and all command X buttons")
 	print("PLAYTEST SMOKE PASS: storm hazards/shelter/save compatibility, live 3D atmosphere, 3D industrial animation, region and workforce gameplay")
 	instance.queue_free()
