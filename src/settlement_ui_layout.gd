@@ -70,6 +70,19 @@ static func civilization_tab_rect(size: Vector2, index: int, count: int = 6) -> 
 	var width := (area.size.x-28.0-gap*float(count-1))/maxf(1.0,float(count))
 	return Rect2(area.position+Vector2(14.0+float(index)*(width+gap),66.0),Vector2(width,32.0))
 
+static func guide_rect(size: Vector2) -> Rect2:
+	var usable_h := size.y-TOP_H-BOTTOM_H-18.0
+	var width := minf(780.0,size.x-36.0)
+	var height := minf(502.0,usable_h)
+	return Rect2((size.x-width)*0.5,TOP_H+maxf(8.0,(usable_h-height)*0.5),width,height)
+
+static func guide_lesson_rect(size: Vector2, index: int) -> Rect2:
+	var panel := guide_rect(size)
+	var gap := 12.0
+	var width := (panel.size.x-46.0-gap)*0.5
+	var height := maxf(84.0,minf(106.0,(panel.size.y-139.0)/3.0))
+	return Rect2(panel.position+Vector2(17.0+float(index%2)*(width+gap),69.0+float(int(index/2))*(height+8.0)),Vector2(width,height))
+
 static func facility_inspector(size: Vector2) -> Rect2:
 	var area := side_panel(size,372.0)
 	return Rect2(area.position,Vector2(area.size.x,minf(354.0,area.size.y)))
