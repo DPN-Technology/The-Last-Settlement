@@ -1,3 +1,13 @@
+# WINDOWS CAMERA BORDER / OBJECTIVES OVERLAY REGRESSION (OCTOBER 10)
+
+Four user-provided FULL/3D capture pairs on gl_compatibility Windows show a hard black horizon, a sloped finite-heightfield cutoff when orbiting/panning, and a long blank black horizontal box beside the collapsed objectives tab. These are real captured regressions, not concept-art discrepancies. The finite heightfield previously terminated at +/-160m while the opaque fail-safe was only 360m wide; GL Compatibility's procedural sky also presented as black beyond the mesh. The notice had been drawn from x=14 across 650px and the objectives tab obscured its text.
+
+**Changes:** The sculpted terrain now smoothly fades to baseline at its outer 40m, above an earth-material horizon mesh spanning 1.4km with repeated ground textures. The fallback underlay spans 2.2km. The GL Compatibility world background uses a day/night/weather-matched nonblack color instead of relying on the unsupported procedural sky path alone. Camera focus is restricted to the supported +/-135m corridor. The transient status banner now has a dedicated viewport-aware top-right hit-free rectangle, leaving the objectives tab and expanded checklist unobscured. Test gates check all edge heights, presence of a large terrain continuation, scene background color, camera bounds, and notice-vs-objectives separation at realistic Windows resolutions.
+
+**Manual testing still required:** use F8 FULL and 3D near all four corners; zoom maximum and orbit to low pitch; there should be no sharp black void or terrain cliff. Toggle F3 and various notice triggers to verify no blank green-bordered rectangle appears to the right of objectives. Check the GL-compatible scene at night and in storms, and ensure the background does not appear unnaturally flat. Previous door, UI red-line, and 1x speed regressions must remain green. Visual quality still needs authored props, terrain blends and LOD improvements.
+
+---
+
 # ADDITIONAL TERRAIN MATERIAL PASS
 
 Beyond 3D instanced scatter, the ground now has a brighter multi-scale clay/limestone/gravel albedo bake and a tangent-space height-derived normal texture. Both are generated locally in Godot's GL Compatibility renderer and contain no web/runtime dependencies. The existing opaque ground failsafe and terrain culling fix are unchanged. The normal texture is verified by the headless game smoke test. Visual parity with the provided concept art remains a future licensed-art direction target.

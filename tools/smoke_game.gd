@@ -1434,6 +1434,47 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
+	# Camera and terrain edge regression from real Windows screenshots:
+	# zero-height sculpted boundary, wide opaque earth backdrop, and a
+	# non-black environment color in the GL Compatibility SubViewport.
+	for edge_pos in [Vector2(160.0,0.0),Vector2(-160.0,0.0),Vector2(0.0,160.0),Vector2(0.0,-160.0)]:
+		var edge_noise := FastNoiseLite.new()
+		edge_noise.seed=114722
+		edge_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+		edge_noise.frequency=0.015
+		edge_noise.fractal_octaves=4
+		if absf(WastelandDetail.terrain_height(edge_pos.x,edge_pos.y,edge_noise))>0.001:
+			push_error("SMOKE: heightfield edge still forms a visible cliff")
+			quit(1)
+			return
+	var far_ground: MeshInstance3D=world.terrain_layer.get_node_or_null("GroundHorizonContinuation") as MeshInstance3D
+	if far_ground==null or not (far_ground.mesh is PlaneMesh) or (far_ground.mesh as PlaneMesh).size.x<1200.0:
+		push_error("SMOKE: extended camera horizon terrain missing")
+		quit(1)
+		return
+	if world.world_environment.background_mode!=Environment.BG_COLOR or world.world_environment.background_color.get_luminance()<0.07:
+		push_error("SMOKE: compatibility viewport may render a black sky")
+		quit(1)
+		return
+	var original_focus := world.focus
+	world.focus=Vector3(350,0,350)
+	world._position_camera()
+	if absf(world.focus.x)>136.0 or absf(world.focus.z)>136.0:
+		push_error("SMOKE: pan can still show endless terrain outside supported world")
+		quit(1)
+		return
+	world.focus=original_focus
+	world._position_camera()
+	for preview in [Vector2(900,650),Vector2(1366,768),Vector2(1793,1009)]:
+		var notice_rect := SettlementUILayout.playtest_notice_rect(preview)
+		if notice_rect.intersects(SettlementUILayout.directive_tab()) or notice_rect.intersects(SettlementUILayout.objective_panel()):
+			push_error("SMOKE: notice produces black bar behind objectives")
+			quit(1)
+			return
+		if notice_rect.end.x>preview.x or notice_rect.position.x<0.0:
+			push_error("SMOKE: status notice escapes viewport")
+			quit(1)
+			return
 	# The ground texture must be visibly dark, not a shader fallback that
 	# renders as a nearly white surface on the player's Windows GPU.
 	var ground_material := ground.material_override as StandardMaterial3D

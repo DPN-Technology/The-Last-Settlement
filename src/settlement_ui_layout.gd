@@ -77,6 +77,15 @@ static func side_panel(size: Vector2, preferred_width: float, top_offset: float 
 static func directive_tab() -> Rect2:
 	return Rect2(14.0, TOP_H + 9.0, 268.0, 30.0)
 
+# Transient feedback must not sit beneath the always-visible F3 objectives
+# tab. The previous 650px box started at (14,TOP_H+10), so most of its
+# contents were hidden and an unexplained black strip appeared beside it.
+static func playtest_notice_rect(size: Vector2) -> Rect2:
+	var width := minf(420.0,maxf(180.0,size.x-342.0))
+	if size.x>=720.0:
+		return Rect2(size.x-width-15.0,TOP_H+11.0,width,32.0)
+	return Rect2(14.0,TOP_H+205.0,minf(width,maxf(120.0,size.x-28.0)),32.0)
+
 static func objective_panel() -> Rect2:
 	return Rect2(14.0, TOP_H + 9.0, 300.0, 188.0)
 

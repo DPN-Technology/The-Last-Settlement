@@ -224,7 +224,11 @@ func _create_environment() -> void:
 	sky_material.use_debanding = true
 	sky.sky_material = sky_material
 	world_environment = Environment.new()
-	world_environment.background_mode = Environment.BG_SKY
+	# GL Compatibility SubViewport can output black for procedural sky at
+	# certain camera angles. A lit earth-colored background is a reliable
+	# fallback even beyond the 3D horizon mesh.
+	world_environment.background_mode = Environment.BG_COLOR
+	world_environment.background_color = Color("#615748")
 	world_environment.sky = sky
 	world_environment.background_energy_multiplier = 0.25
 	world_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -272,6 +276,7 @@ func _update_daylight(hour: float) -> void:
 	world_environment.fog_light_color = Color("#202d36").lerp(Color("#6c6d63"), daylight)
 	sky_material.sky_top_color = Color("#0d1b2a").lerp(Color("#3b5566"), daylight)
 	sky_material.sky_horizon_color = Color("#222c3a").lerp(Color("#9d9788"), daylight)
+	world_environment.background_color = Color("#343944").lerp(Color("#8a8070"),daylight)
 	command_lamp.light_energy = lerpf(1.7, 0.0, daylight) + twilight * 0.14
 
 
@@ -286,6 +291,7 @@ func _update_weather_environment(sim: SettlementSimulation) -> void:
 	world_environment.fog_density=lerpf(0.00095,0.0085,dust_strength)
 	world_environment.fog_light_color=base_fog.lerp(Color("#8e7154"),dust_strength*0.75)
 	sky_material.sky_horizon_color=base_horizon.lerp(Color("#8e6c52"),dust_strength*0.75)
+	world_environment.background_color=Color("#343944").lerp(Color("#8a8070"),daylight).lerp(Color("#8e6c52"),dust_strength*0.75)
 	world_environment.ambient_light_energy=lerpf(0.14,0.54,daylight)*(1.0-0.20*dust_strength)
 	light.light_energy=lerpf(0.04,1.32,daylight)*(1.0-0.28*dust_strength)
 
@@ -331,7 +337,9 @@ func _build_terrain() -> void:
 	var fallback_outer := MeshInstance3D.new()
 	fallback_outer.name = "GroundFailsafeOuter"
 	var outer_mesh := PlaneMesh.new()
-	outer_mesh.size = Vector2(360.0, 360.0)
+	# Emergency underlay covers the whole camera far range, not merely the
+	# original 320m ground tile. The previous 360m plane exposed black beyond.
+	outer_mesh.size = Vector2(2200.0, 2200.0)
 	fallback_outer.mesh = outer_mesh
 	fallback_outer.material_override = GroundAppearance.new_ground_failsafe_material()
 	fallback_outer.position.y = -13.0
@@ -354,6 +362,20 @@ func _build_terrain() -> void:
 	# from above due to backface culling.
 	ground.material_override = GroundAppearance.new_ground_material()
 	terrain_layer.add_child(ground)
+
+	# A camera-safe continuation beyond the finite sculpted heightfield.
+	# The edge heights smoothly approach 0 so this earth-textured plane sits
+	# just under the landscape without an exposed vertical cliff / black void.
+	var horizon := MeshInstance3D.new()
+	horizon.name="GroundHorizonContinuation"
+	var horizon_mesh := PlaneMesh.new()
+	horizon_mesh.size=Vector2(1400.0,1400.0)
+	horizon.mesh=horizon_mesh
+	var horizon_material := (ground.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	horizon_material.uv1_scale=Vector3.ONE*175.0
+	horizon.material_override=horizon_material
+	horizon.position.y=-0.16
+	terrain_layer.add_child(horizon)
 
 	# Graveled settlement access. Physical 3D roads and lane marking strips.
 	_road(Vector3(-87, 0, 5), Vector3(-9, 0, 5), 8.4)
@@ -422,6 +444,10 @@ func game_position(point: Vector3) -> Vector2:
 func _position_camera() -> void:
 	if camera == null:
 		return
+	# Keep panning / tracking inside the traversable terrain corridor, while
+	# the horizon continuation hides far-field perspective beyond the tile.
+	focus.x=clampf(focus.x,-135.0,135.0)
+	focus.z=clampf(focus.z,-135.0,135.0)
 	var horizontal := camera_distance * cos(pitch)
 	camera.position = focus + Vector3(sin(yaw) * horizontal, camera_distance * sin(pitch), cos(yaw) * horizontal)
 	camera.look_at(focus, Vector3.UP)

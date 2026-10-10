@@ -33,7 +33,10 @@ static func terrain_height(x: float, z: float, noise: FastNoiseLite) -> float:
 	var falloff := smoothstep(51.0, 111.0, radius)
 	var waves := noise.get_noise_2d(x * 1.4, z * 1.4) * 7.2
 	var rocky := noise.get_noise_2d(x * 5.5 + 311.0, z * 5.5) * 1.1
-	return (waves + rocky + 0.4) * falloff
+	# Blend the last 35m smoothly into the flat horizon continuation to
+	# prevent sharp vertical cliffs at the finite 320m mesh boundary.
+	var edge_fade := 1.0-smoothstep(119.0,158.0,radius)
+	return (waves + rocky + 0.4) * falloff * edge_fade
 
 static func terrain_mesh() -> ArrayMesh:
 	var tool := SurfaceTool.new()

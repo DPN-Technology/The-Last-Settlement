@@ -1773,8 +1773,8 @@ func _draw_hud() -> void:
 		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,18),str(source[0])+"  //  "+str(source[1]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,12,TEXT)
 		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,35),str(source[3]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,10,MUTED)
 	if playtest_notice_seconds > 0.0:
-		var width := minf(vp.x - 44.0, 650.0)
-		var notice := Rect2(14,top_h+10.0,width,32)
+		var notice := SettlementUILayout.playtest_notice_rect(vp)
+		var width := notice.size.x
 		draw_rect(notice,PANEL_SOLID)
 		DPNUISkin.outline(self,notice,GOOD,1.0)
 		draw_string(ThemeDB.fallback_font,notice.position+Vector2(10,21),playtest_notice,HORIZONTAL_ALIGNMENT_LEFT,width-20,11,GOOD)
