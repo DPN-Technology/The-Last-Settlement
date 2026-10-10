@@ -154,7 +154,8 @@ func _update_citizens(delta: float) -> void:
 			continue
 		var ident := int(c["id"])
 		live_ids[ident]=true
-		var stride := 25.0*delta*maxf(0.5,sim.speed)
+		# 1x is an ordinary walk (~1.2 meters/second), not a sprint.
+		var stride := 14.0*clampf(delta,0.0,SettlementSimulation.MAX_FRAME_DELTA)*maxf(1.0,sim.speed)
 		# Only exterior citizens are projected out of solid footprints. Indoor
 		# occupants are intentionally inside their *own* assigned facility.
 		if not interior_visits.has(ident):
@@ -2220,8 +2221,8 @@ func _handle_objective_click(position: Vector2) -> bool:
 	elif row == 2:
 		world_map_mode = true
 	elif row == 3:
+		# This objective must not silently override the player's clock choice.
 		sim.paused = false
-		sim.speed = 4.0
 	return true
 
 func _update_camera_follow(delta: float) -> void:
@@ -2393,6 +2394,12 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 		return true
 	return false
 
+func _set_playback_speed(value: float) -> void:
+	sim.speed=clampf(value,1.0,12.0)
+	sim.paused=false
+	playtest_notice="CLOCK  /  %dx  /  %d GAME MINUTES PER REAL SECOND" % [int(sim.speed),int(sim.speed)]
+	playtest_notice_seconds=4.0
+
 func _draw_time_controls() -> void:
 	var vp := get_viewport_rect().size
 	var labels := ["RESUME" if sim.paused else "PAUSE","1x","4x","12x"]
@@ -2410,8 +2417,7 @@ func _handle_time_control_click(position: Vector2) -> bool:
 		if i==0:
 			sim.paused=not sim.paused
 		else:
-			sim.speed=[0.0,1.0,4.0,12.0][i]
-			sim.paused=false
+			_set_playback_speed([0.0,1.0,4.0,12.0][i])
 		return true
 	return false
 
@@ -3137,11 +3143,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_SPACE:
 				sim.paused = not sim.paused
 			KEY_1:
-				sim.speed = 1.0
+				_set_playback_speed(1.0)
 			KEY_2:
-				sim.speed = 4.0
+				_set_playback_speed(4.0)
 			KEY_3:
-				sim.speed = 12.0
+				_set_playback_speed(12.0)
 			KEY_S:
 				playtest_notice = "SETTLEMENT SAVED" if sim.save_game() else "SAVE FAILED"
 				playtest_notice_seconds = 4.5

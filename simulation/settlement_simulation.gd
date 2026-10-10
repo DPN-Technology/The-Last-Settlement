@@ -2,6 +2,15 @@ class_name SettlementSimulation
 extends RefCounted
 
 const SAVE_VERSION := 14
+# Normal 1x game clock: one in-game minute per real second (24-minute day).
+# 4x and 12x scale this exact base rather than changing the underlying rate.
+const GAME_MINUTES_PER_REAL_SECOND := 1.0
+const MAX_FRAME_DELTA := 0.25
+
+static func clock_hours(real_delta: float, multiplier: float) -> float:
+	# Clamp exceptional stall frames so a frozen window cannot jump days.
+	return clampf(real_delta,0.0,MAX_FRAME_DELTA)*clampf(multiplier,1.0,12.0)*GAME_MINUTES_PER_REAL_SECOND/60.0
+
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -277,7 +286,9 @@ func detect_rooms() -> int:
 func update(delta: float) -> void:
 	if paused:
 		return
-	var sim_hours := delta * speed * 0.32
+	var sim_hours := clock_hours(delta,speed)
+	if sim_hours<=0.0:
+		return
 	total_hours += sim_hours
 	hour += sim_hours
 	while hour >= 24.0:

@@ -1095,6 +1095,39 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance.governance_mode = false
+	# Verify in-game time elapsed under actual updates, not just button color.
+	# At 1x a real second advances one game minute, invariant across FPS.
+	for multiplier in [1.0,4.0,12.0]:
+		var expected: float=multiplier/60.0
+		var fixture := SettlementSimulation.new()
+		fixture.hour=10.0
+		fixture.speed=multiplier
+		for frame in range(20):
+			fixture.update(0.05)
+		if absf(fixture.hour-10.0-expected)>0.0005:
+			push_error("SMOKE: "+str(multiplier)+"x game clock is miscalibrated")
+			quit(1)
+			return
+		var fps_fixture := SettlementSimulation.new()
+		fps_fixture.hour=10.0
+		fps_fixture.speed=multiplier
+		for frame in range(5):
+			fps_fixture.update(0.2)
+		if absf(fps_fixture.hour-fixture.hour)>0.0005:
+			push_error("SMOKE: clock elapsed time depends on rendering FPS")
+			quit(1)
+			return
+		fixture.paused=true
+		var freeze: float=fixture.hour
+		fixture.update(0.25)
+		if not is_equal_approx(fixture.hour,freeze):
+			push_error("SMOKE: pause did not stop the game clock")
+			quit(1)
+			return
+	if absf(SettlementSimulation.clock_hours(10.0,12.0)-0.05)>0.0001:
+		push_error("SMOKE: stalled frame generated a calendar-time jump")
+		quit(1)
+		return
 	# Speed controls are gameplay buttons, not a decorative RUNNING label.
 	var old_speed: float=sim.speed
 	var old_pause: bool=sim.paused
@@ -1104,6 +1137,10 @@ func _smoke() -> void:
 		return
 	if not instance._handle_time_control_click(SettlementUILayout.time_control(screen,2).get_center()) or sim.paused or not is_equal_approx(sim.speed,4.0):
 		push_error("SMOKE: Timeline 4x speed failed to resume simulation")
+		quit(1)
+		return
+	if not instance._handle_time_control_click(SettlementUILayout.time_control(screen,1).get_center()) or not is_equal_approx(sim.speed,1.0):
+		push_error("SMOKE: clicking 1x did not restore normal speed")
 		quit(1)
 		return
 	sim.speed=old_speed
