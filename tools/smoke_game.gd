@@ -319,6 +319,90 @@ func _smoke() -> void:
 		push_error("SMOKE: Industry CLOSE mouse button did not dismiss panel")
 		quit(1)
 		return
+	# Dedicated workshop is a real queue manager, not an informational mock.
+	var eco: EconomySimulation=sim.economy_simulation
+	instance.economy_mode=true
+	if not instance._handle_command_content_click(SettlementUILayout.workshop_entry(screen).get_center()) or not instance.industry_workshop_visible:
+		push_error("SMOKE: Industry cannot open its clickable Workshop Control")
+		quit(1)
+		return
+	for preview_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768),Vector2(1024,600)]:
+		var workshop_bounds := SettlementUILayout.workshop_panel(preview_size)
+		for recipe_i in range(instance.ECONOMY_RECIPES.size()):
+			if not workshop_bounds.encloses(SettlementUILayout.workshop_recipe(preview_size,recipe_i)):
+				push_error("SMOKE: Workshop recipe button escapes available panel")
+				quit(1)
+				return
+		for action_i in range(10):
+			if not workshop_bounds.encloses(SettlementUILayout.workshop_action(preview_size,action_i)):
+				push_error("SMOKE: Workshop action button escapes available panel")
+				quit(1)
+				return
+		for queue_i in range(SettlementUILayout.workshop_visible_rows(preview_size)):
+			if not workshop_bounds.encloses(SettlementUILayout.workshop_queue_row(preview_size,queue_i)):
+				push_error("SMOKE: Workshop active-order row escapes panel")
+				quit(1)
+				return
+	# Recipe selection and queue button must mutate actual simulation orders.
+	var queue_count := eco.production_queue.size()
+	instance._handle_workshop_click(SettlementUILayout.workshop_recipe(screen,3).get_center())
+	if instance.economy_recipe_index!=3:
+		push_error("SMOKE: Workshop recipe picker is not interactive")
+		quit(1)
+		return
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,1).get_center())
+	if eco.production_queue.size()!=queue_count+5:
+		push_error("SMOKE: Workshop QUEUE 5 did not add 5 real jobs")
+		quit(1)
+		return
+	# Batches may change priority only before any inputs have been consumed.
+	var orders := eco.get_open_batches()
+	var last: Dictionary=orders.back()
+	var previous: Dictionary=orders[orders.size()-2]
+	var chosen_id := int(last["id"])
+	instance.industry_queue_page=int(floor(float(orders.size()-1)/float(SettlementUILayout.workshop_visible_rows(screen))))
+	instance.industry_batch_id=chosen_id
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,2).get_center())
+	orders=eco.get_open_batches()
+	if int(orders[orders.size()-2]["id"])!=chosen_id or int(orders.back()["id"])!=int(previous["id"]):
+		push_error("SMOKE: Workshop MOVE UP failed to change pending production order")
+		quit(1)
+		return
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,4).get_center())
+	if not eco.get_batch_by_id(chosen_id).is_empty():
+		push_error("SMOKE: Workshop CANCEL did not remove unstarted order")
+		quit(1)
+		return
+	var active_fixture := eco.get_open_batches()[0]
+	active_fixture["status"]="working"
+	active_fixture["progress"]=6.0
+	var working_id := int(active_fixture["id"])
+	var stock_before := float(sim.stockpiles["industry"]["materials"])
+	if eco.cancel_queued_batch(sim,working_id) or eco.move_queued_batch(sim,working_id,-1):
+		push_error("SMOKE: Started production batch was wrongly cancellable/reorderable")
+		quit(1)
+		return
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,5).get_center())
+	if not eco.production_paused:
+		push_error("SMOKE: Workshop pause button did not stop real production")
+		quit(1)
+		return
+	eco._update_production(sim,3.0)
+	if not is_equal_approx(float(active_fixture["progress"]),6.0) or not is_equal_approx(float(sim.stockpiles["industry"]["materials"]),stock_before):
+		push_error("SMOKE: Production advanced or consumed inputs while paused")
+		quit(1)
+		return
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,5).get_center())
+	if eco.production_paused:
+		push_error("SMOKE: Workshop resume button failed")
+		quit(1)
+		return
+	instance._handle_workshop_click(SettlementUILayout.workshop_action(screen,8).get_center())
+	if instance.industry_workshop_visible or not instance.economy_mode:
+		push_error("SMOKE: Workshop TRADE did not return to existing industry screen")
+		quit(1)
+		return
+	instance.economy_mode=false
 	instance.governance_mode = true
 	var old_law: int = instance.governance_law_index
 	instance._handle_panel_action_click(instance._panel_action_rect(1,4).get_center())
