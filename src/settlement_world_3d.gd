@@ -79,6 +79,8 @@ var cached_layout := ""
 var last_daylight := -1
 var people: Dictionary = {}
 var animated_vent_fans: Array[Node3D] = []
+var industrial_yards: Array[Dictionary] = []
+var industry_cycle := 0.0
 var materials: Dictionary = {}
 var selected_key := ""
 var visual_time := 0.0
@@ -455,6 +457,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 	_update_people(sim, selected_citizen)
 	_update_daylight(sim.hour)
 	_animate_machinery(delta, bool(sim.utility_state.get("power_online", true)) and not sim.paused)
+	_animate_industry(delta, _industry_operating(sim) and not sim.paused)
 	# Construction hologram updates without re-instantiating building meshes.
 	if building_preview != null:
 		building_preview.visible = build_mode
@@ -471,6 +474,7 @@ var building_preview: MeshInstance3D
 
 func _rebuild_structures(sim: SettlementSimulation) -> void:
 	animated_vent_fans.clear()
+	industrial_yards.clear()
 	for node in structure_layer.get_children():
 		node.queue_free()
 	for building in sim.buildings:
@@ -518,6 +522,10 @@ func _build_structure(b: Dictionary) -> void:
 	structure_layer.add_child(group)
 	var authored_scene := "res://assets/3d/structures/%s.glb" % type
 	if _try_authored_model(group, authored_scene, size):
+		# Exterior gameplay props remain active even after installing a licensed
+		# replacement for the structure's architectural model.
+		if type=="industry":
+			industrial_yards.append(SettlementIndustry3D.build(group,size,materials))
 		return
 	# Walls, flooring, pipes and utility poles remain independent modular pieces.
 	if type in ["wall","floor","door","pipe","power_pole"]:
@@ -571,6 +579,8 @@ func _build_structure(b: Dictionary) -> void:
 			_cylinder(group,Vector3(i*size.x*0.20,body_height+2.02,0),1.76,0.12,materials["glass"])
 		_box(group,Vector3(0,body_height+0.8,0),Vector3(1.2,0.4,size.y*0.65),materials["pipe"])
 	WastelandDetail.detail_building(group,type,size,body_height,float(b.get("condition",100.0)),materials)
+	if type=="industry":
+		industrial_yards.append(SettlementIndustry3D.build(group,size,materials))
 	if float(b.get("condition",100.0)) < 60.0:
 		_box(group,Vector3(size.x*0.35,body_height+0.63,0),Vector3(2.0,0.17,1.1),materials["rust"])
 
@@ -585,7 +595,9 @@ func _build_farm(group: Node3D, size: Vector2) -> void:
 func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> void:
 	var alive_ids: Dictionary = {}
 	for citizen in sim.citizens:
-		if not bool(citizen["alive"]) or str(citizen.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
+		# A survivor on a regional expedition must no longer be drawn inside
+		# Last Haven while simultaneously marked as being away in the roster.
+		if not bool(citizen["alive"]) or bool(citizen.get("on_expedition",false)) or str(citizen.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
 			continue
 		var id := str(citizen["id"])
 		alive_ids[id] = true
@@ -705,3 +717,47 @@ func _animate_machinery(delta: float, active: bool) -> void:
 	for rotor in animated_vent_fans:
 		if is_instance_valid(rotor):
 			rotor.rotation.y += delta * 2.8
+
+func _industry_operating(sim: SettlementSimulation) -> bool:
+	var eco := sim.economy_simulation
+	if eco.production_paused:
+		return false
+	var active := false
+	for batch in eco.production_queue:
+		if str(batch.get("status",""))=="working":
+			active=true
+			break
+	if not active:
+		return false
+	var workshops := 0
+	for building in sim.buildings:
+		if str(building.get("type",""))=="industry":
+			workshops+=1
+	if workshops==0:
+		return false
+	for person in sim.get_settlement_citizens():
+		if str(person.get("job","")) not in ["Engineer","Builder"]:
+			continue
+		if int(person.get("age",0))<18 or bool(person.get("incarcerated",false)):
+			continue
+		if float(person.get("health",0.0))<30.0 or not sim.is_selected_work_enabled(person):
+			continue
+		if sim._is_shift_active(person):
+			return true
+	return false
+
+func _animate_industry(delta: float, active: bool) -> void:
+	if active:
+		industry_cycle+=delta*3.2
+	for yard in industrial_yards:
+		var ram: Node3D=yard["ram"]
+		var carrier: Node3D=yard["carrier"]
+		var run_lamp: MeshInstance3D=yard["running_light"]
+		var idle_lamp: MeshInstance3D=yard["idle_light"]
+		if not is_instance_valid(ram) or not is_instance_valid(carrier):
+			continue
+		# Pausing preserves the exact mechanism position until work resumes.
+		ram.position.y=2.04+0.30*sin(industry_cycle*1.8)
+		carrier.position.x=-2.1+fposmod(industry_cycle*0.44,1.8)
+		run_lamp.visible=active
+		idle_lamp.visible=not active
