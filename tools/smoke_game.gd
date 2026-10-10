@@ -321,6 +321,99 @@ func _smoke() -> void:
 		return
 	toggle.keycode = KEY_ESCAPE
 	instance._unhandled_input(toggle)
+	# Real faction discovery path: before radio expansion, the diplomacy UI
+	# must lead players to the already-discovered relay, not a dead-end panel.
+	instance.faction_mode = true
+	instance.civilization_mode = false
+	if not sim.faction_simulation.get_visible_factions(sim).is_empty():
+		push_error("SMOKE: Initial factions incorrectly bypass fog of war")
+		quit(1)
+		return
+	if str(instance._panel_action_items()[0][0]) != "FIND RELAY":
+		push_error("SMOKE: Empty factions screen provides no actionable radio-relay route")
+		quit(1)
+		return
+	instance._handle_panel_action_click(instance._panel_action_rect(0,2).get_center())
+	if not instance.world_map_mode or instance.faction_mode or instance.selected_world_location_id != 3:
+		push_error("SMOKE: Find Relay action did not navigate to actual North Ridge Relay")
+		quit(1)
+		return
+	instance.world_map_mode = false
+	# Discover a genuine faction location and verify an actual aid transaction.
+	var contact: Dictionary = sim.world_simulation.get_location_by_id(9)
+	contact["discovered"] = true
+	instance.faction_mode = true
+	var known_factions := sim.faction_simulation.get_visible_factions(sim)
+	if not known_factions.has("Cedar Union"):
+		push_error("SMOKE: Faction visibility ignores discovered world location")
+		quit(1)
+		return
+	instance._handle_command_content_click(SettlementUILayout.side_panel(screen,480.0).position+Vector2(40,65))
+	if instance.faction_index != 0:
+		push_error("SMOKE: Faction portrait tab does not select a discovered neighbor")
+		quit(1)
+		return
+	sim.stockpiles["command"]["food"] = maxf(25.0,float(sim.stockpiles["command"].get("food",0.0)))
+	sim.stockpiles["medical"]["medicine"] = maxf(5.0,float(sim.stockpiles["medical"].get("medicine",0.0)))
+	var old_reputation := float(sim.faction_simulation.factions["Cedar Union"]["reputation"])
+	instance._handle_panel_action_click(instance._panel_action_rect(2,6).get_center())
+	if float(sim.faction_simulation.factions["Cedar Union"]["reputation"]) <= old_reputation:
+		push_error("SMOKE: Faction SEND AID does not change actual diplomatic reputation")
+		quit(1)
+		return
+	contact["discovered"] = false
+	instance.faction_mode = false
+
+	# Nation is six readable, clickable screens, not one unreadable wall of
+	# eight-point keyboard commands. Every tab must match shared geometry.
+	instance.civilization_mode = true
+	for target in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
+		var nation_area := SettlementUILayout.side_panel(target,620.0)
+		for i in range(6):
+			var tab := SettlementUILayout.civilization_tab_rect(target,i)
+			if not nation_area.encloses(tab):
+				push_error("SMOKE: Nation tab extends outside command panel")
+				quit(1)
+				return
+	for i in range(6):
+		var tab := SettlementUILayout.civilization_tab_rect(screen,i)
+		if not instance._handle_command_content_click(tab.get_center()) or instance.civilization_tab != i:
+			push_error("SMOKE: Nation page tab not clickable: "+str(i))
+			quit(1)
+			return
+		if instance._panel_action_items().is_empty():
+			push_error("SMOKE: Nation tab missing its contextual actions")
+			quit(1)
+			return
+	instance.civilization_tab = 3
+	var nation_panel := SettlementUILayout.side_panel(screen,620.0)
+	var selected_project_rect := Rect2(nation_panel.position+Vector2(21,214),Vector2(nation_panel.size.x-43,46))
+	instance._handle_command_content_click(selected_project_rect.get_center())
+	if instance.civilization_recovery_project_index != 1:
+		push_error("SMOKE: Recovery-project cards do not select actual projects")
+		quit(1)
+		return
+	sim.stockpiles["industry"]["materials"] = maxf(35.0,float(sim.stockpiles["industry"].get("materials",0.0)))
+	sim.stockpiles["command"]["water"] = maxf(70.0,float(sim.stockpiles["command"].get("water",0.0)))
+	var old_progress := sim.civilization_simulation.get_recovery_project_progress("Clean Water Network")
+	instance._handle_panel_action_click(instance._panel_action_rect(1,3).get_center())
+	if sim.civilization_simulation.get_recovery_project_progress("Clean Water Network") <= old_progress:
+		push_error("SMOKE: Nation CONTRIBUTE did not consume resources and progress real recovery")
+		quit(1)
+		return
+	instance.civilization_tab = 4
+	var old_autonomy := str(sim.civilization_simulation.civilization_policies["autonomy"])
+	instance._handle_panel_action_click(instance._panel_action_rect(0,8).get_center())
+	if str(sim.civilization_simulation.civilization_policies["autonomy"]) == old_autonomy:
+		push_error("SMOKE: Nation policy action did not affect real autonomy rules")
+		quit(1)
+		return
+	instance.civilization_mode = false
+	if instance._display_settlement_name() != "Last Haven":
+		push_error("SMOKE: Old Site-01 developer jargon still appears in player identity")
+		quit(1)
+		return
+
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
 	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
@@ -589,6 +682,6 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
-	print("PLAYTEST SMOKE PASS: readable settlement identity and briefing, compact HUD and controls, 3D rigs, PBR and saves")
+	print("PLAYTEST SMOKE PASS: faction relay discovery, nation tabs/policies/recovery, honest HUD, 3D rigs, and save/load")
 	instance.queue_free()
 	quit(0)
