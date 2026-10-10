@@ -863,6 +863,10 @@ func toggle_selected_work(c: Dictionary) -> void:
 	var current := int(c["work_priority"].get(job, 3))
 	if current > 0:
 		c["work_priority"][job] = 0
+		if job=="Builder":
+			for blueprint in blueprints:
+				if int(blueprint.get("assigned_builder",0))==int(c.get("id",0)):
+					blueprint["assigned_builder"]=0
 		c["target_blueprint_id"] = 0
 		c["target"] = Vector2.ZERO
 		_set_action(c, "Off Duty", "housing")
