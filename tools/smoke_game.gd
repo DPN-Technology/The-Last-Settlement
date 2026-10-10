@@ -373,9 +373,73 @@ func _smoke() -> void:
 	scout["on_expedition"] = false
 	sim.stockpiles["command"]["meals"] = maxf(24.0,float(sim.stockpiles["command"].get("meals",0.0)))
 	sim.stockpiles["command"]["water"] = maxf(30.0,float(sim.stockpiles["command"].get("water",0.0)))
+	# Region is now a mission-planning screen, not an unconfigurable
+	# launch button. The same immutable preview drives actual dispatch.
+	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
+		var region_frame := SettlementUILayout.side_panel(target_size,372.0)
+		for control_index in range(3):
+			if not region_frame.encloses(SettlementUILayout.region_team_control(target_size,control_index)):
+				push_error("SMOKE: Mission planning button outside region panel")
+				quit(1)
+				return
+		if not region_frame.encloses(SettlementUILayout.region_dispatch_rect(target_size)):
+			push_error("SMOKE: Mission dispatch button outside region panel")
+			quit(1)
+			return
+	instance._handle_region_click(SettlementUILayout.region_team_control(screen,0).get_center())
+	instance._handle_region_click(SettlementUILayout.region_team_control(screen,2).get_center())
+	if instance.expedition_team_size!=2 or str(WorldSimulation.STRATEGIES[instance.expedition_strategy_index])!="cautious":
+		push_error("SMOKE: Expedition team size or route selector is not mouse-controlled")
+		quit(1)
+		return
+	var meal_before: float=float(sim.stockpiles["command"]["meals"])
+	var water_before: float=float(sim.stockpiles["command"]["water"])
+	var mission: Dictionary=sim.world_simulation.plan_expedition(sim,int(destination["id"]),instance.expedition_team_size,"cautious")
+	var rapid: Dictionary=sim.world_simulation.plan_expedition(sim,int(destination["id"]),instance.expedition_team_size,"rapid")
+	if not bool(mission["ok"]) or not bool(rapid["ok"]):
+		push_error("SMOKE: Valid expedition planner wrongly blocked an eligible crew")
+		quit(1)
+		return
+	if mission["members"].size()!=2 or float(mission["risk"])>=float(rapid["risk"]) or float(mission["travel_hours"])<=float(rapid["travel_hours"]):
+		push_error("SMOKE: Mission strategy has no real impact on safety / travel")
+		quit(1)
+		return
+	if not is_equal_approx(float(sim.stockpiles["command"]["meals"]),meal_before) or not is_equal_approx(float(sim.stockpiles["command"]["water"]),water_before):
+		push_error("SMOKE: Read-only mission preview silently spent resources")
+		quit(1)
+		return
 	var prior_trips := sim.world_simulation.expeditions.size()
 	if not instance._dispatch_region() or sim.world_simulation.expeditions.size() != prior_trips+1:
 		push_error("SMOKE: Discovered salvage site cannot dispatch a real survivor team")
+		quit(1)
+		return
+	var launched: Dictionary=sim.world_simulation.expeditions.back()
+	if str(launched.get("strategy",""))!="cautious" or launched["members"].size()!=2:
+		push_error("SMOKE: Configured expedition team and tactic were ignored")
+		quit(1)
+		return
+	if not is_equal_approx(float(sim.stockpiles["command"]["meals"]),meal_before-float(mission["food_cost"])) or not is_equal_approx(float(sim.stockpiles["command"]["water"]),water_before-float(mission["water_cost"])):
+		push_error("SMOKE: Dispatch supply cost differs from mission preview")
+		quit(1)
+		return
+	for scout_id in launched["members"]:
+		if not bool(sim.get_citizen_by_id(int(scout_id)).get("on_expedition",false)):
+			push_error("SMOKE: Planned survivor never departed from the settlement")
+			quit(1)
+			return
+	var after_launch_meals: float=float(sim.stockpiles["command"]["meals"])
+	if sim.world_simulation.create_expedition(sim,int(destination["id"]),1) or not is_equal_approx(float(sim.stockpiles["command"]["meals"]),after_launch_meals):
+		push_error("SMOKE: Duplicate active mission started or consumed extra supplies")
+		quit(1)
+		return
+	var starving_plan: Dictionary=sim.world_simulation.plan_expedition(sim,3,4,"rapid")
+	var last_meals: float=float(sim.stockpiles["command"]["meals"])
+	if not bool(starving_plan.get("ok",false)) and sim.world_simulation.create_expedition(sim,3,4,"invalid-tactic"):
+		push_error("SMOKE: Invalid mission tactic was accepted")
+		quit(1)
+		return
+	if not is_equal_approx(float(sim.stockpiles["command"]["meals"]),last_meals):
+		push_error("SMOKE: Rejected mission spent supplies")
 		quit(1)
 		return
 	if not bool(sim.field_objectives.get("expedition",false)):
@@ -933,6 +997,6 @@ func _smoke() -> void:
 			return
 	instance.help_mode=false
 	instance.civilization_mode=false
-	print("PLAYTEST SMOKE PASS: workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
+	print("PLAYTEST SMOKE PASS: planned regional missions, crew costs, workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
 	instance.queue_free()
 	quit(0)
