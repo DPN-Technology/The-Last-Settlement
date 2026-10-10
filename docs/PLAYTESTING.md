@@ -1,3 +1,17 @@
+# Dust Fronts & Settlement Emergency Orders — Windows playtest
+
+This developer preview adds a dynamic **dust-storm weather front** to the actual Godot simulation. A first front can begin after approximately two simulation days; subsequent fronts recur with a varied interval, duration and severity. The game shows the active weather in the thin HUD data rail, surfaces an urgent **STORM: TAKE COVER** warning, and adds a weather briefing with estimated time remaining in the Overview screen. It uses no real-world forecast service.
+
+**Gameplay effects** are not decorative: a dust front degrades generator efficiency and water purification, increases the fatigue and stress of survivors assigned to outdoor tasks, and may cause a small health penalty under severe exposure. The severity determines the degree of these effects. Click the upper-right **STORM: TAKE COVER** alert to issue **Shelter In Place**. Exposed field workers (Farmers, Builders, Scavengers, Haulers and Guards) leave outside duties for housing, so crop gathering, salvage hauling and outside construction slow or stop. Click **SHELTER ACTIVE** again to release the emergency order. Engineering, medical work and cooking continue under normal shift/health rules; the workshop now also refuses to use any Builder explicitly taking cover. A shelter order does not magically repair a generator or water pump.
+
+The 3D world now contains a GPU-instanced airborne-dust field, warmer obscured skyline, longer-distance dust haze and reduced storm daylight. The visual volume follows the playable camera rather than instantiating hundreds of individual mesh nodes. The weather front and order persist through a compatible v14 save; loading older saves defaults safely to clear weather.
+
+**Manual Windows acceptance:** accelerate simulation to 12× to reach an actual dust front; verify HUD warning, dust particles and changed horizon and power/water readings. Click the alert to shelter outdoor crews; inspect real survivor actions and confirm outdoor work output halts while indoor shifts continue. Resume field work and observe that exposure, production and the alert react accordingly. Save in a storm, reload, and confirm the same severity and policy remain. Let the front pass and confirm weather visuals clear, shelter releases automatically, and normal production returns. Test with the camera orbiting at 960×720 and 1920×1080; use F8 to capture unaltered screenshots.
+
+**Current limits:** This implements storm lighting, airborne grit and concrete gameplay decisions, not cinematic volumetric VFX, realistic wind audio, rain/snow, handcrafted weather textures, or full-body cover animations. Visual quality needs manual Windows playtesting even when the headless build passes. PR #6 stays unmerged until accepted.
+
+---
+
 # 3D Settlement Worksite Pass — PR #6 candidate
 
 The next Windows preview adds a **physical press-and-conveyor yard** outside the industrial workshop rather than a decorative HUD representation. The modeled environment includes a hydraulic stamping press, traveling die head, roller conveyor carrying a metal blank, operator safety rails, an electrical cabinet, storage pallets, service conduit and status lighting. The assembly remains to the right of the workshop's central doorway, preserving the existing exterior navigation approach. It is procedural transitional game art; licensed, realistic mechanical models and collisions have not yet been shipped.
