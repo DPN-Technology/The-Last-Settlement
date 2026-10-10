@@ -32,6 +32,7 @@ var dragging := false
 var drag_origin := Vector2.ZERO
 var selected_citizen: Dictionary = {}
 var selected_building: Dictionary = {}
+var pending_demolition_key := ""
 var selected_blueprint: Dictionary = {}
 var build_mode := false
 var build_catalog_index := 0
@@ -1547,38 +1548,108 @@ func _handle_inspector_click(position: Vector2) -> bool:
 				return true
 		return Rect2(x, y, 350, h).has_point(position)
 	if not selected_building.is_empty():
-		var selected_bounds := SettlementUILayout.side_panel(vp,372.0)
-		if Rect2(selected_bounds.position,Vector2(selected_bounds.size.x,minf(270.0,selected_bounds.size.y))).has_point(position):
+		for index in range(3):
+			if SettlementUILayout.facility_action(vp,index).has_point(position):
+				_apply_facility_action(index)
+				return true
+		return SettlementUILayout.facility_inspector(vp).has_point(position)
+	return false
+
+func _facility_repair_queued(b: Dictionary) -> bool:
+	var name := "Repair "+str(b.get("name",""))
+	for work in sim.work_orders:
+		if str(work.get("title",""))==name and not bool(work.get("complete",false)):
 			return true
+	return false
+
+func _facility_key(b: Dictionary) -> String:
+	return str(b.get("name",""))+"@"+str(b.get("position",Vector2.ZERO))
+
+func _apply_facility_action(index: int) -> bool:
+	if selected_building.is_empty():
+		return false
+	var b := selected_building
+	if index==0:
+		pending_demolition_key = ""
+		if float(b.get("condition",100.0))>=99.5:
+			playtest_notice="FACILITY IS ALREADY IN GOOD CONDITION"
+		elif _facility_repair_queued(b):
+			playtest_notice="REPAIR REQUEST ALREADY IN WORK QUEUE"
+		else:
+			sim.queue_repair(b)
+			playtest_notice="REPAIR REQUEST SENT TO BUILDERS"
+		playtest_notice_seconds=5.0
+		return true
+	if index==1:
+		if str(b.get("type",""))=="command":
+			playtest_notice="COMMAND CENTER IS PROTECTED FROM DEMOLITION"
+		elif pending_demolition_key!=_facility_key(b):
+			pending_demolition_key=_facility_key(b)
+			playtest_notice="CONFIRM SALVAGE BY CLICKING SALVAGE AGAIN"
+		else:
+			var name := str(b.get("name","Facility"))
+			if sim.demolish_building(b):
+				selected_building={}
+				playtest_notice=name.to_upper()+" SALVAGED  /  MATERIALS RECOVERED"
+			else:
+				playtest_notice="SALVAGE COULD NOT BE COMPLETED"
+			pending_demolition_key=""
+		playtest_notice_seconds=6.0
+		return true
+	if index==2:
+		selected_building={}
+		pending_demolition_key=""
+		return true
 	return false
 
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
-	var bounds := SettlementUILayout.side_panel(vp,372.0)
+	var bounds := SettlementUILayout.facility_inspector(vp)
 	var x := bounds.position.x
 	var y := bounds.position.y
 	var w := bounds.size.x
-	var h := minf(270.0,bounds.size.y)
-	_draw_ui_panel(Rect2(x,y,w,h),ACCENT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+30), "INFRASTRUCTURE NODE", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, ACCENT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+64), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 24, TEXT)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+92), "TYPE // %s" % str(b["type"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, MUTED)
-	_draw_meter(Vector2(x+20,y+126), w-40.0, "CONDITION", float(b["condition"]))
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+184), "WORK CAPACITY // %d" % int(b["capacity"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, TEXT)
-	var utility := str(b.get("utility", ""))
-	var node_status := "OPERATIONAL"
-	var node_color := GOOD
-	if utility == "generator" and sim.utility_failures["generator_trip"]:
-		node_status = "TRIPPED"
-		node_color = BAD
-	elif utility in ["water_pump","purifier"] and not sim.utility_state["water_online"]:
-		node_status = "DEGRADED"
-		node_color = WARN
-	elif utility == "sewage" and sim.utility_failures["sewage_overflow"]:
-		node_status = "OVERFLOW"
-		node_color = BAD
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+214), "NODE STATUS // %s" % node_status, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, node_color)
-	draw_string(ThemeDB.fallback_font, Vector2(x+20,y+240), "[R] QUEUE REPAIR   [X] DEMOLISH / SALVAGE", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, RUST)
+	var h := bounds.size.y
+	var condition := float(b.get("condition",100.0))
+	var utility := str(b.get("utility",""))
+	if utility=="":
+		utility=str(b.get("type",""))
+	var workers := 0
+	for citizen in sim.get_settlement_citizens():
+		if str(citizen.get("target_building",""))==str(b.get("type","")) and bool(citizen.get("alive",false)):
+			workers += 1
+	_draw_ui_panel(bounds,ACCENT)
+	draw_rect(Rect2(x+14,y+13,4,21),ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+29),"FACILITY  /  BUILDING MANAGEMENT",HORIZONTAL_ALIGNMENT_LEFT,w-43,14,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+17,y+60),str(b["name"]),HORIZONTAL_ALIGNMENT_LEFT,w-34,20,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+83),"Type: "+str(b["type"]).capitalize()+"   •   Capacity: "+str(b.get("capacity",0)),HORIZONTAL_ALIGNMENT_LEFT,w-38,11,MUTED)
+	_draw_meter(Vector2(x+18,y+111),w-36.0,"BUILDING CONDITION",condition)
+	var is_damaged := condition<65.0
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+149),"Status: "+("Repairs needed" if is_damaged else "Operating"),HORIZONTAL_ALIGNMENT_LEFT,w-35,12,WARN if is_damaged else GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+170),"Workers assigned: "+str(workers),HORIZONTAL_ALIGNMENT_LEFT,w-38,11,TEXT)
+	var description := SettlementCommandCatalog.purpose(str(b["type"]))
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+193),description,HORIZONTAL_ALIGNMENT_LEFT,w-36,10,MUTED)
+	var type_name := str(b["type"])
+	if type_name in ["generator","power"]:
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Power supply: %.0f  /  Demand: %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])],HORIZONTAL_ALIGNMENT_LEFT,w-36,10,GOOD if bool(sim.utility_state["power_online"]) else WARN)
+	elif type_name in ["water","water_pump","purifier","water_tank"]:
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Clean water rate: %.1f per hour" % float(sim.utility_state["clean_water_rate"]),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
+	elif type_name=="sewage":
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Sanitation: %.0f%%" % float(sim.utility_state["sanitation"]),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
+	else:
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Facility supports settlement work and survival.",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
+	draw_line(Vector2(x+15,y+238),Vector2(x+w-15,y+238),Color("#4f636b"),1)
+	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+260),"Maintenance: "+("REPAIR ORDER QUEUED" if _facility_repair_queued(b) else ("NEEDS ATTENTION" if condition<99.5 else "NO REPAIRS NEEDED")),HORIZONTAL_ALIGNMENT_LEFT,w-36,11,WARN if condition<70.0 else GOOD)
+	if pending_demolition_key==_facility_key(b):
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"CONFIRM SALVAGE  /  click again to demolish",HORIZONTAL_ALIGNMENT_LEFT,w-35,11,BAD)
+	else:
+		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"Manage this facility using the actions below.",HORIZONTAL_ALIGNMENT_LEFT,w-35,10,MUTED)
+	var labels := ["REPAIR [R]","CONFIRM" if pending_demolition_key==_facility_key(b) else "SALVAGE [X]","CLOSE"]
+	for index in range(3):
+		var button := SettlementUILayout.facility_action(vp,index)
+		var highlight := button.has_point(get_local_mouse_position())
+		draw_rect(button,Color("#603036") if highlight or (index==1 and pending_demolition_key==_facility_key(b)) else Color("#1d313a"))
+		draw_rect(button,BAD if index==1 else (GOOD if index==0 and condition<99.5 else Color("#607c87")),false,1)
+		draw_string(ThemeDB.fallback_font,button.position+Vector2(9,21),labels[index],HORIZONTAL_ALIGNMENT_LEFT,button.size.x-16,11,TEXT)
 
 func _draw_meter(pos: Vector2, width: float, label: String, value: float) -> void:
 	draw_string(ThemeDB.fallback_font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, 150, 10, MUTED)
@@ -1956,13 +2027,14 @@ func _unhandled_input(event: InputEvent) -> void:
 					var route := sim.civilization_simulation.logistics_routes[civilization_route_index]
 					sim.civilization_simulation.toggle_route(int(route["id"]))
 				elif not selected_building.is_empty():
-					sim.queue_repair(selected_building)
+					_apply_facility_action(0)
 			KEY_X:
 				if not selected_building.is_empty():
-					sim.demolish_building(selected_building)
-					selected_building = {}
+					_apply_facility_action(1)
 			KEY_ESCAPE:
-				if overview_visible:
+				if pending_demolition_key!="":
+					pending_demolition_key=""
+				elif overview_visible:
 					overview_visible = false
 				elif help_mode:
 					help_mode = false
