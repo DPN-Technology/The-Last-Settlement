@@ -413,6 +413,30 @@ func _smoke() -> void:
 		push_error("SMOKE: Old Site-01 developer jargon still appears in player identity")
 		quit(1)
 		return
+	# A practical resource HUD lets players resolve a power shortfall with a
+	# real generator blueprint, not another abstract warning light.
+	instance.governance_mode = false
+	instance.build_mode = false
+	var power_card: Rect2 = SettlementUILayout.resource_rects(screen)[3]
+	if not instance._handle_resource_chip_click(power_card.get_center()) or not instance.build_mode:
+		push_error("SMOKE: Power telemetry does not open functional construction")
+		quit(1)
+		return
+	if str(sim.get_build_catalog()[instance.build_catalog_index]["type"]) != "generator":
+		push_error("SMOKE: Power telemetry selected the wrong construction blueprint")
+		quit(1)
+		return
+	instance.build_mode = false
+	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[0].get_center()) or not instance.overview_visible:
+		push_error("SMOKE: Population telemetry cannot open settlement overview")
+		quit(1)
+		return
+	instance.overview_visible = false
+	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[5].get_center()) or not instance.governance_mode:
+		push_error("SMOKE: Morale telemetry cannot open real governance controls")
+		quit(1)
+		return
+	instance.governance_mode = false
 
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
