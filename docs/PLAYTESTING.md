@@ -1,3 +1,17 @@
+# 3D Settlement Worksite Pass — PR #6 candidate
+
+The next Windows preview adds a **physical press-and-conveyor yard** outside the industrial workshop rather than a decorative HUD representation. The modeled environment includes a hydraulic stamping press, traveling die head, roller conveyor carrying a metal blank, operator safety rails, an electrical cabinet, storage pallets, service conduit and status lighting. The assembly remains to the right of the workshop's central doorway, preserving the existing exterior navigation approach. It is procedural transitional game art; licensed, realistic mechanical models and collisions have not yet been shipped.
+
+**Real simulation link:** The press/conveyor animate only while an actual production batch is marked **working**, the workshop has an eligible on-shift Engineer or Builder, and the workshop/settlement are not paused. The machine holds its current pose during pause. The running status lamp turns off when production stops. The economic process still executes in the existing simulation: visuals don't manufacture bonus parts or assume production where none exists.
+
+Survivors now carry context-sensitive 3D work equipment while their current action matches actual work: construction wrench, farming hoe, first-aid kit, security radio, carried supplies or cooking pan. On-duty tasks gain a restrained stationary work gesture with the procedural character rig. Work props disappear when the survivor is moving to another location, sleeping or off duty. **People deployed on expeditions disappear from the Last Haven scene** until they return; they can no longer be simultaneously away on the regional map and physically present at home. The command building has a world-space **DPN / LAST HAVEN** identification plaque above the entrance.
+
+**Windows visual acceptance:** Open Industry, choose Fuel Blend or Machine Parts and allow a production batch to begin. Pan to the outdoor workshop yard, observe the press cycling and the carrier moving. Pause Workshop Control and verify both freeze; resume and verify movement returns. Reassign the only Engineer/Builder or turn their duty off to check the machine stays idle when there is no available industrial worker. Inspect Farmer, Medic, Guard and Builder activity props while working, traveling and off duty. Launch an expedition to ensure members disappear from the settlement and return once home. Capture actual unaltered Windows F8 screenshots at 1280×720, 1920×1080 and fullscreen to evaluate silhouettes, proportions, readability, possible clipping and machine/character placement.
+
+**Current limits:** This does not provide simulated machine collisions, realistic glTF machinery, full motion-captured work tasks, hand IK, factory interiors or authentic industrial audio. Headless smoke tests check the scene nodes, animation state, staffing, away-member visibility and command identification; they cannot certify how realistic the art looks on a Windows display. Keep PR #6 unmerged until player-approved.
+
+---
+
 # Industry Workshop Command — October 2026 candidate
 
 This pull-request build contains a **real production management screen**, not just a graphical preview. Open **Industry (K)**, then click **Open Workshop Control / Manage Orders** in the middle of the trade screen. The new right-side interface leaves the 3D settlement visible.
