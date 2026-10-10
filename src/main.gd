@@ -98,37 +98,87 @@ func _process(delta: float) -> void:
 	settlement_world.sync(sim, selected_building, selected_citizen, build_mode, mouse_world, sim.get_build_catalog()[build_catalog_index], build_rotated, delta)
 	queue_redraw()
 
-func _update_citizens(delta: float) -> void:
-	for c in sim.citizens:
-		if not c["alive"] or str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN":
-			continue
-		if int(c.get("target_blueprint_id", 0)) > 0:
-			var bp := sim.get_blueprint_by_id(int(c["target_blueprint_id"]))
-			if not bp.is_empty():
-				c["target"] = bp["position"]
-				c["position"] = _move_with_obstacle_avoidance(c["position"], c["target"], 25.0 * delta * maxf(0.5, sim.speed))
-				continue
-		if c["target"] == Vector2.ZERO or c["position"].distance_to(c["target"]) < 8.0:
-			var b := sim.get_building_by_type(c["target_building"])
-			c["target"] = b["position"] + Vector2(
-				sim.rng.randf_range(-float(b["size"].x) * 0.34, float(b["size"].x) * 0.34),
-				sim.rng.randf_range(-float(b["size"].y) * 0.28, float(b["size"].y) * 0.28)
-			)
-		c["position"] = _move_with_obstacle_avoidance(c["position"], c["target"], 25.0 * delta * maxf(0.5, sim.speed))
+# Paths are transient gameplay state and must not expand the save schema.
+var citizen_paths: Dictionary = {}
+var navigation_revision := ""
 
-func _move_with_obstacle_avoidance(origin: Vector2, target: Vector2, distance: float) -> Vector2:
-	var direct := origin.move_toward(target, distance)
-	for b in sim.buildings:
-		if b["type"] != "wall":
+func _navigation_layout_revision() -> String:
+	var parts := PackedStringArray()
+	for building in sim.buildings:
+		parts.append(str(building.get("type",""))+"@"+str(building.get("position",Vector2.ZERO))+"#"+str(building.get("size",Vector2.ZERO)))
+	return "|".join(parts)
+
+func _update_citizens(delta: float) -> void:
+	var revision := _navigation_layout_revision()
+	if navigation_revision != revision:
+		citizen_paths.clear()
+		navigation_revision = revision
+	for c in sim.citizens:
+		if not c["alive"] or str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN" or bool(c.get("on_expedition",false)):
 			continue
-		var rect := Rect2(b["position"] - b["size"]/2.0, b["size"]).grow(5.0)
-		if rect.has_point(direct):
-			var direction := (target - origin).normalized()
-			var perpendicular := Vector2(-direction.y, direction.x)
-			var option_a := origin + perpendicular * distance
-			var option_b := origin - perpendicular * distance
-			return option_a if option_a.distance_to(target) <= option_b.distance_to(target) else option_b
-	return direct
+		var original_position := Vector2(c["position"])
+		var safe_position := SettlementNavigation.resolve_walkable(original_position,sim.buildings)
+		if safe_position.distance_squared_to(original_position)>0.01:
+			c["position"]=safe_position
+			citizen_paths.erase(int(c["id"]))
+		var blueprint_id := int(c.get("target_blueprint_id",0))
+		if blueprint_id>0:
+			var blueprint := sim.get_blueprint_by_id(blueprint_id)
+			if not blueprint.is_empty():
+				c["target"] = blueprint["position"]
+				_move_citizen_safely(c,25.0*delta*maxf(0.5,sim.speed))
+				continue
+		if c["target"] == Vector2.ZERO or Vector2(c["position"]).distance_to(Vector2(c["target"]))<8.0:
+			var building := sim.get_building_by_type(str(c.get("target_building","")))
+			if not building.is_empty():
+				if str(building["type"])=="farm":
+					c["target"] = Vector2(building["position"])+Vector2(
+						sim.rng.randf_range(-float(building["size"].x)*0.34,float(building["size"].x)*0.34),
+						sim.rng.randf_range(-float(building["size"].y)*0.28,float(building["size"].y)*0.28)
+					)
+				else:
+					# Approach the visible door from outside until interiors
+					# have their own traversal and cutaway representation.
+					c["target"] = SettlementNavigation.exterior_entry(building)
+			else:
+				c["target"] = Vector2(c["position"])
+		_move_citizen_safely(c,25.0*delta*maxf(0.5,sim.speed))
+
+func _move_citizen_safely(c: Dictionary, distance: float) -> void:
+	var ident := int(c["id"])
+	var position := Vector2(c["position"])
+	var goal := Vector2(c["target"])
+	if position.distance_to(goal)<1.0:
+		citizen_paths.erase(ident)
+		return
+	var state: Dictionary = citizen_paths.get(ident,{})
+	if state.is_empty() or Vector2(state.get("goal",Vector2.ZERO)).distance_to(goal)>2.0:
+		var waypoints := SettlementNavigation.route(position,goal,sim.buildings)
+		if waypoints.is_empty():
+			citizen_paths.erase(ident)
+			return
+		state={"goal":goal,"points":waypoints,"index":0}
+		citizen_paths[ident]=state
+	var points: PackedVector2Array = state["points"]
+	var index := int(state["index"])
+	while index<points.size() and position.distance_to(points[index])<maxf(1.0,distance):
+		position=points[index]
+		index+=1
+	if index<points.size():
+		var step := position.move_toward(points[index],distance)
+		if SettlementNavigation.valid_step(position,step,sim.buildings):
+			position=step
+		else:
+			# Buildings may have appeared since route selection. Re-evaluate
+			# next simulation tick without passing through geometry.
+			citizen_paths.erase(ident)
+			return
+	if index>=points.size():
+		citizen_paths.erase(ident)
+	else:
+		state["index"]=index
+		citizen_paths[ident]=state
+	c["position"]=position
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), BG)
