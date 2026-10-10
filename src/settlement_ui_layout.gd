@@ -70,6 +70,16 @@ static func civilization_tab_rect(size: Vector2, index: int, count: int = 6) -> 
 	var width := (area.size.x-28.0-gap*float(count-1))/maxf(1.0,float(count))
 	return Rect2(area.position+Vector2(14.0+float(index)*(width+gap),66.0),Vector2(width,32.0))
 
+static func facility_inspector(size: Vector2) -> Rect2:
+	var area := side_panel(size,372.0)
+	return Rect2(area.position,Vector2(area.size.x,minf(354.0,area.size.y)))
+
+static func facility_action(size: Vector2, index: int) -> Rect2:
+	var area := facility_inspector(size)
+	var gap := 6.0
+	var width := (area.size.x-28.0-gap*2.0)/3.0
+	return Rect2(area.position+Vector2(14.0+float(index)*(width+gap),area.size.y-48.0),Vector2(width,32.0))
+
 static func build_palette(size: Vector2, _count: int) -> Rect2:
 	var max_height := maxf(250.0,size.y-TOP_H-BOTTOM_H-23.0)
 	return Rect2(12.0,TOP_H+8.0,minf(350.0,size.x-24.0),minf(443.0,max_height))
