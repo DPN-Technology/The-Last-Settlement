@@ -1492,10 +1492,12 @@ func _settlement_attention() -> Array:
 		return ["CHECK WATER",WARN]
 	if float(sim.resources["food"]) < float(living) * 2.0:
 		return ["CHECK FOOD",WARN]
-	if float(sim.utility_state["power_generated"]) < float(sim.utility_state["power_demand"]):
-		return ["POWER SHORTFALL",WARN]
+	# A storm can directly cause the power warning. Keep shelter reachable
+	# instead of hiding the player decision behind the consequence.
 	if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM:
 		return ["SHELTER ACTIVE" if sim.weather_simulation.shelter_in_place else "STORM: TAKE COVER", WARN if sim.weather_simulation.shelter_in_place else BAD]
+	if float(sim.utility_state["power_generated"]) < float(sim.utility_state["power_demand"]):
+		return ["POWER SHORTFALL",WARN]
 	return [_active_screen_label(),GOOD]
 
 func _next_settlement_goal() -> String:
