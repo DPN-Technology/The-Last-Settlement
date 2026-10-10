@@ -86,7 +86,7 @@ static func current_activity(citizen: Dictionary) -> String:
 		return "Construction"
 	if action=="Work: Farming":
 		return "Farming"
-	if action=="Work: Medical" or action=="Seek Treatment":
+	if action=="Work: Medical":
 		return "Medical"
 	if action=="Patrol":
 		return "Security"
