@@ -451,7 +451,7 @@ func _draw_panel_actions() -> void:
 	var area := _action_panel_area()
 	var tall := actions.size()>5
 	draw_rect(Rect2(area.position.x+5,area.end.y-(80.0 if tall else 47.0),area.size.x-10,77.0 if tall else 44.0),Color("#100c13ef"))
-	draw_line(Vector2(area.position.x+12,area.end.y-(80.0 if tall else 47.0)),Vector2(area.end.x-12,area.end.y-(80.0 if tall else 47.0)),ACCENT,1.0)
+	DPNUISkin.stroke(self,Vector2(area.position.x+12,area.end.y-(80.0 if tall else 47.0)),Vector2(area.end.x-12,area.end.y-(80.0 if tall else 47.0)),ACCENT,1.0)
 	for i in range(actions.size()):
 		var row: Array = actions[i]
 		var rect := _panel_action_rect(i,actions.size())
@@ -586,7 +586,7 @@ func _draw_utility_overlay() -> void:
 			var max_distance := 260.0 if mode == "POWER" else 180.0
 			if a["position"].distance_to(b["position"]) <= max_distance:
 				var line_color := WARN if mode == "POWER" else (Color("#5aa7c7") if mode == "WATER" else Color("#88924b"))
-				draw_line(_world_point(a["position"]), _world_point(b["position"]), line_color, 2.0)
+				DPNUISkin.stroke(self,_world_point(a["position"]), _world_point(b["position"]), line_color, 2.0)
 
 	for node in nodes:
 		var p := _world_point(node["position"])
@@ -630,8 +630,8 @@ func _draw_settlement_minimap() -> void:
 	for i in range(1,6):
 		var px := plot.position.x+plot.size.x*float(i)/6.0
 		var py := plot.position.y+plot.size.y*float(i)/6.0
-		draw_line(Vector2(px,plot.position.y),Vector2(px,plot.end.y),Color("#91917a",0.11),1.0)
-		draw_line(Vector2(plot.position.x,py),Vector2(plot.end.x,py),Color("#91917a",0.11),1.0)
+		DPNUISkin.stroke(self,Vector2(px,plot.position.y),Vector2(px,plot.end.y),Color("#91917a",0.11),1.0)
+		DPNUISkin.stroke(self,Vector2(plot.position.x,py),Vector2(plot.end.x,py),Color("#91917a",0.11),1.0)
 	for building in sim.buildings:
 		var point := _settlement_minimap_project(Vector2(building["position"]),plot)
 		var extent := Vector2(building["size"])*Vector2(plot.size.x/1200.0,plot.size.y/730.0)
@@ -659,8 +659,8 @@ func _draw_settlement_minimap() -> void:
 		draw_circle(marker,1.6,Color("#f8e8d3"))
 	var focus_point := _settlement_minimap_project(settlement_world.game_position(settlement_world.focus),plot)
 	draw_arc(focus_point,6.0,0.0,TAU,20,ACCENT,1.6)
-	draw_line(focus_point-Vector2(9,0),focus_point+Vector2(9,0),ACCENT,1.0)
-	draw_line(focus_point-Vector2(0,9),focus_point+Vector2(0,9),ACCENT,1.0)
+	DPNUISkin.stroke(self,focus_point-Vector2(9,0),focus_point+Vector2(9,0),ACCENT,1.0)
+	DPNUISkin.stroke(self,focus_point-Vector2(0,9),focus_point+Vector2(0,9),ACCENT,1.0)
 	draw_string(ThemeDB.fallback_font,frame.position+Vector2(13,frame.size.y-5),"CLICK TO FOCUS  /  BUILDINGS + CREW",HORIZONTAL_ALIGNMENT_LEFT,frame.size.x-24,9,MUTED)
 
 func _handle_minimap_click(position: Vector2) -> bool:
@@ -825,7 +825,7 @@ func _draw_region_route_trace(origin: Vector2, destination: Vector2, tint: Color
 			continue
 		var a := origin.lerp(destination,float(i)/float(steps))
 		var b := origin.lerp(destination,minf(1.0,float(i+1)/float(steps)))
-		draw_line(a,b,tint,2.0)
+		DPNUISkin.stroke(self,a,b,tint,2.0)
 
 func _world_map_select(screen_pos: Vector2) -> void:
 	var vp := get_viewport_rect().size
@@ -920,7 +920,7 @@ func _draw_economy_panel() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+356),recipe_name,HORIZONTAL_ALIGNMENT_LEFT,w-36,13,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+376),"Requires: "+_format_recipe_items(recipe.get("input",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+394),"Produces: "+_format_recipe_items(recipe.get("output",{})),HORIZONTAL_ALIGNMENT_LEFT,w-34,10,GOOD)
-	draw_line(Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#613641"),1)
+	DPNUISkin.stroke(self,Vector2(x+16,y+404),Vector2(x+w-16,y+404),Color("#613641"),1)
 	# Operational dashboards only appear when they fit above real action keys.
 	# Their telemetry is taken from the economy simulation, never fake charts.
 	var live_batches := eco.get_open_batches()
@@ -1011,7 +1011,7 @@ func _draw_workshop_panel() -> void:
 	var page_rows := SettlementUILayout.workshop_visible_rows(vp)
 	var pages := maxi(1,int(ceil(float(active_batches.size())/float(page_rows))))
 	industry_queue_page=clampi(industry_queue_page,0,pages-1)
-	draw_line(Vector2(x+16,y+219),Vector2(x+w-16,y+219),Color("#49626c"),1)
+	DPNUISkin.stroke(self,Vector2(x+16,y+219),Vector2(x+w-16,y+219),Color("#49626c"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+238),"PRODUCTION ORDERS  /  %d ACTIVE  /  PAGE %d OF %d" % [active_batches.size(),industry_queue_page+1,pages],HORIZONTAL_ALIGNMENT_LEFT,w-36,11,ACCENT)
 	var selected_batch := _workshop_selected_batch()
 	for i in range(page_rows):
@@ -1126,7 +1126,7 @@ func _draw_civilization_panel() -> void:
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+24),"Stage: %s    |    Communities: %d    |    Trade routes: %d" % [str(civ.endgame_stage).capitalize(),settlements.size(),civ.logistics_routes.size()],HORIZONTAL_ALIGNMENT_LEFT,max_width,12,MUTED)
 			_draw_meter(Vector2(left,top+51),max_width,"REGIONAL RECOVERY",civ.recovery_score)
 			_draw_meter(Vector2(left,top+92),max_width,"CIVILIZATION STABILITY",civ.civilization_stability)
-			draw_line(Vector2(left,top+128),Vector2(panel.end.x-18,top+128),Color("#643845"),1.0)
+			DPNUISkin.stroke(self,Vector2(left,top+128),Vector2(panel.end.x-18,top+128),Color("#643845"),1.0)
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+150),"YOUR NEXT OBJECTIVE",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,ACCENT)
 			var foundable := civ.get_foundable_locations(sim)
 			var next_step := "Explore the region and salvage an abandoned site."
@@ -1181,7 +1181,7 @@ func _draw_civilization_panel() -> void:
 				draw_string(ThemeDB.fallback_font,Vector2(left,top+107),"Food %.0f   Water %.0f   Materials %.0f   Parts %.0f" % [float(resources["food"]),float(resources["water"]),float(resources["materials"]),float(resources["parts"])],HORIZONTAL_ALIGNMENT_LEFT,max_width,11,MUTED)
 				var modules: Dictionary = settlement.get("modules",{})
 				draw_string(ThemeDB.fallback_font,Vector2(left,top+134),"Housing %d   Farms %d   Clinics %d   Workshops %d" % [int(modules.get("housing",0)),int(modules.get("farm",0)),int(modules.get("clinic",0)),int(modules.get("workshop",0))],HORIZONTAL_ALIGNMENT_LEFT,max_width,11,TEXT)
-				draw_line(Vector2(left,top+155),Vector2(panel.end.x-18,top+155),Color("#643845"),1.0)
+				DPNUISkin.stroke(self,Vector2(left,top+155),Vector2(panel.end.x-18,top+155),Color("#643845"),1.0)
 				if key == "LAST_HAVEN":
 					draw_string(ThemeDB.fallback_font,Vector2(left,top+181),"LAST HAVEN IS YOUR CAPITAL",HORIZONTAL_ALIGNMENT_LEFT,max_width,13,ACCENT)
 					draw_string(ThemeDB.fallback_font,Vector2(left,top+208),"Use Build to add facilities to the capital.",HORIZONTAL_ALIGNMENT_LEFT,max_width,12,TEXT)
@@ -1290,7 +1290,7 @@ func _draw_faction_panel() -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+224),"01    Open Region and select North Ridge Relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+255),"02    Dispatch a salvage team to restore the relay.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+22,y+286),"03    Wait for the team to finish its mission.",HORIZONTAL_ALIGNMENT_LEFT,w-44,12,TEXT)
-		draw_line(Vector2(x+20,y+313),Vector2(panel.end.x-18,y+313),Color("#673b47"),1.0)
+		DPNUISkin.stroke(self,Vector2(x+20,y+313),Vector2(panel.end.x-18,y+313),Color("#673b47"),1.0)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+344),"RELAY STATUS",HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+370),"North Ridge Relay: "+("ONLINE" if restored else "AWAITING REPAIRS"),HORIZONTAL_ALIGNMENT_LEFT,w-40,13,GOOD if restored else WARN)
 		draw_string(ThemeDB.fallback_font,Vector2(x+21,y+393),"The restored relay extends radio coverage by 140 units.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
@@ -1327,7 +1327,7 @@ func _draw_faction_panel() -> void:
 	_draw_meter(Vector2(x+20,y+161),w-40.0,"REPUTATION",clampf((float(info["reputation"])+100.0)*0.5,0.0,100.0))
 	_draw_meter(Vector2(x+20,y+202),w-40.0,"STRENGTH",float(info["strength"]))
 	_draw_meter(Vector2(x+20,y+243),w-40.0,"INFLUENCE / WEALTH",float(info["wealth"]))
-	draw_line(Vector2(x+20,y+282),Vector2(panel.end.x-18,y+282),Color("#673b47"),1)
+	DPNUISkin.stroke(self,Vector2(x+20,y+282),Vector2(panel.end.x-18,y+282),Color("#673b47"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+307),"TRADE AGREEMENT: "+("ACTIVE" if bool(info["trade_agreement"]) else "NOT SIGNED"),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,GOOD if bool(info["trade_agreement"]) else MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+333),"SEND AID: 8 food + 2 medicine  •  +9 reputation",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+354),"TRADE: needs reputation 30 or higher.",HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
@@ -1364,7 +1364,7 @@ func _draw_help_panel() -> void:
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,72),str(lessons[i][2]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-24,11,GOOD)
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,box.size.y-7),"CLICK TO OPEN  ›",HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22,9,GOOD if hover else MUTED)
 	draw_rect(Rect2(x+17,y+h-46,w-34,31),DPNUISkin.SURFACE)
-	draw_line(Vector2(x+18,y+h-46),Vector2(x+w-18,y+h-46),ACCENT,1)
+	DPNUISkin.stroke(self,Vector2(x+18,y+h-46),Vector2(x+w-18,y+h-46),ACCENT,1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+h-25),"SPACE PAUSE   F7 UI ZOOM   S SAVE   L LOAD   F8 CAPTURE   ESC CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-54,11,TEXT)
 
 func _open_guide_section(index: int) -> void:
@@ -1562,20 +1562,21 @@ func _draw_hud() -> void:
 	var top_h := SettlementUILayout.TOP_H
 	draw_rect(Rect2(0,0,vp.x,top_h),Color("#07070cf5"))
 	draw_rect(Rect2(0,0,vp.x,3),Color("#771927"))
-	draw_line(Vector2(0,top_h-1),Vector2(vp.x,top_h-1),ACCENT,1.5)
-	draw_line(Vector2(0,top_h-4),Vector2(vp.x,top_h-4),Color("#4b1b2a",0.8),1.0)
+	DPNUISkin.stroke(self,Vector2(0,top_h-1),Vector2(vp.x,top_h-1),ACCENT,1.5)
+	DPNUISkin.stroke(self,Vector2(0,top_h-4),Vector2(vp.x,top_h-4),Color("#4b1b2a",0.8),1.0)
 	var identity := SettlementUILayout.identity_rect(vp)
 	var is_hovered := identity.has_point(get_local_mouse_position())
 	var badge := Rect2(identity.position+Vector2(3,6),Vector2(37,38))
 	DPNUISkin.button(self,badge,"",is_hovered,false,false,true,true)
 	# Red-lightning signature is real vector art, not an emoji or stock icon.
 	var bolt := PackedVector2Array([badge.position+Vector2(24,4),badge.position+Vector2(14,17),badge.position+Vector2(23,17),badge.position+Vector2(12,33),badge.position+Vector2(16,21),badge.position+Vector2(10,21)])
-	draw_polyline(bolt,ACCENT,2.0,true)
+	for part in range(bolt.size()-1):
+		DPNUISkin.stroke(self,bolt[part],bolt[part+1],ACCENT,2.0)
 	draw_string(ThemeDB.fallback_font,badge.position+Vector2(4,35),"01",HORIZONTAL_ALIGNMENT_LEFT,16,8,MUTED)
 	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,22),"DPN // THE LAST SETTLEMENT" if vp.x>=1100 else "DPN // LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,14 if vp.x>=1100 else 11,TEXT)
 	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,39),"LAST HAVEN   /   COMMAND" if vp.x>=1000 else "RECOVERY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,10,ACCENT if is_hovered else MUTED)
 	if is_hovered:
-		draw_line(Vector2(identity.position.x+45,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),ACCENT,1.0)
+		DPNUISkin.stroke(self,Vector2(identity.position.x+45,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),ACCENT,1.0)
 
 	var alive := sim.get_alive_citizens().size()
 	var morale := sim.get_average_morale()
@@ -1626,7 +1627,7 @@ func _draw_hud() -> void:
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
 	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#08080deb"))
-	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),ACCENT,1.4)
+	DPNUISkin.stroke(self,Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),ACCENT,1.4)
 	DPNUISkin.backdrop(self,vp,ui_animation_clock)
 	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-45),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-270,11,MUTED)
 	_draw_time_controls()
@@ -1685,18 +1686,18 @@ func _draw_overview() -> void:
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+29),"YOUR SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,full_width,17,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % _display_settlement_name(),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+68),"Day %d   |   %02d:%02d   |   %s" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),"Paused" if sim.paused else "Simulation running"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,MUTED)
-	draw_line(Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#603644"),1.0)
+	DPNUISkin.stroke(self,Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#603644"),1.0)
 	var complete := 0
 	for value in sim.field_objectives.values():
 		if bool(value):
 			complete += 1
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+100),"YOUR NEXT STEP  •  %d/4 goals completed" % complete,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+120),_next_settlement_goal(),HORIZONTAL_ALIGNMENT_LEFT,full_width,10,TEXT)
-	draw_line(Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#432734"),1.0)
+	DPNUISkin.stroke(self,Vector2(left,top+134),Vector2(area.end.x-17,top+134),Color("#432734"),1.0)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+154),"SUPPLIES & BUILDING",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+174),"Building materials: %.0f" % float(sim.resources["materials"]),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+193),"Projects being built: %d    |    Rooms finished: %d" % [sim.blueprints.size(),sim.completed_rooms],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
-	draw_line(Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#432734"),1.0)
+	DPNUISkin.stroke(self,Vector2(left,top+208),Vector2(area.end.x-17,top+208),Color("#432734"),1.0)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+228),"ESSENTIAL SYSTEMS",HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	var power_available := float(sim.utility_state["power_generated"])
 	var power_needed := float(sim.utility_state["power_demand"])
@@ -1705,7 +1706,7 @@ func _draw_overview() -> void:
 	var charge := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+268),"Battery charge: %.0f%%    |    Sanitation: %.0f%%" % [charge,float(sim.utility_state["sanitation"])],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,TEXT)
 	if area.size.y>350.0:
-		draw_line(Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#432734"),1.0)
+		DPNUISkin.stroke(self,Vector2(left,top+283),Vector2(area.end.x-17,top+283),Color("#432734"),1.0)
 		var weather := sim.weather_simulation
 		if weather.condition==WeatherSimulation.DUST_STORM:
 			draw_string(ThemeDB.fallback_font,Vector2(left,top+303),"DUST FRONT: %.1fh remaining  /  %.0f%% strength" % [weather.remaining_hours(sim),weather.intensity*100.0],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,WARN)
@@ -1851,7 +1852,7 @@ func _draw_build_palette() -> void:
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(box.size.x-85,21),"%.0f MAT" % float(entry["cost"]),HORIZONTAL_ALIGNMENT_LEFT,80,12,GOOD if affordable else BAD)
 	var selected: Dictionary = catalog[build_catalog_index]
 	var divider_y := rect.end.y-108.0
-	draw_line(Vector2(rect.position.x+12,divider_y),Vector2(rect.end.x-12,divider_y),Color("#58616a"),1)
+	DPNUISkin.stroke(self,Vector2(rect.position.x+12,divider_y),Vector2(rect.end.x-12,divider_y),Color("#58616a"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+20),str(selected["name"]).to_upper()+"  /  "+str(selected["capacity"])+" CAPACITY",HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,12,TEXT)
 	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+38),SettlementCommandCatalog.purpose(str(selected["type"])),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,10,MUTED)
 	draw_string(ThemeDB.fallback_font,Vector2(rect.position.x+13,divider_y+55),"Cost: %.0f materials   •   Build effort: %.0f" % [float(selected["cost"]),float(selected["work"])],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-26,10,GOOD)
@@ -2218,7 +2219,7 @@ func _draw_building_panel(b: Dictionary) -> void:
 		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Sanitation: %.0f%%" % float(sim.utility_state["sanitation"]),HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
 	else:
 		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+221),"Facility supports settlement work and survival.",HORIZONTAL_ALIGNMENT_LEFT,w-36,10,TEXT)
-	draw_line(Vector2(x+15,y+238),Vector2(x+w-15,y+238),Color("#4f636b"),1)
+	DPNUISkin.stroke(self,Vector2(x+15,y+238),Vector2(x+w-15,y+238),Color("#4f636b"),1)
 	draw_string(ThemeDB.fallback_font,Vector2(x+18,y+260),"Maintenance: "+("REPAIR ORDER QUEUED" if _facility_repair_queued(b) else ("NEEDS ATTENTION" if condition<99.5 else "NO REPAIRS NEEDED")),HORIZONTAL_ALIGNMENT_LEFT,w-36,11,WARN if condition<70.0 else GOOD)
 	if pending_demolition_key==_facility_key(b):
 		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"CONFIRM SALVAGE  /  click again to demolish",HORIZONTAL_ALIGNMENT_LEFT,w-35,11,BAD)
