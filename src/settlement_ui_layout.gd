@@ -4,7 +4,7 @@ extends RefCounted
 # Centralize every mouse hitbox with its draw rectangle. All measurements are
 # logical Godot viewport pixels and remain independent of camera zoom.
 const TOP_H := 82.0
-const BOTTOM_H := 58.0
+const BOTTOM_H := 62.0
 const GAP := 6.0
 const NAV_LABELS := ["BUILD","REGION","GOVERN","INDUSTRY","FACTIONS","NATION","SAVE","LOAD","GUIDE"]
 
@@ -36,7 +36,7 @@ static func resource_rects(size: Vector2) -> Array[Rect2]:
 
 static func navbar_rect(size: Vector2, index: int) -> Rect2:
 	var unit := (size.x - 22.0 - GAP * 8.0) / 9.0
-	return Rect2(11.0 + float(index) * (unit + GAP), size.y - 42.0, unit, 32.0)
+	return Rect2(11.0 + float(index) * (unit + GAP), size.y - 44.0, unit, 36.0)
 
 static func side_panel(size: Vector2, preferred_width: float, top_offset: float = 8.0, reserve_bottom: float = 10.0) -> Rect2:
 	var width := minf(preferred_width, maxf(230.0, size.x - 28.0))
@@ -58,7 +58,7 @@ static func region_point(size: Vector2, world_pos: Vector2) -> Vector2:
 	return map.position+Vector2(world_pos.x/1200.0*map.size.x,world_pos.y/820.0*map.size.y)
 
 static func region_site_row(size: Vector2, row: int) -> Rect2:
-	return Rect2(16.0,TOP_H+85.0+float(row)*29.0,211.0,28.0)
+	return Rect2(16.0,TOP_H+85.0+float(row)*32.0,211.0,31.0)
 
 static func region_team_control(size: Vector2, index: int) -> Rect2:
 	var panel := side_panel(size,372.0)
@@ -107,11 +107,11 @@ static func facility_action(size: Vector2, index: int) -> Rect2:
 
 static func build_palette(size: Vector2, _count: int) -> Rect2:
 	var max_height := maxf(250.0,size.y-TOP_H-BOTTOM_H-23.0)
-	return Rect2(12.0,TOP_H+8.0,minf(350.0,size.x-24.0),minf(443.0,max_height))
+	return Rect2(12.0,TOP_H+8.0,minf(384.0,size.x-24.0),minf(465.0,max_height))
 
 static func palette_rows(size: Vector2, count: int) -> int:
 	var panel := build_palette(size,count)
-	return maxi(1,mini(count,int(floor((panel.size.y-247.0)/27.0))))
+	return maxi(1,mini(count,int(floor((panel.size.y-247.0)/31.0))))
 
 static func palette_first(selection: int, count: int, rows: int) -> int:
 	return clampi(selection-int(rows/2),0,maxi(0,count-rows))
@@ -120,16 +120,16 @@ static func build_category_rect(size: Vector2, index: int) -> Rect2:
 	var panel := build_palette(size,0)
 	var gap := 5.0
 	var width := (panel.size.x-24.0-gap*2.0)/3.0
-	return Rect2(panel.position+Vector2(12.0+float(index%3)*(width+gap),64.0+float(index/3)*30.0),Vector2(width,25.0))
+	return Rect2(panel.position+Vector2(12.0+float(index%3)*(width+gap),64.0+float(index/3)*30.0),Vector2(width,29.0))
 
 static func build_row_rect(size: Vector2, row: int) -> Rect2:
 	var panel := build_palette(size,0)
-	return Rect2(panel.position+Vector2(9.0,134.0+float(row)*27.0),Vector2(panel.size.x-18.0,26.0))
+	return Rect2(panel.position+Vector2(9.0,134.0+float(row)*31.0),Vector2(panel.size.x-18.0,30.0))
 
 static func build_action_rect(size: Vector2, index: int) -> Rect2:
 	var panel := build_palette(size,0)
 	var half := (panel.size.x-31.0)*0.5
-	return Rect2(panel.position+Vector2(12.0+float(index)*(half+7.0),panel.size.y-35.0),Vector2(half,25.0))
+	return Rect2(panel.position+Vector2(12.0+float(index)*(half+7.0),panel.size.y-39.0),Vector2(half,30.0))
 
 # Full roster command is intentionally a centered *modal*, separate from the
 # construction and nation side panels; all hit targets use these same helpers.
@@ -168,7 +168,7 @@ static func workforce_action(size: Vector2, index: int) -> Rect2:
 # Simulation time controls sit in the shallow upper rail of the command dock.
 # They never collide with the nine primary navigation stations.
 static func time_control(size: Vector2, index: int) -> Rect2:
-	return Rect2(size.x-226.0+float(index)*53.0,size.y-BOTTOM_H+2.0,47.0,14.0)
+	return Rect2(size.x-256.0+float(index)*61.0,size.y-BOTTOM_H+2.0,55.0,16.0)
 
 # All workshop render regions are also the sole source of mouse hit tests.
 static func workshop_panel(size: Vector2) -> Rect2:
