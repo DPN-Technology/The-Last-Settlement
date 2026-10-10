@@ -68,6 +68,10 @@ static func region_team_control(size: Vector2, index: int) -> Rect2:
 		return Rect2(panel.position+Vector2(77.0,180.0),Vector2(55.0,29.0))
 	return Rect2(panel.position+Vector2(139.0,180.0),Vector2(panel.size.x-155.0,29.0))
 
+static func region_recall_rect(size: Vector2, row: int) -> Rect2:
+	var panel := side_panel(size,372.0)
+	return Rect2(panel.position+Vector2(panel.size.x-106.0,349.0+float(row)*48.0),Vector2(89.0,25.0))
+
 static func region_dispatch_rect(size: Vector2) -> Rect2:
 	var panel := side_panel(size,372.0)
 	return Rect2(panel.position+Vector2(16.0,278.0),Vector2(panel.size.x-32.0,34.0))
