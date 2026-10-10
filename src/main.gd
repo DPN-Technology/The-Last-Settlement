@@ -939,6 +939,11 @@ func _draw_ui_panel(rect: Rect2, edge: Color) -> void:
 	draw_line(rect.position+Vector2(8,10),rect.position+Vector2(22,10),Color("#da5756",0.76),2)
 	draw_rect(Rect2(rect.end-Vector2(10,10),Vector2(5,5)),Color(edge,0.85))
 
+func _display_settlement_name() -> String:
+	# Old saves may contain internal SITE-01 tags. Only present the readable
+	# name without rewriting the original persisted value.
+	return str(sim.settlement_name).split(" // ")[0].to_lower().capitalize()
+
 func _draw_hud() -> void:
 	var vp := get_viewport_rect().size
 	var top_h := SettlementUILayout.TOP_H
@@ -953,7 +958,7 @@ func _draw_hud() -> void:
 	draw_rect(badge,ACCENT,false,1.0)
 	draw_string(ThemeDB.fallback_font,badge.position+Vector2(5,21),"DPN",HORIZONTAL_ALIGNMENT_LEFT,27,10,TEXT)
 	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,21),"THE LAST SETTLEMENT" if vp.x>=1000 else "LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,16 if vp.x>=1000 else 12,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % sim.settlement_name if vp.x>=1000 else "Overview ›",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(43,37),"%s  •  Overview ›" % _display_settlement_name() if vp.x>=1000 else "Overview ›",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-47,10,GOOD if is_hovered else MUTED)
 	if is_hovered:
 		draw_line(Vector2(identity.position.x+44,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),GOOD,1.0)
 
@@ -996,7 +1001,7 @@ func _draw_hud() -> void:
 	var attention := _settlement_attention()
 	draw_string(ThemeDB.fallback_font,Vector2(vp.x-152,69),str(attention[0]),HORIZONTAL_ALIGNMENT_RIGHT,138,10,Color(attention[1]))
 
-	if selected_citizen.is_empty() and selected_building.is_empty():
+	if selected_citizen.is_empty() and selected_building.is_empty() and not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and not help_mode and not update_mode:
 		if incident_panel_visible:
 			_draw_event_panel()
 		else:
@@ -1004,7 +1009,12 @@ func _draw_hud() -> void:
 
 	var status := "PAUSED" if sim.paused else ("RUNNING x%.0f" % sim.speed)
 	var hint := "DRAG PAN  •  ALT+DRAG ORBIT  •  SCROLL ZOOM  •  SPACE PAUSE  •  F8 SCREENSHOT"
-	if build_mode:
+	var hover_help := ["Build real structures", "Select sites and dispatch salvage teams", "Set laws for your people", "Trade and manage production", "Talk to discovered neighbors", "Manage regional expansion", "Save your progress", "Load your progress", "Learn how to play"]
+	for index in range(TOOLBAR_NAMES.size()):
+		if SettlementUILayout.navbar_rect(vp,index).has_point(get_local_mouse_position()):
+			hint = hover_help[index]
+			break
+	if build_mode and not SettlementUILayout.navbar_rect(vp,0).has_point(get_local_mouse_position()):
 		var definition := sim.get_build_catalog()[build_catalog_index]
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
 	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#081015f0"))
@@ -1063,7 +1073,7 @@ func _draw_overview() -> void:
 	var full_width := area.size.x-34.0
 	var top := area.position.y
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+29),"YOUR SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,full_width,17,TEXT)
-	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % sim.settlement_name,HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+49),"%s  •  Home base" % _display_settlement_name(),HORIZONTAL_ALIGNMENT_LEFT,full_width,11,GOOD)
 	draw_string(ThemeDB.fallback_font,Vector2(left,top+68),"Day %d   |   %02d:%02d   |   %s" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),"Paused" if sim.paused else "Simulation running"],HORIZONTAL_ALIGNMENT_LEFT,full_width,11,MUTED)
 	draw_line(Vector2(left,top+79),Vector2(area.end.x-17,top+79),Color("#41575e"),1.0)
 	var complete := 0
@@ -1302,14 +1312,7 @@ func _draw_toolbar() -> void:
 			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-3),Vector2(rect.size.x-6,3)),ACCENT)
 		elif hovered:
 			draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-2),Vector2(rect.size.x-6,2)),GOOD)
-	if current>=0:
-		var hovered_rect := SettlementUILayout.navbar_rect(vp,current)
-		var left := clampf(hovered_rect.position.x,8.0,maxf(8.0,vp.x-308))
-		var tip := Rect2(left,vp.y-90.0,304.0,28.0)
-		draw_rect(tip,Color("#0d1e27fa"))
-		draw_rect(tip,Color("#71929c"),false,1)
-		draw_rect(Rect2(tip.position,Vector2(3,tip.size.y)),ACCENT)
-		draw_string(ThemeDB.fallback_font,tip.position+Vector2(11,18),descriptions[current],HORIZONTAL_ALIGNMENT_LEFT,tip.size.x-21,11,TEXT)
+	# Tooltips live inside the dock status rail, never over the 3D world.
 
 func _handle_toolbar_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
