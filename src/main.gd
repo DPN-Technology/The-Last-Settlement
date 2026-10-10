@@ -1236,7 +1236,6 @@ func _draw_hud() -> void:
 		else:
 			_draw_event_toasts()
 
-	var status := "PAUSED" if sim.paused else ("RUNNING x%.0f" % sim.speed)
 	var hint := "DRAG PAN  •  ALT+DRAG ORBIT  •  SCROLL ZOOM  •  SPACE PAUSE  •  F8 SCREENSHOT"
 	var hover_help := ["Build real structures", "Select sites and dispatch salvage teams", "Set laws for your people", "Trade and manage production", "Talk to discovered neighbors", "Manage regional expansion", "Save your progress", "Load your progress", "Learn how to play"]
 	for index in range(TOOLBAR_NAMES.size()):
@@ -1248,8 +1247,8 @@ func _draw_hud() -> void:
 		hint = "BUILDING %s  •  Q/E SELECT  •  F ROTATE  •  CLICK TO PLACE" % str(definition["name"]).to_upper()
 	draw_rect(Rect2(0,vp.y-SettlementUILayout.BOTTOM_H,vp.x,SettlementUILayout.BOTTOM_H),Color("#081015f0"))
 	draw_line(Vector2(0,vp.y-SettlementUILayout.BOTTOM_H),Vector2(vp.x,vp.y-SettlementUILayout.BOTTOM_H),Color("#54646b"),1)
-	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-46),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-126,10,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(vp.x-111,vp.y-46),status,HORIZONTAL_ALIGNMENT_RIGHT,97,10,WARN if sim.paused else GOOD)
+	draw_string(ThemeDB.fallback_font,Vector2(13,vp.y-46),hint,HORIZONTAL_ALIGNMENT_LEFT,vp.x-255,10,MUTED)
+	_draw_time_controls()
 	_draw_toolbar()
 	if hovered >= 0:
 		var source: Array = resources[hovered]
@@ -1529,8 +1528,18 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
 	# The actual warning strip is also interactive: power shortage opens a
 	# generator blueprint; the player never has to guess which menu to use.
-	if Rect2(vp.x-158,54.0,154.0,24.0).has_point(position) and str(_settlement_attention()[0])=="POWER SHORTFALL":
-		_open_building_from_status("generator")
+	if Rect2(vp.x-158,54.0,154.0,24.0).has_point(position):
+		match str(_settlement_attention()[0]):
+			"CHECK WATER":
+				_open_building_from_status("purifier")
+			"CHECK FOOD":
+				_open_building_from_status("farm")
+			"POWER SHORTFALL":
+				_open_building_from_status("generator")
+			"NO SURVIVORS":
+				_toggle_workforce()
+			_:
+				return false
 		return true
 	var cards := SettlementUILayout.resource_rects(vp)
 	for i in range(cards.size()):
@@ -1550,6 +1559,30 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 			5:
 				if not governance_mode:
 					_handle_toolbar_click(SettlementUILayout.navbar_rect(vp,2).get_center())
+		return true
+	return false
+
+func _draw_time_controls() -> void:
+	var vp := get_viewport_rect().size
+	var labels := ["RESUME" if sim.paused else "PAUSE","1x","4x","12x"]
+	for i in range(4):
+		var rect := SettlementUILayout.time_control(vp,i)
+		var active := (i==0 and sim.paused) or (i>0 and not sim.paused and is_equal_approx(sim.speed,[0.0,1.0,4.0,12.0][i]))
+		var hover := rect.has_point(get_local_mouse_position())
+		draw_rect(rect,Color("#6b2b34") if active else (Color("#33474d") if hover else Color("#1a2d34")))
+		draw_rect(rect,ACCENT if active else Color("#59717c"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(5,11),str(labels[i]),HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-7,9,GOOD if active else TEXT)
+
+func _handle_time_control_click(position: Vector2) -> bool:
+	var vp := get_viewport_rect().size
+	for i in range(4):
+		if not SettlementUILayout.time_control(vp,i).has_point(position):
+			continue
+		if i==0:
+			sim.paused=not sim.paused
+		else:
+			sim.speed=[0.0,1.0,4.0,12.0][i]
+			sim.paused=false
 		return true
 	return false
 
@@ -2249,6 +2282,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if _handle_toolbar_click(event.position):
 				overview_visible = false
+				return
+			if _handle_time_control_click(event.position):
 				return
 			if workforce_mode:
 				_handle_workforce_click(event.position)
