@@ -1,3 +1,9 @@
+# GOVERNANCE: POLICY OUTCOME PREVIEW
+
+The Governance page now shows the **current law, next proposed law, projected average citizen-loyalty change, and number of residents whose loyalty would fall**. These values come from a side-effect-free calculation using the same reactions as the actual `CHANGE` action. The preview does not change the active law, write a save, or consume resources. Clicking `CHANGE` continues to apply the actual law and publishes an event. Test all five laws (Rationing, Security, Labor, Justice, Speech), compare the proposed option to the new current option after a change, and verify the predicted loyalty reaction matches the actual change. The automated smoke checks this end-to-end for Speech.
+
+---
+
 # INCIDENT CHANNEL & COMMAND MENU INPUT FIX — ISSUE #10
 
 The player confirmed that the persistent red-line issue #9 is **fixed** in the Windows build containing the cached DPN raster controls. Issue #9 is closed from that player confirmation. The new issue **#10** addresses the unresponsive, oversized Settlement Incident Channel and basic command-screen usability.
