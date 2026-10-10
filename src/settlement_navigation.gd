@@ -1,9 +1,10 @@
 class_name SettlementNavigation
 extends RefCounted
 
-# World-plane movement for the current exterior-only settlement prototype.
-# Buildings are obstacles; survivors approach exterior front-door steps.
-# This intentionally does NOT claim accessible interiors or a NavMesh3D.
+# World-plane navigation with exclusive door transitions into playable facility interiors.
+# Exterior routes still treat buildings as solid. Only an actor that reached a
+# specific door threshold can temporarily exclude that building's footprint.
+# Furniture collisions and full NavMesh3D are future issue #8 stages.
 const CLEARANCE := 6.0
 const CORNER_MARGIN := 1.6
 const MAX_NODES := 100
@@ -156,3 +157,40 @@ static func route(origin: Vector2, destination: Vector2, buildings: Array[Dictio
 
 static func valid_step(origin: Vector2, destination: Vector2, buildings: Array[Dictionary]) -> bool:
 	return _visible(origin,destination,collision_rects(buildings))
+
+# No save data is added: door metadata is derived from footprint and stable ID.
+static func building_key(building: Dictionary) -> String:
+	return "%s|%s|%s|%s" % [str(building.get("type","")),str(building.get("name","")),str(building.get("position",Vector2.ZERO)),str(building.get("size",Vector2.ZERO))]
+
+static func access_points(building: Dictionary, citizen_id: int) -> Dictionary:
+	var center := Vector2(building["position"])
+	var size := Vector2(building["size"])
+	var threshold := center+Vector2(0.0,-size.y*0.5)
+	var col := posmod(citizen_id,3)-1
+	var row := posmod(int(floor(float(citizen_id)/3.0)),3)
+	# 3x3 work positions sit clear of the door's center aisle and of walls.
+	var work := center+Vector2(float(col)*size.x*0.28,(-0.10+float(row)*0.17)*size.y)
+	return {
+		"key":building_key(building),
+		"outside":exterior_entry(building),
+		"threshold":threshold,
+		"arrival":center+Vector2(0.0,-size.y*0.5+minf(20.0,size.y*0.25)),
+		"work":work
+	}
+
+static func without_building(buildings: Array[Dictionary], access_building: Dictionary) -> Array[Dictionary]:
+	var filtered: Array[Dictionary]=[]
+	var exempt := building_key(access_building)
+	for building in buildings:
+		if building_key(building)!=exempt:
+			filtered.append(building)
+	return filtered
+
+static func doorway_segment_allowed(from: Vector2, to: Vector2, building: Dictionary, others: Array[Dictionary]) -> bool:
+	# The only legitimate crossing is the front opening, aligned with -Y.
+	var door_x := Vector2(building["position"]).x
+	if absf(from.x-door_x)>11.5 or absf(to.x-door_x)>11.5:
+		return false
+	if to.y<from.y and from.y>Vector2(building["position"]).y:
+		return false
+	return valid_step(from,to,without_building(others,building))

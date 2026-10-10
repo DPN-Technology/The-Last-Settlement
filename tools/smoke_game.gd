@@ -327,6 +327,66 @@ func _smoke() -> void:
 		push_error("SMOKE: Outdoor farm workers cannot reach farm rows")
 		quit(1)
 		return
+	# Door access has separate stages; exterior geometry remains impenetrable
+	# except while the assigned actor crosses its specific entrance.
+	var access := SettlementNavigation.access_points(test_buildings[0],4)
+	if Vector2(access["outside"]).distance_to(Vector2(access["threshold"]))<5.0:
+		push_error("SMOKE: Door approach and entrance are indistinguishable")
+		quit(1)
+		return
+	var work_pos := Vector2(access["work"])
+	var inside_bounds := Rect2(Vector2(test_buildings[0]["position"])-Vector2(test_buildings[0]["size"])*0.5,Vector2(test_buildings[0]["size"]))
+	if not inside_bounds.has_point(work_pos):
+		push_error("SMOKE: Work position is not inside the facility")
+		quit(1)
+		return
+	if SettlementNavigation.access_points(test_buildings[0],5)["work"]==access["work"]:
+		push_error("SMOKE: Indoor stations overlap for adjacent workers")
+		quit(1)
+		return
+	var door_obstacles := SettlementNavigation.without_building(test_buildings,test_buildings[0])
+	if not SettlementNavigation.valid_step(Vector2(access["outside"]),Vector2(access["threshold"]),door_obstacles):
+		push_error("SMOKE: Assigned doorway cannot be traversed")
+		quit(1)
+		return
+	if SettlementNavigation.valid_step(Vector2(access["outside"]),Vector2(access["work"]),test_buildings):
+		push_error("SMOKE: General exterior navigation incorrectly permits wall clipping")
+		quit(1)
+		return
+	var visit_citizen: Dictionary=sim.get_settlement_citizens()[0]
+	var original_position: Vector2=Vector2(visit_citizen["position"])
+	var visit_building: Dictionary=sim.get_building_by_type("medical")
+	visit_citizen["position"]=SettlementNavigation.exterior_entry(visit_building)
+	visit_citizen["target_building"]="medical"
+	instance.interior_visits.erase(int(visit_citizen["id"]))
+	for tick in range(45):
+		instance._visit_facility(visit_citizen,visit_building,8.0)
+	if not instance.interior_visits.has(int(visit_citizen["id"])) or str(instance.interior_visits[int(visit_citizen["id"])]["phase"])!="AT_WORK":
+		push_error("SMOKE: Medical survivor never entered work room")
+		quit(1)
+		return
+	if not Rect2(Vector2(visit_building["position"])-Vector2(visit_building["size"])*0.5,Vector2(visit_building["size"])).has_point(Vector2(visit_citizen["position"])):
+		push_error("SMOKE: Medical survivor never appeared within interior")
+		quit(1)
+		return
+	var evacuated := false
+	for tick in range(45):
+		if not instance._leave_facility(visit_citizen,8.0):
+			evacuated=true
+			break
+	if not evacuated:
+		# The finishing tick may still report handled so callers do not
+		# issue an unintended second movement operation.
+		evacuated=not instance.interior_visits.has(int(visit_citizen["id"]))
+	if not evacuated or SettlementNavigation.collision_rects([visit_building])[0].has_point(Vector2(visit_citizen["position"])):
+		push_error("SMOKE: Survivor cannot leave the assigned facility through door")
+		quit(1)
+		return
+	visit_citizen["position"]=original_position
+	visit_citizen["target"]=Vector2.ZERO
+	visit_citizen["target_building"]=""
+	instance.interior_visits.clear()
+	instance.citizen_paths.clear()
 	# Facility management is a real repair work-order and a two-step
 	# demolition transaction, never one accidental click through a panel.
 	var repair_fixture: Dictionary = {"name":"Smoke Maintenance Shed","type":"storage","position":Vector2(1960,940),"size":Vector2(100,80),"condition":48.0,"capacity":2}

@@ -128,6 +128,8 @@ func _process(delta: float) -> void:
 
 # Paths are transient gameplay state and must not expand the save schema.
 var citizen_paths: Dictionary = {}
+# Non-persistent occupant states: old saved games remain compatible.
+var interior_visits: Dictionary = {}
 var navigation_revision := ""
 
 func _navigation_layout_revision() -> String:
@@ -141,38 +143,128 @@ func _update_citizens(delta: float) -> void:
 	if navigation_revision != revision:
 		citizen_paths.clear()
 		navigation_revision = revision
+	var live_ids: Dictionary = {}
 	for c in sim.citizens:
 		if not c["alive"] or str(c.get("home_settlement","LAST_HAVEN")) != "LAST_HAVEN" or bool(c.get("on_expedition",false)):
 			continue
-		var original_position := Vector2(c["position"])
-		var safe_position := SettlementNavigation.resolve_walkable(original_position,sim.buildings)
-		if safe_position.distance_squared_to(original_position)>0.01:
-			c["position"]=safe_position
-			citizen_paths.erase(int(c["id"]))
+		var ident := int(c["id"])
+		live_ids[ident]=true
+		var stride := 25.0*delta*maxf(0.5,sim.speed)
+		# Only exterior citizens are projected out of solid footprints. Indoor
+		# occupants are intentionally inside their *own* assigned facility.
+		if not interior_visits.has(ident):
+			var original_position := Vector2(c["position"])
+			var safe_position := SettlementNavigation.resolve_walkable(original_position,sim.buildings)
+			if safe_position.distance_squared_to(original_position)>0.01:
+				c["position"]=safe_position
+				citizen_paths.erase(ident)
 		var blueprint_id := int(c.get("target_blueprint_id",0))
 		if blueprint_id>0:
 			var blueprint := sim.get_blueprint_by_id(blueprint_id)
 			if not blueprint.is_empty():
-				c["target"] = blueprint["position"]
-				_move_citizen_safely(c,25.0*delta*maxf(0.5,sim.speed))
+				if _leave_facility(c,stride):
+					continue
+				c["target"]=Vector2(blueprint["position"])
+				_move_citizen_safely(c,stride)
 				continue
+		var type_name := str(c.get("target_building",""))
+		var building: Dictionary = {}
+		if type_name!="":
+			for candidate in sim.buildings:
+				if str(candidate.get("type",""))==type_name:
+					building=candidate
+					break
+		if not building.is_empty() and SettlementNavigation._is_solid(building):
+			var active: Dictionary=interior_visits.get(ident,{})
+			if not active.is_empty() and str(active.get("key",""))!=SettlementNavigation.building_key(building):
+				_leave_facility(c,stride)
+				continue
+			_visit_facility(c,building,stride)
+			continue
+		if _leave_facility(c,stride):
+			continue
 		if c["target"] == Vector2.ZERO or Vector2(c["position"]).distance_to(Vector2(c["target"]))<8.0:
-			var building := sim.get_building_by_type(str(c.get("target_building","")))
-			if not building.is_empty():
-				if str(building["type"])=="farm":
-					c["target"] = Vector2(building["position"])+Vector2(
-						sim.rng.randf_range(-float(building["size"].x)*0.34,float(building["size"].x)*0.34),
-						sim.rng.randf_range(-float(building["size"].y)*0.28,float(building["size"].y)*0.28)
-					)
-				else:
-					# Approach the visible door from outside until interiors
-					# have their own traversal and cutaway representation.
-					c["target"] = SettlementNavigation.exterior_entry(building)
+			if not building.is_empty() and str(building["type"])=="farm":
+				c["target"] = Vector2(building["position"])+Vector2(
+					sim.rng.randf_range(-float(building["size"].x)*0.34,float(building["size"].x)*0.34),
+					sim.rng.randf_range(-float(building["size"].y)*0.28,float(building["size"].y)*0.28)
+				)
 			else:
-				c["target"] = Vector2(c["position"])
-		_move_citizen_safely(c,25.0*delta*maxf(0.5,sim.speed))
+				c["target"]=Vector2(c["position"])
+		_move_citizen_safely(c,stride)
+	for ident in interior_visits.keys():
+		if not live_ids.has(ident):
+			interior_visits.erase(ident)
+			citizen_paths.erase(ident)
 
-func _move_citizen_safely(c: Dictionary, distance: float) -> void:
+func _visit_facility(c: Dictionary, building: Dictionary, stride: float) -> void:
+	var ident := int(c["id"])
+	var points := SettlementNavigation.access_points(building,ident)
+	var state: Dictionary=interior_visits.get(ident,{})
+	if state.is_empty():
+		state={"key":str(points["key"]),"building":building,"phase":"APPROACH"}
+	var phase := str(state["phase"])
+	match phase:
+		"APPROACH":
+			# Full obstacle avoidance until the survivor reaches the steps.
+			c["target"]=points["outside"]
+			_move_citizen_safely(c,stride)
+			if Vector2(c["position"]).distance_to(points["outside"])<=1.5:
+				state["phase"]="CROSS"
+				citizen_paths.erase(ident)
+		"CROSS":
+			# Only the front door's building is exempt from the wall blockers.
+			c["target"]=points["threshold"]
+			_move_citizen_safely(c,stride,building)
+			if Vector2(c["position"]).distance_to(points["threshold"])<=1.5:
+				state["phase"]="ENTER"
+				citizen_paths.erase(ident)
+		"ENTER":
+			c["target"]=points["arrival"]
+			_move_citizen_safely(c,stride,building)
+			if Vector2(c["position"]).distance_to(points["arrival"])<=1.5:
+				state["phase"]="AT_WORK"
+				citizen_paths.erase(ident)
+		"AT_WORK":
+			c["target"]=points["work"]
+			_move_citizen_safely(c,stride,building)
+	interior_visits[ident]=state
+
+# Returns true while leaving (caller must not send an indoor actor directly
+# toward another structure / blueprint through a wall).
+func _leave_facility(c: Dictionary, stride: float) -> bool:
+	var ident := int(c["id"])
+	if not interior_visits.has(ident):
+		return false
+	var state: Dictionary=interior_visits[ident]
+	var phase := str(state["phase"])
+	if phase=="APPROACH":
+		interior_visits.erase(ident)
+		citizen_paths.erase(ident)
+		return false
+	var building: Dictionary=state["building"]
+	var points := SettlementNavigation.access_points(building,ident)
+	if phase not in ["RETURN_DOOR","EXIT"]:
+		state["phase"]="RETURN_DOOR"
+		citizen_paths.erase(ident)
+	if str(state["phase"])=="RETURN_DOOR":
+		c["target"]=points["threshold"]
+		_move_citizen_safely(c,stride,building)
+		if Vector2(c["position"]).distance_to(points["threshold"])<=1.5:
+			state["phase"]="EXIT"
+			citizen_paths.erase(ident)
+	else:
+		c["target"]=points["outside"]
+		_move_citizen_safely(c,stride,building)
+		if Vector2(c["position"]).distance_to(points["outside"])<=1.5:
+			interior_visits.erase(ident)
+			citizen_paths.erase(ident)
+			c["target"]=Vector2.ZERO
+			return true
+	interior_visits[ident]=state
+	return true
+
+func _move_citizen_safely(c: Dictionary, distance: float, access_building: Dictionary = {}) -> void:
 	var ident := int(c["id"])
 	var position := Vector2(c["position"])
 	var goal := Vector2(c["target"])
@@ -180,12 +272,14 @@ func _move_citizen_safely(c: Dictionary, distance: float) -> void:
 		citizen_paths.erase(ident)
 		return
 	var state: Dictionary = citizen_paths.get(ident,{})
-	if state.is_empty() or Vector2(state.get("goal",Vector2.ZERO)).distance_to(goal)>2.0:
-		var waypoints := SettlementNavigation.route(position,goal,sim.buildings)
+	var skip_key := "" if access_building.is_empty() else SettlementNavigation.building_key(access_building)
+	var obstacles: Array[Dictionary]=sim.buildings if access_building.is_empty() else SettlementNavigation.without_building(sim.buildings,access_building)
+	if state.is_empty() or str(state.get("skip_key",""))!=skip_key or Vector2(state.get("goal",Vector2.ZERO)).distance_to(goal)>2.0:
+		var waypoints := SettlementNavigation.route(position,goal,obstacles)
 		if waypoints.is_empty():
 			citizen_paths.erase(ident)
 			return
-		state={"goal":goal,"points":waypoints,"index":0}
+		state={"goal":goal,"points":waypoints,"index":0,"skip_key":skip_key}
 		citizen_paths[ident]=state
 	var points: PackedVector2Array = state["points"]
 	var index := int(state["index"])
@@ -194,7 +288,7 @@ func _move_citizen_safely(c: Dictionary, distance: float) -> void:
 		index+=1
 	if index<points.size():
 		var step := position.move_toward(points[index],distance)
-		if SettlementNavigation.valid_step(position,step,sim.buildings):
+		if SettlementNavigation.valid_step(position,step,obstacles):
 			position=step
 		else:
 			# Buildings may have appeared since route selection. Re-evaluate
