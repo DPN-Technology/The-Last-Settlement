@@ -1447,7 +1447,7 @@ func _smoke() -> void:
 			return
 		var crown_count := 0
 		for leaf in node.get_children():
-			if leaf.name=="IrregularFoliageCluster":
+			if str(leaf.name).begins_with("IrregularFoliageCluster_"):
 				crown_count+=1
 		if crown_count<10:
 			push_error("SMOKE: distant trees regressed to three green balls")

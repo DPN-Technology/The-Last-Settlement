@@ -442,7 +442,7 @@ func _tree(point: Vector3, scale: float) -> void:
 		var y: float=rng.randf_range(3.0,4.6)
 		var at := Vector3(cos(angle)*reach*0.47,y,sin(angle)*reach*0.47)
 		var woody := _cylinder(branch,at,0.115,reach*1.05,materials["rust"],0.045)
-		woody.name="AngledCrownBranch"
+		woody.name="AngledCrownBranch_"+str(limb)
 		woody.rotation.z=sin(angle)*0.68
 		woody.rotation.x=cos(angle)*0.68
 	# Branch silhouettes are not replaced by a few identical round spheres.
@@ -451,7 +451,7 @@ func _tree(point: Vector3, scale: float) -> void:
 		var spread: float=rng.randf_range(0.45,2.30)
 		var y: float=rng.randf_range(3.35,5.55)
 		var leaf := MeshInstance3D.new()
-		leaf.name="IrregularFoliageCluster"
+		leaf.name="IrregularFoliageCluster_"+str(tuft)
 		leaf.mesh=foliage_mesh
 		leaf.position=Vector3(cos(bearing)*spread,y,sin(bearing)*spread)
 		leaf.rotation_degrees=Vector3(rng.randf_range(-18.0,18.0),rng.randf_range(0.0,180.0),rng.randf_range(-18.0,18.0))
