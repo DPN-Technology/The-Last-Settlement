@@ -151,6 +151,14 @@ static func workforce_job(size: Vector2, index: int) -> Rect2:
 	var unit := (panel.size.x-39.0-gap*3.0)/4.0
 	return Rect2(panel.position+Vector2(16.0+float(index%4)*(unit+gap),panel.size.y-158.0+float(int(index/4))*35.0),Vector2(unit,30))
 
+# Workforce shift and active-duty controls live between role selection and page
+# navigation, using the same hitboxes for render and mouse dispatch.
+static func workforce_duty_control(size: Vector2, index: int) -> Rect2:
+	var panel := workforce_panel(size)
+	var gap := 8.0
+	var width := (panel.size.x-40.0-gap)*0.5
+	return Rect2(panel.position+Vector2(16.0+float(index)*(width+gap),panel.size.y-90.0),Vector2(width,27.0))
+
 static func workforce_action(size: Vector2, index: int) -> Rect2:
 	var panel := workforce_panel(size)
 	var gap := 8.0
