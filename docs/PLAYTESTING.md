@@ -1,3 +1,15 @@
+# Workforce Command and Live Timeline — PR #6 playtest
+
+**This is a development-branch feature, not part of the installed stable v1.0.5 build.**
+
+The **PEOPLE** metric in the top HUD, or **F6**, opens a new Workforce Command overlay. The panel lists the current Last Haven population, shows each resident's job, shift and duty status, and has **Previous Page / Next Page** buttons for longer rosters. Click a person, then click one of eight actual production roles (Farmer, Engineer, Builder, Medic, Scavenger, Guard, Cook, Hauler). A successful change updates the survivor's simulation job immediately. Reassignment releases any blueprint previously claimed by a Builder. The panel deliberately rejects jobs for children, away teams, and unchanged assignments; it does not introduce new fictional simulation mechanics.
+
+The thin bottom information rail now contains **PAUSE/RESUME, 1x, 4x and 12x** mouse controls above the nine command stations. Clicking a speed resumes play at that selected rate. Keyboard Space, 1, 2 and 3 still work. Clicking a **CHECK FOOD**, **CHECK WATER**, or **POWER SHORTFALL** alert in the top-right HUD opens a real farm, purifier, or generator blueprint, respectively.
+
+**Windows checks:** Open Workforce from PEOPLE and F6; select the last survivor on page 2, reassign them to a new job and confirm the displayed role updates; verify work behavior changes with time running. Click PAUSE, then 4x, and verify the simulation resumes at 4x. Trigger a food/water shortage with an existing save and click its warning to reach an actual building placement. Confirm no input passes through the personnel panel to the 3D world and the modal remains fully on screen at both 960×720 and 1366×768. Capture F8 screenshots and use F9 for a local diagnostic report. The headless CI smoke validates state, hit targets, and transactions but cannot replace Windows visual acceptance.
+
+---
+
 ## New players: understanding Last Haven
 
 **The Last Settlement** is the game's title. **Last Haven** is the name of the settlement you're controlling. The earlier words "Recovery Network" and "Site-01" were internal project labels, not useful gameplay instructions, so they are gone from the player-facing header.
