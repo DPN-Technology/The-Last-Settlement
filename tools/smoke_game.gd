@@ -442,6 +442,37 @@ func _smoke() -> void:
 		push_error("SMOKE: Rejected mission spent supplies")
 		quit(1)
 		return
+	# Mid-route recall must reverse the real team, preserve supplies and
+	# return from its actual position, not teleport to the destination.
+	var departure_distance: float=float(launched["distance"])
+	launched["progress"]=departure_distance*0.32
+	var expected_backtrack: float=float(launched["progress"])
+	if not instance._handle_region_click(SettlementUILayout.region_recall_rect(screen,0).get_center()):
+		push_error("SMOKE: Region recall click is not consumed")
+		quit(1)
+		return
+	if str(launched["status"])!="returning" or not bool(launched.get("recalled",false)) or not is_equal_approx(float(launched.get("return_distance",0.0)),expected_backtrack):
+		push_error("SMOKE: Mission recall did not reverse at the team's real location")
+		quit(1)
+		return
+	if sim.world_simulation.recall_expedition(sim,int(launched["id"])):
+		push_error("SMOKE: Returning mission incorrectly accepts duplicate recall")
+		quit(1)
+		return
+	if not is_equal_approx(float(sim.stockpiles["command"]["meals"]),last_meals):
+		push_error("SMOKE: Recall incorrectly refunded consumed provisions")
+		quit(1)
+		return
+	sim.world_simulation._update_returning(sim,launched,expected_backtrack/float(launched["travel_speed"])+0.1)
+	if str(launched["status"])!="returned":
+		push_error("SMOKE: Recalled team cannot finish its shorter return path")
+		quit(1)
+		return
+	for scout_id in launched["members"]:
+		if bool(sim.get_citizen_by_id(int(scout_id)).get("on_expedition",false)):
+			push_error("SMOKE: Recalled survivor remains locked on expedition")
+			quit(1)
+			return
 	if not bool(sim.field_objectives.get("expedition",false)):
 		push_error("SMOKE: Salvage expedition did not advance campaign objectives")
 		quit(1)
@@ -997,6 +1028,6 @@ func _smoke() -> void:
 			return
 	instance.help_mode=false
 	instance.civilization_mode=false
-	print("PLAYTEST SMOKE PASS: planned regional missions, crew costs, workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
+	print("PLAYTEST SMOKE PASS: controllable expedition recall, planned regional missions, crew costs, workforce reassignment, collision-aware exterior navigation, safe facility repairs/salvage, interactive guide, factions, nation, 3D rigs, and save/load")
 	instance.queue_free()
 	quit(0)
