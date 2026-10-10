@@ -610,7 +610,8 @@ func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> 
 		person.position = target
 		if traveling:
 			person.rotation.y = atan2(person.position.x-previous.x,person.position.z-previous.z)
-		_animate_survivor(person, traveling, int(citizen["id"]))
+		_animate_survivor(person, traveling, int(citizen["id"]), citizen, sim.paused)
+		SettlementActivity3D.update(person,citizen,traveling,sim.paused,visual_time)
 		var ring: Node3D = person.get_node("Selection")
 		ring.visible = selected_citizen == citizen
 	for id in people.keys():
@@ -645,6 +646,7 @@ func _make_survivor(c: Dictionary) -> Node3D:
 		outline.position = Vector3(0, 0.055, 0)
 		art_selection.add_child(outline)
 		art_selection.visible = false
+		SettlementActivity3D.attach(person,materials)
 		return person
 	SettlementDetailArt3D.create_survivor(person, c, materials)
 	var select := Node3D.new()
@@ -661,6 +663,7 @@ func _make_survivor(c: Dictionary) -> Node3D:
 	selected_ring.position = Vector3(0, 0.07, 0)
 	select.add_child(selected_ring)
 	select.visible = false
+	SettlementActivity3D.attach(person,materials)
 	return person
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
@@ -694,21 +697,25 @@ func _animate_imported_survivor(person: Node3D, traveling: bool) -> void:
 	if not chosen.is_empty() and player.current_animation != chosen:
 		player.play(chosen, 0.2)
 
-func _animate_survivor(person: Node3D, traveling: bool, id: int) -> void:
+func _animate_survivor(person: Node3D, traveling: bool, id: int, citizen: Dictionary, paused: bool) -> void:
 	if not person.has_node("ArmLeft"):
 		_animate_imported_survivor(person, traveling)
 		return
 	var stride := 0.0
 	if traveling:
 		stride = sin(visual_time * 7.5 + float(id) * 0.68) * 0.44
+	elif not paused and SettlementActivity3D.current_activity(citizen)!="":
+		# Low amplitude hand-work cycle for the procedural rig; unlike walking,
+		# legs remain planted while harvesting, carrying, treating or crafting.
+		stride = sin(visual_time * 3.0 + float(id) * 0.68) * 0.19
 	var left_arm := person.get_node("ArmLeft") as Node3D
 	var right_arm := person.get_node("ArmRight") as Node3D
 	var left_leg := person.get_node("LegLeft") as Node3D
 	var right_leg := person.get_node("LegRight") as Node3D
 	left_arm.rotation.x = stride
 	right_arm.rotation.x = -stride
-	left_leg.rotation.x = -stride * 0.60
-	right_leg.rotation.x = stride * 0.60
+	left_leg.rotation.x = -stride * 0.60 if traveling else 0.0
+	right_leg.rotation.x = stride * 0.60 if traveling else 0.0
 	person.position.y = absf(stride) * 0.12 if traveling else 0.0
 
 func _animate_machinery(delta: float, active: bool) -> void:
