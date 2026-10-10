@@ -1506,6 +1506,14 @@ func _smoke() -> void:
 		push_error("SMOKE: F2 console has no reachable close icon")
 		quit(1)
 		return
+	for compact in [Vector2(960,600),Vector2(960,720),Vector2(1280,720),Vector2(1920,1080)]:
+		var console := SettlementIncidentUI.panel_rect(compact)
+		var last_visible := SettlementIncidentUI.row_rect(compact,SettlementIncidentUI.visible_rows(compact)-1)
+		var details := SettlementIncidentUI.details_rect(compact)
+		if not console.encloses(last_visible) or last_visible.end.y>=details.position.y or details.end.y>=SettlementIncidentUI.action_rect(compact,0).position.y:
+			push_error("SMOKE: Incident records overlap details/actions on "+str(compact))
+			quit(1)
+			return
 	for i in range(4):
 		if not incident_frame.encloses(SettlementIncidentUI.tab_rect(incident_screen,i)) or not incident_frame.encloses(SettlementIncidentUI.action_rect(incident_screen,i)):
 			push_error("SMOKE: Responsive incident control falls outside visible command panel")
