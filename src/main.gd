@@ -1525,16 +1525,11 @@ func _draw_governance_panel() -> void:
 		draw_string(ThemeDB.fallback_font,row.position+Vector2(10,18),law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,146,11,TEXT)
 		draw_string(ThemeDB.fallback_font,Vector2(row.position.x+150,row.position.y+18),str(gov.laws[law]),HORIZONTAL_ALIGNMENT_RIGHT,row.size.x-164,11,GOOD if active else MUTED)
 	var selected_law := str(GOVERNANCE_LAWS[governance_law_index])
-	var help_text := {
-		"rationing":"Food policy affects survivors' daily lives.",
-		"security":"Sets how strictly the community is protected.",
-		"labor":"Changes expectations for work and service.",
-		"justice":"Sets the approach to resolving offenses.",
-		"speech":"Shapes residents' freedom to voice concerns."
-	}
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+423),"SELECTED  /  "+selected_law.capitalize(),HORIZONTAL_ALIGNMENT_LEFT,w-40,11,WARN)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+443),str(help_text[selected_law]),HORIZONTAL_ALIGNMENT_LEFT,w-40,10,MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+462),"Change law applies real citizen opinion effects.",HORIZONTAL_ALIGNMENT_LEFT,w-40,10,GOOD)
+	var policy_preview: Dictionary=gov.preview_next_law(sim,selected_law)
+	var delta: float=float(policy_preview.get("loyalty_delta",0.0))
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+423),"POLICY REVIEW  /  "+selected_law.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,w-40,12,ACCENT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+443),"CURRENT: %s    >    PROPOSED: %s" % [str(policy_preview.get("current","")),str(policy_preview.get("proposed",""))],HORIZONTAL_ALIGNMENT_LEFT,w-40,12,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+463),"PROJECTED LOYALTY: %+.2f avg.  /  %d of %d residents negative" % [delta,int(policy_preview.get("negative_residents",0)),int(policy_preview.get("residents",0))],HORIZONTAL_ALIGNMENT_LEFT,w-40,11,GOOD if delta>=0 else WARN)
 	draw_string(ThemeDB.fallback_font,Vector2(x+20,y+485),"Unresolved justice cases: %d" % _open_case_count(),HORIZONTAL_ALIGNMENT_LEFT,w-40,11,MUTED)
 	# An actual council breakdown, based on survivor civic affiliations, fills
 	# the command canvas that used to be empty under the law list.
