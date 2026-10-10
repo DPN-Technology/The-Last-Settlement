@@ -150,8 +150,10 @@ static func nav_station(canvas: CanvasItem, rect: Rect2, index: int, label: Stri
 	var icon_color := RED if active else (TEXT if hover else Color("#aa8f96"))
 	canvas.draw_rect(Rect2(rect.position+Vector2(3,4),Vector2(2,rect.size.y-8)),RED if active else Color("#492631"))
 	nav_icon(canvas,rect.position+Vector2(8,rect.size.y*0.5-8),index,icon_color)
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(34,rect.size.y*0.5+5),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(10.0,rect.size.x-55.0),12,TEXT)
-	canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,10,RED if active else MUTED)
+	var compact := rect.size.x<112.0
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(34,rect.size.y*0.5+5),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(10.0,rect.size.x-(38.0 if compact else 55.0)),11 if compact else 12,TEXT)
+	if not compact:
+		canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,10,RED if active else MUTED)
 	if active:
 		canvas.draw_rect(Rect2(rect.position+Vector2(4,rect.size.y-3),Vector2(rect.size.x-8,3)),RED)
 		canvas.draw_rect(Rect2(rect.position+Vector2(7,3),Vector2(rect.size.x-14,2)),Color("#ff7280",0.68))
@@ -166,7 +168,7 @@ static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: St
 	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,rect.size.y-4)),severity)
 	canvas.draw_line(rect.position+Vector2(8,2),Vector2(rect.end.x-8,2),Color("#aa394d",0.50 if hover else 0.23),1.0)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),11,MUTED)
-	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,36),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),18,TEXT)
+	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,34),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),18,TEXT)
 	meter(canvas,Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(maxf(3.0,rect.size.x-14.0),3)),fraction,severity)
 	canvas.draw_circle(rect.position+Vector2(rect.size.x-10,10),2.2,severity)
 	if hover:
