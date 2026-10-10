@@ -30,6 +30,10 @@ var workforce_selected_id := 0
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var ui_animation_clock := 0.0
+# Issue #9: draw-pass isolation, 0 is normal playable UI.
+const UI_DIAGNOSTIC_PASSES := ["FULL","WORLD_COMPOSITE","HUD_ONLY","PANELS_ONLY","NO_WIDGETS","BARE_CANVAS"]
+var ui_diagnostic_pass := 0
+var ui_diagnostic_capture_active := false
 const UI_SCALE_LEVELS := [1.0,1.15,1.3]
 var ui_scale_index := 0
 var camera_offset := Vector2(-75, -34)
@@ -196,14 +200,31 @@ func _move_citizen_safely(c: Dictionary, distance: float) -> void:
 	c["position"]=position
 
 func _draw() -> void:
+	# Issue #9: these actual draw groups are intentional test inputs.
+	# A clean WORLD_COMPOSITE but dirty HUD_ONLY proves the HUD itself is
+	# introducing lines; clean HUD_ONLY but dirty FULL points to panel/widget
+	# passes. All game and simulation objects remain present and unchanged.
+	if ui_diagnostic_pass == 1:
+		_draw_world()
+		return
+	if ui_diagnostic_pass == 5:
+		_draw_world()
+		draw_rect(Rect2(12,12,190,38),Color("#07080c"))
+		draw_string(ThemeDB.fallback_font,Vector2(20,35),"UI PRIMITIVE TEST",HORIZONTAL_ALIGNMENT_LEFT,176,12,Color("#f3e9e6"))
+		return
+	if ui_diagnostic_pass == 2:
+		_draw_world()
+		_draw_hud()
+		return
 	draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), BG)
 	if world_map_mode:
 		_draw_world_map()
 	else:
 		_draw_world()
 		_draw_utility_overlay()
-	_draw_hud()
-	if not help_mode and not update_mode:
+	if ui_diagnostic_pass != 3:
+		_draw_hud()
+	if ui_diagnostic_pass != 4 and not help_mode and not update_mode:
 		if build_mode:
 			_draw_build_palette()
 		elif not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode:
@@ -229,10 +250,11 @@ func _draw() -> void:
 		_draw_selection_panel()
 	# Action buttons are drawn after command content and use the same hitboxes
 	# as input handling. Keyboard-only workflows now have mouse equivalents.
-	_draw_panel_actions()
-	if _can_draw_settlement_minimap():
+	if ui_diagnostic_pass != 4:
+		_draw_panel_actions()
+	if ui_diagnostic_pass != 4 and _can_draw_settlement_minimap():
 		_draw_settlement_minimap()
-	if overview_visible and not workforce_mode:
+	if ui_diagnostic_pass != 4 and overview_visible and not workforce_mode:
 		_draw_overview()
 
 
@@ -2303,6 +2325,7 @@ func _capture_game_screenshot() -> void:
 				"OS: "+OS.get_name()+"\n"+
 				"Game frame: "+str(screenshot.get_size())+"\n"+
 				"UI decorative stroke mode: "+("DISABLED (Ctrl+F10)" if DPNUISkin.diagnostic_minimal_strokes else "SAFE FILLED RECTS")+"\n"+
+				"UI diagnostic pass: "+UI_DIAGNOSTIC_PASSES[ui_diagnostic_pass]+"\n"+
 				"3D pass separately captured: "+str(world_saved)+"\n"+
 				"FULL=3D+UI. 3D=scene-only. Check whether streaks exist in either PNG.\n")
 		playtest_notice = "2 GRAPHICS CAPTURES SAVED [F8]" if world_saved else "GRAPHICS CAPTURE SAVED [F8]"
@@ -2328,9 +2351,55 @@ func _cycle_ui_scale() -> void:
 	playtest_notice_seconds=5.0
 	queue_redraw()
 
+# Issue #9: capture the exact same viewport in isolated draw modes, on
+# demand, without the player needing to restart the game between modes.
+# Each PNG is tagged to the active render group and matching 3D baseline.
+func _capture_ui_pass_suite() -> void:
+	if ui_diagnostic_capture_active:
+		return
+	ui_diagnostic_capture_active=true
+	var directory := "user://playtest-screenshots"
+	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory))!=OK:
+		ui_diagnostic_capture_active=false
+		return
+	var prior_pass := ui_diagnostic_pass
+	var prior_strokes := DPNUISkin.diagnostic_minimal_strokes
+	var stamp := "last-settlement-uiissue9-%d" % int(Time.get_unix_time_from_system())
+	var manifest := "THE LAST SETTLEMENT // ISSUE #9 UI PASS ISOLATION\n"
+	manifest += "Renderer: "+str(ProjectSettings.get_setting("rendering/renderer/rendering_method","unknown"))+"\n"
+	manifest += "OS: "+OS.get_name()+"\n"
+	manifest += "3D is drawn in an isolated SubViewport. The main CanvasItem composites 3D and UI.\n"
+	var failures := 0
+	for pass_index in range(UI_DIAGNOSTIC_PASSES.size()):
+		ui_diagnostic_pass=pass_index
+		DPNUISkin.diagnostic_minimal_strokes=prior_strokes
+		queue_redraw()
+		# Wait for the actual renderer, not just the next logic update.
+		await RenderingServer.frame_post_draw
+		var captured: Image=get_viewport().get_texture().get_image()
+		var filename := stamp+"-%d-%s.png" % [pass_index,UI_DIAGNOSTIC_PASSES[pass_index]]
+		var success := captured!=null and not captured.is_empty() and captured.save_png(directory.path_join(filename))==OK
+		if not success:
+			failures+=1
+		manifest += filename+": "+("CAPTURED" if success else "FAILED")+"\n"
+	ui_diagnostic_pass=prior_pass
+	DPNUISkin.diagnostic_minimal_strokes=prior_strokes
+	queue_redraw()
+	var report := FileAccess.open(directory.path_join(stamp+"-PASS-REPORT.txt"),FileAccess.WRITE)
+	if report!=null:
+		report.store_string(manifest+"\nInterpretation: WORLD_COMPOSITE clean + HUD_ONLY dirty => HUD. HUD_ONLY clean + FULL dirty => other overlays. If WORLD_COMPOSITE dirty => base 2D texture composite.\n")
+	ui_diagnostic_capture_active=false
+	playtest_notice="ISSUE #9 DIAGNOSTIC SET COMPLETE" if failures==0 else "DIAGNOSTIC FAILED  /  CHECK CAPTURE FOLDER"
+	playtest_notice_seconds=7.0
+	if OS.get_name()=="Windows":
+		OS.shell_open(ProjectSettings.globalize_path(directory))
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
+		if event.keycode==KEY_F12 and event.ctrl_pressed:
+			_capture_ui_pass_suite()
+			return
 		if event.keycode==KEY_F10 and event.ctrl_pressed:
 			DPNUISkin.diagnostic_minimal_strokes=not DPNUISkin.diagnostic_minimal_strokes
 			playtest_notice="UI DECORATION DISABLED  /  CTRL+F10 RESTORE" if DPNUISkin.diagnostic_minimal_strokes else "UI DECORATION RESTORED  /  CTRL+F10 DISABLE"
