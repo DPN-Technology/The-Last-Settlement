@@ -414,13 +414,50 @@ func _road(a: Vector3, b: Vector3, width: float) -> void:
 	segment.rotation.y = -atan2(delta.z, delta.x)
 
 func _tree(point: Vector3, scale: float) -> void:
+	# Real terrain height and seeded canopy variation avoid lollipop-like
+	# trees floating at y=0 on the outer ridge. Asset-independent proxy art.
+	var terrain_noise := FastNoiseLite.new()
+	terrain_noise.seed=114722
+	terrain_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	terrain_noise.frequency=0.015
+	terrain_noise.fractal_octaves=4
 	var branch := Node3D.new()
-	branch.position = point
+	branch.name="DroughtHardwoodTree_"+str(terrain_layer.get_child_count())
+	branch.position = Vector3(point.x,WastelandDetail.terrain_height(point.x,point.z,terrain_noise),point.z)
 	branch.scale = Vector3.ONE * scale
 	terrain_layer.add_child(branch)
-	_cylinder(branch, Vector3(0, 1.9, 0), 0.23, 3.8, materials["roof"], 0.11)
-	for p in [Vector3(-1.1, 4.1, 0), Vector3(0.7, 4.5, 0.3), Vector3(0, 5.1, -0.7)]:
-		_sphere(branch, p, 1.55, materials["olive"])
+	# Narrow tapered trunk, visible irregular boughs and multi-layer crown.
+	var trunk := _cylinder(branch, Vector3(0, 2.0, 0), 0.27, 4.0, materials["roof"], 0.11)
+	trunk.name="TaperedHardwoodTrunk"
+	var rng := RandomNumberGenerator.new()
+	rng.seed=int(absf(point.x*431.0+point.z*673.0))+12091
+	var foliage_mesh := SphereMesh.new()
+	foliage_mesh.radius=0.5
+	foliage_mesh.height=1.0
+	foliage_mesh.radial_segments=7
+	foliage_mesh.rings=5
+	for limb in range(5):
+		var angle: float=float(limb)/5.0*TAU+rng.randf_range(-0.18,0.18)
+		var reach: float=rng.randf_range(1.2,2.2)
+		var y: float=rng.randf_range(3.0,4.6)
+		var at := Vector3(cos(angle)*reach*0.47,y,sin(angle)*reach*0.47)
+		var woody := _cylinder(branch,at,0.115,reach*1.05,materials["rust"],0.045)
+		woody.name="AngledCrownBranch"
+		woody.rotation.z=sin(angle)*0.68
+		woody.rotation.x=cos(angle)*0.68
+	# Branch silhouettes are not replaced by a few identical round spheres.
+	for tuft in range(13):
+		var bearing: float=float(tuft)/13.0*TAU+rng.randf_range(-0.42,0.42)
+		var spread: float=rng.randf_range(0.45,2.30)
+		var y: float=rng.randf_range(3.35,5.55)
+		var leaf := MeshInstance3D.new()
+		leaf.name="IrregularFoliageCluster"
+		leaf.mesh=foliage_mesh
+		leaf.position=Vector3(cos(bearing)*spread,y,sin(bearing)*spread)
+		leaf.rotation_degrees=Vector3(rng.randf_range(-18.0,18.0),rng.randf_range(0.0,180.0),rng.randf_range(-18.0,18.0))
+		leaf.scale=Vector3(rng.randf_range(1.25,1.95),rng.randf_range(0.85,1.75),rng.randf_range(0.92,1.45))
+		leaf.material_override=materials["leaf"] if tuft%3==0 else materials["olive"]
+		branch.add_child(leaf)
 
 func _abandoned_vehicle(pos: Vector3) -> void:
 	var group := Node3D.new()

@@ -1,3 +1,9 @@
+# TERRAIN VEGETATION REWORK
+
+Replaced three-ball tree proxies with varied tapered trunks, angled branch silhouettes, and thirteen individually shaped foliage clumps per tree. Trees are now anchored to the actual sculpted terrain height instead of y=0, with stable deterministic variation. This remains efficient low-poly proxy vegetation pending production tree assets; it does not block navigation. Added scene assertions for tree trunk and dense crown distribution.
+
+---
+
 # WINDOWS CAMERA BORDER / OBJECTIVES OVERLAY REGRESSION (OCTOBER 10)
 
 Four user-provided FULL/3D capture pairs on gl_compatibility Windows show a hard black horizon, a sloped finite-heightfield cutoff when orbiting/panning, and a long blank black horizontal box beside the collapsed objectives tab. These are real captured regressions, not concept-art discrepancies. The finite heightfield previously terminated at +/-160m while the opaque fail-safe was only 360m wide; GL Compatibility's procedural sky also presented as black beyond the mesh. The notice had been drawn from x=14 across 650px and the objectives tab obscured its text.

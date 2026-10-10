@@ -1434,6 +1434,29 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
+	# Outer vegetation now uses real terrain heights, tapered trunks and
+	# varied foliage rather than three fixed-size green spheres per tree.
+	var woodland := 0
+	for node in world.terrain_layer.get_children():
+		if not str(node.name).begins_with("DroughtHardwoodTree_"):
+			continue
+		woodland+=1
+		if node.get_node_or_null("TaperedHardwoodTrunk")==null:
+			push_error("SMOKE: environmental tree has no structural trunk")
+			quit(1)
+			return
+		var crown_count := 0
+		for leaf in node.get_children():
+			if leaf.name=="IrregularFoliageCluster":
+				crown_count+=1
+		if crown_count<10:
+			push_error("SMOKE: distant trees regressed to three green balls")
+			quit(1)
+			return
+	if woodland<20:
+		push_error("SMOKE: environmental woodland detail has disappeared")
+		quit(1)
+		return
 	# Camera and terrain edge regression from real Windows screenshots:
 	# zero-height sculpted boundary, wide opaque earth backdrop, and a
 	# non-black environment color in the GL Compatibility SubViewport.
