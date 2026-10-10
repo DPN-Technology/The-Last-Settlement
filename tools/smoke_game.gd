@@ -54,6 +54,11 @@ func _smoke() -> void:
 		push_error("SMOKE: No physically modeled press-and-conveyor yard at the workshop")
 		quit(1)
 		return
+	var sign: Label3D=world_3d.structure_layer.get_node_or_null("Command/LastHavenPhysicalSign") as Label3D
+	if sign==null or not sign.text.contains("LAST HAVEN"):
+		push_error("SMOKE: Command HQ is missing its readable real-world DPN identity plaque")
+		quit(1)
+		return
 	var machine: Dictionary=world_3d.industrial_yards[0]
 	var yard_root: Node3D=machine["root"]
 	if yard_root.get_node_or_null("StampingRam")==null or yard_root.get_node_or_null("MovingBlankCarrier")==null or yard_root.get_node_or_null("PressUpright")==null:
