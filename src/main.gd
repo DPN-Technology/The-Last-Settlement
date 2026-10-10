@@ -1821,17 +1821,18 @@ func _draw_event_toasts() -> void:
 	var vp := get_viewport_rect().size
 	var left := vp.x - 334.0
 	var y := vp.y - SettlementUILayout.BOTTOM_H - 123.0
-	draw_rect(Rect2(left, y, 309, 106), Color("#111b1bd9"), true)
-	draw_line(Vector2(left, y), Vector2(left + 309, y), ACCENT, 2.0)
-	draw_string(ThemeDB.fallback_font, Vector2(left + 13, y + 20), "SETTLEMENT ACTIVITY    [F2] EXPAND", HORIZONTAL_ALIGNMENT_LEFT, 289, 11, TEXT)
+	DPNUISkin.frame(self,Rect2(left,y,309,106),ui_animation_clock)
+	draw_string(ThemeDB.fallback_font, Vector2(left + 13, y + 23), "DPN  /  LIVE SETTLEMENT FEED    [F2]", HORIZONTAL_ALIGNMENT_LEFT, 289, 11, TEXT)
 	for i in range(mini(2, sim.events.size())):
 		var incident: Dictionary = sim.events[i]
 		var color := GOOD if str(incident.get("severity", "")) == "good" else WARN
 		if str(incident.get("severity", "")) == "critical":
 			color = BAD
 		var row_y := y + 39.0 + float(i) * 30.0
-		draw_circle(Vector2(left + 16, row_y), 3.0, color)
-		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 3), str(incident.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 11, TEXT)
+		draw_rect(Rect2(left+9,row_y-10,290,30),Color("#19131c"))
+		draw_rect(Rect2(left+9,row_y-10,3,30),color)
+		draw_circle(Vector2(left + 20, row_y), 2.5, color)
+		draw_string(ThemeDB.fallback_font, Vector2(left + 29, row_y + 3), str(incident.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, 263, 11, TEXT)
 		draw_string(ThemeDB.fallback_font, Vector2(left + 27, row_y + 17), str(incident.get("body", "")), HORIZONTAL_ALIGNMENT_LEFT, 267, 9, MUTED)
 
 func _draw_event_panel() -> void:
