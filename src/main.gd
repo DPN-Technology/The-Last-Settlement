@@ -2299,7 +2299,7 @@ func _capture_game_screenshot() -> void:
 		var record := FileAccess.open(target_folder.path_join(capture_id+"-GRAPHICS.txt"),FileAccess.WRITE)
 		if record!=null:
 			record.store_string("THE LAST SETTLEMENT // DISPLAY ARTIFACT DIAGNOSTIC\n"+
-				"Renderer: "+str(RenderingServer.get_rendering_method())+"\n"+
+				"Default rendering method: "+str(ProjectSettings.get_setting("rendering/renderer/rendering_method","unknown"))+"\n"+
 				"OS: "+OS.get_name()+"\n"+
 				"Game frame: "+str(screenshot.get_size())+"\n"+
 				"3D pass separately captured: "+str(world_saved)+"\n"+
