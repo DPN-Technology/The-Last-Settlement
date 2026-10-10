@@ -602,6 +602,46 @@ func _smoke() -> void:
 		quit(1)
 		return
 	instance.governance_mode = false
+	# Speed controls are gameplay buttons, not a decorative RUNNING label.
+	var old_speed: float=sim.speed
+	var old_pause: bool=sim.paused
+	if not instance._handle_time_control_click(SettlementUILayout.time_control(screen,0).get_center()) or sim.paused==old_pause:
+		push_error("SMOKE: Clickable timeline failed to toggle pause")
+		quit(1)
+		return
+	if not instance._handle_time_control_click(SettlementUILayout.time_control(screen,2).get_center()) or sim.paused or not is_equal_approx(sim.speed,4.0):
+		push_error("SMOKE: Timeline 4x speed failed to resume simulation")
+		quit(1)
+		return
+	sim.speed=old_speed
+	sim.paused=old_pause
+	for target_size in [Vector2(960,720),Vector2(1280,720),Vector2(1366,768)]:
+		for ctrl_i in range(4):
+			var control := SettlementUILayout.time_control(target_size,ctrl_i)
+			if control.end.y>SettlementUILayout.navbar_rect(target_size,0).position.y or control.end.x>target_size.x:
+				push_error("SMOKE: Playback control collides with bottom navigation")
+				quit(1)
+				return
+	# Food and water warning text now provides a one-click recovery route.
+	var remembered_food: float=float(sim.resources["food"])
+	var remembered_water: float=float(sim.resources["water"])
+	sim.resources["food"]=0.0
+	sim.resources["water"]=float(sim.get_alive_citizens().size())*10.0
+	var warning_hit := Vector2(screen.x-80.0,66.0)
+	instance.build_mode=false
+	if not instance._handle_resource_chip_click(warning_hit) or not instance.build_mode or str(sim.get_build_catalog()[instance.build_catalog_index]["type"])!="farm":
+		push_error("SMOKE: Food emergency does not open the farm blueprint")
+		quit(1)
+		return
+	sim.resources["food"]=remembered_food
+	sim.resources["water"]=0.0
+	instance.build_mode=false
+	if not instance._handle_resource_chip_click(warning_hit) or not instance.build_mode or str(sim.get_build_catalog()[instance.build_catalog_index]["type"])!="purifier":
+		push_error("SMOKE: Water emergency does not open the purifier blueprint")
+		quit(1)
+		return
+	sim.resources["water"]=remembered_water
+	instance.build_mode=false
 
 	# The branding area must explain the home settlement, open a real briefing,
 	# and close without sending clicks into the 3D construction world.
