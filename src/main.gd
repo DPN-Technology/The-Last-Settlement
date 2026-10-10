@@ -30,6 +30,8 @@ var workforce_selected_id := 0
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var ui_animation_clock := 0.0
+const UI_SCALE_LEVELS := [1.0,1.15,1.3]
+var ui_scale_index := 0
 var camera_offset := Vector2(-75, -34)
 var zoom := 1.04
 var dragging := false
@@ -1253,7 +1255,7 @@ func _draw_help_panel() -> void:
 		draw_string(ThemeDB.fallback_font,box.position+Vector2(12,box.size.y-7),"CLICK TO OPEN  ›",HORIZONTAL_ALIGNMENT_LEFT,box.size.x-22,9,GOOD if hover else MUTED)
 	draw_rect(Rect2(x+17,y+h-46,w-34,31),DPNUISkin.SURFACE)
 	draw_line(Vector2(x+18,y+h-46),Vector2(x+w-18,y+h-46),ACCENT,1)
-	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+h-25),"SPACE  PAUSE    S  SAVE    L  LOAD    F8  SCREENSHOT    F9  REPORT    ESC  CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-54,11,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(x+27,y+h-25),"SPACE PAUSE   F7 UI ZOOM   S SAVE   L LOAD   F8 CAPTURE   ESC CLOSE",HORIZONTAL_ALIGNMENT_LEFT,w-54,11,TEXT)
 
 func _open_guide_section(index: int) -> void:
 	# Tutorial modules are entry points into live gameplay, not passive text.
@@ -2164,14 +2166,32 @@ func _capture_game_screenshot() -> void:
 		playtest_notice = "SCREENSHOT FAILED // DISK WRITE ERROR"
 	playtest_notice_seconds = 7.0
 
+# Scales Godot's canvas and its matching input coordinates together. A
+# minimum usable logical viewport prevents zoom from breaking command menus.
+func _cycle_ui_scale() -> void:
+	var window := get_window()
+	var physical := Vector2(DisplayServer.window_get_size())
+	var next := (ui_scale_index+1)%UI_SCALE_LEVELS.size()
+	var target := float(UI_SCALE_LEVELS[next])
+	if physical.x/target<960.0 or physical.y/target<600.0:
+		next=0
+		target=1.0
+	window.content_scale_factor=target
+	ui_scale_index=next
+	playtest_notice="INTERFACE SCALE  /  %d%%   [F7 CHANGE]" % int(round(target*100.0))
+	playtest_notice_seconds=5.0
+	queue_redraw()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		# Workforce is modal: keyboard shortcuts cannot change hidden panels.
-		if workforce_mode and event.keycode not in [KEY_F6,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
+		if workforce_mode and event.keycode not in [KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
 		match event.keycode:
 			KEY_F6:
 				_toggle_workforce()
+			KEY_F7:
+				_cycle_ui_scale()
 			KEY_F1:
 				help_mode = not help_mode
 			KEY_F2:
