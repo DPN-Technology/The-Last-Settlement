@@ -45,6 +45,8 @@ var mouse_world := Vector2.ZERO
 var utility_overlay := 0
 var world_map_mode := false
 var selected_world_location_id := 0
+var expedition_team_size := 3
+var expedition_strategy_index := 0
 var governance_mode := false
 var economy_mode := false
 var faction_mode := false
@@ -561,7 +563,8 @@ func _dispatch_region() -> bool:
 		playtest_notice = "SELECT A DISCOVERED SALVAGE SITE FIRST"
 		playtest_notice_seconds = 4.0
 		return false
-	var ok := sim.world_simulation.create_expedition(sim,selected_world_location_id)
+	var strategy := str(WorldSimulation.STRATEGIES[expedition_strategy_index])
+	var ok := sim.world_simulation.create_expedition(sim,selected_world_location_id,expedition_team_size,strategy)
 	var event_text := ""
 	if not sim.events.is_empty():
 		event_text = str(sim.events[0].get("body",""))
@@ -651,20 +654,46 @@ func _draw_world_map() -> void:
 	else:
 		draw_string(ThemeDB.fallback_font,Vector2(px,py+59),"Select a discovered site",HORIZONTAL_ALIGNMENT_LEFT,side.size.x-38,13,MUTED)
 		draw_string(ThemeDB.fallback_font,Vector2(px,py+81),"Use the left list or click a map marker.",HORIZONTAL_ALIGNMENT_LEFT,side.size.x-38,11,MUTED)
+	# Planning and dispatch share one side-effect-free simulation preview.
+	var strategy := str(WorldSimulation.STRATEGIES[expedition_strategy_index])
+	var mission: Dictionary = sim.world_simulation.plan_expedition(sim,selected_world_location_id,expedition_team_size,strategy)
+	draw_string(ThemeDB.fallback_font,Vector2(px,py+168),"MISSION PLANNER  /  %d PERSON TEAM" % expedition_team_size,HORIZONTAL_ALIGNMENT_LEFT,side.size.x-34,11,GOOD)
+	var controls := ["− TEAM","+ TEAM","TACTIC: "+strategy.to_upper()+"  ›"]
+	for index in range(3):
+		var rect := SettlementUILayout.region_team_control(vp,index)
+		var hovered := rect.has_point(get_local_mouse_position())
+		draw_rect(rect,Color("#553238") if hovered else Color("#1c3038"))
+		draw_rect(rect,ACCENT if hovered else Color("#526c79"),false,1.0)
+		draw_string(ThemeDB.fallback_font,rect.position+Vector2(7,19),controls[index],HORIZONTAL_ALIGNMENT_LEFT,rect.size.x-13,10,TEXT)
+	var roster_names := PackedStringArray()
+	for id in mission.get("members",[]):
+		var citizen := sim.get_citizen_by_id(int(id))
+		if not citizen.is_empty():
+			roster_names.append(str(citizen["name"]).split(" ")[0])
+	var preview := "TEAM: "+(", ".join(roster_names) if not roster_names.is_empty() else "No eligible crew")
+	draw_string(ThemeDB.fallback_font,Vector2(px,py+225),preview,HORIZONTAL_ALIGNMENT_LEFT,side.size.x-36,10,MUTED)
+	draw_string(ThemeDB.fallback_font,Vector2(px,py+242),"Supplies: %.0f meals  •  %.0f water  •  %.0f meds" % [float(mission["food_cost"]),float(mission["water_cost"]),float(mission["medicine_cost"])],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-36,10,TEXT)
+	draw_string(ThemeDB.fallback_font,Vector2(px,py+259),"One-way %.1fh  •  search %.1fh  •  hazard %.0f%%" % [float(mission["travel_hours"]),float(mission["search_hours"]),float(mission["risk"])*100.0],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-36,10,WARN if float(mission["risk"])<0.45 else BAD)
 	var dispatch := SettlementUILayout.region_dispatch_rect(vp)
-	var can_go := _region_can_dispatch(loc)
-	draw_rect(dispatch,Color("#254a40") if can_go else Color("#293339"))
-	draw_rect(dispatch,GOOD if can_go else Color("#50636b"),false,1)
-	draw_string(ThemeDB.fallback_font,dispatch.position+Vector2(11,21),"SEND SALVAGE TEAM [G]" if can_go else "SELECT AN AVAILABLE SALVAGE SITE",HORIZONTAL_ALIGNMENT_LEFT,dispatch.size.x-20,11,TEXT if can_go else MUTED)
-	draw_string(ThemeDB.fallback_font,Vector2(px,py+253),"ACTIVE EXPEDITIONS   %d" % sim.world_simulation.get_active_expeditions().size(),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-30,12,ACCENT)
-	var ey := py+280.0
+	var can_go := bool(mission["ok"])
+	draw_rect(dispatch,Color("#245448") if can_go else Color("#33363d"))
+	draw_rect(dispatch,GOOD if can_go else WARN,false,1)
+	draw_string(ThemeDB.fallback_font,dispatch.position+Vector2(11,22),"DISPATCH TEAM  /  PROVISION & DEPART [G]" if can_go else str(mission["reason"]),HORIZONTAL_ALIGNMENT_LEFT,dispatch.size.x-20,11,TEXT if can_go else WARN)
+	draw_string(ThemeDB.fallback_font,Vector2(px,py+340),"ACTIVE EXPEDITIONS   %d" % sim.world_simulation.get_active_expeditions().size(),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-30,12,ACCENT)
+	var ey := py+363.0
 	for expedition in sim.world_simulation.get_active_expeditions():
-		if ey>side.end.y-90:
+		if ey>side.end.y-92:
 			break
 		var target := sim.world_simulation.get_location_by_id(int(expedition["destination_id"]))
-		draw_string(ThemeDB.fallback_font,Vector2(px,ey),"Team %d  •  %s" % [int(expedition["id"]),str(expedition["status"]).capitalize()],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,11,TEXT)
-		draw_string(ThemeDB.fallback_font,Vector2(px,ey+17),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,10,MUTED)
-		ey += 44.0
+		var stage := str(expedition["status"])
+		var elapsed := float(expedition.get("progress",0.0))
+		var phase_target := float(expedition.get("search_hours",6.0)) if stage=="searching" else float(expedition.get("distance",1.0))
+		var completion := clampf(elapsed/maxf(1.0,phase_target),0.0,1.0)
+		draw_string(ThemeDB.fallback_font,Vector2(px,ey),"Team %d  •  %s  •  %d survivors" % [int(expedition["id"]),stage.capitalize(),expedition["members"].size()],HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,11,TEXT)
+		draw_string(ThemeDB.fallback_font,Vector2(px,ey+15),str(target.get("name","Unknown destination")),HORIZONTAL_ALIGNMENT_LEFT,side.size.x-32,10,MUTED)
+		draw_rect(Rect2(px,ey+20,side.size.x-36,3.0),Color("#293d43"))
+		draw_rect(Rect2(px,ey+20,(side.size.x-36.0)*completion,3.0),GOOD)
+		ey+=48.0
 
 func _world_map_select(screen_pos: Vector2) -> void:
 	var vp := get_viewport_rect().size
@@ -689,6 +718,14 @@ func _handle_region_click(position: Vector2) -> bool:
 		if SettlementUILayout.region_site_row(vp,i).has_point(position):
 			selected_world_location_id = int(discovered[i]["id"])
 			return true
+	for index in range(3):
+		if not SettlementUILayout.region_team_control(vp,index).has_point(position):
+			continue
+		match index:
+			0: expedition_team_size=maxi(1,expedition_team_size-1)
+			1: expedition_team_size=mini(4,expedition_team_size+1)
+			2: expedition_strategy_index=(expedition_strategy_index+1)%WorldSimulation.STRATEGIES.size()
+		return true
 	if SettlementUILayout.region_dispatch_rect(vp).has_point(position):
 		_dispatch_region()
 		return true
