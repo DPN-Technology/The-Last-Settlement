@@ -1484,6 +1484,115 @@ func _smoke() -> void:
 	sim.resources["water"]=saved_water
 	sim.utility_state["power_generated"]=saved_generated
 	sim.utility_state["power_demand"]=saved_demand
+	# A player-reported F2 trap is a release blocker. Prove the console
+	# is always dismissible and all mouse actions stay inside its modal layer.
+	var incident_screen: Vector2=instance.get_viewport_rect().size
+	var events_before := sim.events.size()
+	sim.add_event("GRID TRIP","Primary generator emergency test.","critical")
+	sim.add_event("GRID TRIP","Primary generator emergency test.","critical")
+	var incident_all := SettlementIncidentUI.groups(sim.events,0,{})
+	if incident_all.is_empty() or int(incident_all[0].get("occurrences",0))!=2:
+		push_error("SMOKE: Repeated incident history not grouped into a readable row")
+		quit(1)
+		return
+	if SettlementIncidentUI.route_for_event(incident_all[0])!="BUILD":
+		push_error("SMOKE: Incident does not point to its actual relevant game system")
+		quit(1)
+		return
+	instance.economy_mode=true
+	instance._incident_open()
+	var incident_frame := SettlementIncidentUI.panel_rect(incident_screen)
+	if not instance.incident_panel_visible or not incident_frame.encloses(SettlementIncidentUI.close_rect(incident_screen)):
+		push_error("SMOKE: F2 console has no reachable close icon")
+		quit(1)
+		return
+	for i in range(4):
+		if not incident_frame.encloses(SettlementIncidentUI.tab_rect(incident_screen,i)) or not incident_frame.encloses(SettlementIncidentUI.action_rect(incident_screen,i)):
+			push_error("SMOKE: Responsive incident control falls outside visible command panel")
+			quit(1)
+			return
+	instance._handle_incident_click(SettlementIncidentUI.tab_rect(incident_screen,1).get_center())
+	if instance.incident_filter_index!=1 or SettlementIncidentUI.groups(sim.events,1,{}).is_empty():
+		push_error("SMOKE: Severity filter is not operational")
+		quit(1)
+		return
+	instance._handle_incident_click(SettlementIncidentUI.row_rect(incident_screen,0).get_center())
+	instance._handle_incident_click(SettlementIncidentUI.action_rect(incident_screen,0).get_center())
+	if instance.incident_acknowledged.is_empty() or sim.events.size()!=events_before+2:
+		push_error("SMOKE: Incident acknowledgement corrupts history or has no effect")
+		quit(1)
+		return
+	instance._handle_incident_click(SettlementIncidentUI.tab_rect(incident_screen,3).get_center())
+	var unread_groups := instance._incident_entries()
+	if not unread_groups.is_empty() and bool(unread_groups[0].get("read",false)):
+		push_error("SMOKE: Unread filter includes acknowledged events")
+		quit(1)
+		return
+	var active_economy := instance.economy_mode
+	if not instance._handle_incident_click(Vector2(2.0,incident_screen.y*0.5)) or instance.incident_panel_visible or instance.economy_mode!=active_economy:
+		push_error("SMOKE: Outside click leaked through F2 modal or failed to dismiss")
+		quit(1)
+		return
+	instance._incident_open()
+	instance._handle_incident_click(SettlementIncidentUI.close_rect(incident_screen).get_center())
+	if instance.incident_panel_visible:
+		push_error("SMOKE: Incident X close button is unresponsive")
+		quit(1)
+		return
+	instance._incident_open()
+	instance._handle_incident_click(SettlementIncidentUI.action_rect(incident_screen,3).get_center())
+	if instance.incident_panel_visible:
+		push_error("SMOKE: Incident CLOSE footer is unresponsive")
+		quit(1)
+		return
+	var incident_key := InputEventKey.new()
+	incident_key.keycode=KEY_F2
+	incident_key.pressed=true
+	instance._unhandled_input(incident_key)
+	if not instance.incident_panel_visible:
+		push_error("SMOKE: F2 did not open incident modal")
+		quit(1)
+		return
+	instance._unhandled_input(incident_key)
+	if instance.incident_panel_visible:
+		push_error("SMOKE: F2 cannot toggle incident modal closed")
+		quit(1)
+		return
+	instance._incident_open()
+	var escape_key := InputEventKey.new()
+	escape_key.keycode=KEY_ESCAPE
+	escape_key.pressed=true
+	instance._unhandled_input(escape_key)
+	if instance.incident_panel_visible or not instance.economy_mode:
+		push_error("SMOKE: Escape must close incidents before underlying Economy mode")
+		quit(1)
+		return
+	instance.incident_filter_index=0
+	instance.incident_selected_index=0
+	instance.incident_acknowledged.clear()
+	instance._incident_open()
+	instance._handle_incident_click(SettlementIncidentUI.action_rect(incident_screen,2).get_center())
+	if instance.incident_panel_visible or not instance.build_mode:
+		push_error("SMOKE: Incident OPEN SYSTEM did not navigate to linked Build controls")
+		quit(1)
+		return
+	var build_close := SettlementUILayout.command_close_rect(instance._active_command_panel())
+	if not instance._handle_command_close_click(build_close.get_center()) or instance.build_mode:
+		push_error("SMOKE: Build screen X close control is not functional")
+		quit(1)
+		return
+	for mode_key in ["governance_mode","economy_mode","faction_mode","civilization_mode","world_map_mode","help_mode"]:
+		instance.set(mode_key,true)
+		var mode_panel: Rect2=instance._active_command_panel()
+		if mode_panel.size.x<=0.0 or not instance._handle_command_close_click(SettlementUILayout.command_close_rect(mode_panel).get_center()) or bool(instance.get(mode_key)):
+			push_error("SMOKE: Major management screen cannot close by mouse: "+mode_key)
+			quit(1)
+			return
+	instance.incident_filter_index=0
+	instance.incident_page=0
+	instance.incident_selected_index=0
+	instance.incident_acknowledged.clear()
+	print("PLAYTEST SMOKE PASS: responsive F2 incident console, dismissals, filters, acknowledgements, route actions, and all command X buttons")
 	print("PLAYTEST SMOKE PASS: storm hazards/shelter/save compatibility, live 3D atmosphere, 3D industrial animation, region and workforce gameplay")
 	instance.queue_free()
 	quit(0)
