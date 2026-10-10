@@ -35,6 +35,7 @@ var recipes := {
 	"Utility Truck":{"input":{"parts":8.0,"tools":2.0,"components":6.0,"materials":8.0},"output":{"vehicle":1.0},"work":120.0}
 }
 var production_queue: Array[Dictionary] = []
+var production_paused := false
 var next_batch_id := 1
 var price_update_hour := 24.0
 var trade_log: Array[Dictionary] = []
@@ -83,7 +84,7 @@ func update(sim: SettlementSimulation, sim_hours: float) -> void:
 	_update_regional_trade(sim,sim_hours)
 
 func queue_recipe(sim: SettlementSimulation, recipe_name:String, quantity:int=1) -> bool:
-	if not recipes.has(recipe_name) or quantity <= 0:
+	if not recipes.has(recipe_name) or quantity <= 0 or quantity>5 or get_open_batches().size()+quantity>48:
 		return false
 	for i in range(quantity):
 		production_queue.append({
@@ -96,10 +97,90 @@ func queue_recipe(sim: SettlementSimulation, recipe_name:String, quantity:int=1)
 	sim.add_event("PRODUCTION QUEUED","%d x %s added to workshop queue." % [quantity,recipe_name],"intel")
 	return true
 
+# An operator controls the real queue. Only unstarted orders can be
+# removed or reprioritized; their materials have NOT been consumed yet.
+func get_open_batches() -> Array[Dictionary]:
+	var open_batches: Array[Dictionary] = []
+	for batch in production_queue:
+		if str(batch.get("status","")) in ["queued","working"]:
+			open_batches.append(batch)
+	return open_batches
+
+func get_batch_by_id(batch_id: int) -> Dictionary:
+	for batch in production_queue:
+		if int(batch.get("id",-1))==batch_id:
+			return batch
+	return {}
+
+func cancel_queued_batch(sim: SettlementSimulation, batch_id: int) -> bool:
+	for i in range(production_queue.size()):
+		var batch: Dictionary=production_queue[i]
+		if int(batch.get("id",-1))!=batch_id:
+			continue
+		if str(batch.get("status",""))!="queued":
+			return false
+		var name := str(batch.get("recipe","Unknown"))
+		production_queue.remove_at(i)
+		sim.add_event("PRODUCTION CANCELLED","Unstarted "+name+" order removed; no materials were debited.","intel")
+		return true
+	return false
+
+func move_queued_batch(sim: SettlementSimulation, batch_id: int, direction: int) -> bool:
+	if direction not in [-1,1]:
+		return false
+	# A queued order may overtake other queued orders, not working batches.
+	var queued_indices: Array[int] = []
+	for i in range(production_queue.size()):
+		if str(production_queue[i].get("status",""))=="queued":
+			queued_indices.append(i)
+	for i in range(queued_indices.size()):
+		var target_index := queued_indices[i]
+		if int(production_queue[target_index].get("id",-1))!=batch_id:
+			continue
+		var next_pos := i+direction
+		if next_pos<0 or next_pos>=queued_indices.size():
+			return false
+		var neighbor_index := queued_indices[next_pos]
+		var target: Dictionary=production_queue[target_index]
+		production_queue[target_index]=production_queue[neighbor_index]
+		production_queue[neighbor_index]=target
+		sim.add_event("WORKSHOP PRIORITY","Moved "+str(target.get("recipe",""))+(" later." if direction>0 else " earlier."),"intel")
+		return true
+	return false
+
+func set_production_paused(sim: SettlementSimulation, value: bool) -> bool:
+	if production_paused==value:
+		return false
+	production_paused=value
+	sim.add_event("WORKSHOP "+("PAUSED" if value else "RESUMED"),"Production lines are "+("on hold." if value else "running again."),"warning" if value else "good")
+	return true
+
+func get_recipe_readiness(sim: SettlementSimulation, recipe_name: String) -> String:
+	if not recipes.has(recipe_name):
+		return "UNKNOWN RECIPE"
+	var recipe: Dictionary=recipes[recipe_name]
+	for ingredient in recipe["input"].keys():
+		var needed := float(recipe["input"][ingredient])
+		var available := 0.0
+		var key := str(ingredient)
+		if key in sim.stockpiles["industry"]:
+			available=float(sim.stockpiles["industry"][key])
+		elif key in industry_stock:
+			available=float(industry_stock[key])
+		elif key=="repair_kits":
+			available=repair_kits
+		if available<needed:
+			return "NEEDS "+str(ingredient).to_upper()+" (%.0f / %.0f)" % [available,needed]
+	return "INPUTS READY"
+
 func _update_production(sim:SettlementSimulation, sim_hours:float) -> void:
+	if production_paused:
+		bottleneck_reason="PRODUCTION PAUSED BY PLAYER"
+		production_efficiency=0.0
+		return
 	var workers:Array[Dictionary] = []
 	for c in sim.get_settlement_citizens():
-		if c["job"] in ["Engineer","Builder"] and not c.get("incarcerated",false):
+		if c["job"] in ["Engineer","Builder"] and not c.get("incarcerated",false) and bool(c.get("alive",false)) and int(c.get("age",0))>=18 and sim.is_selected_work_enabled(c) and sim._is_shift_active(c) and float(c.get("health",0.0))>=30.0:
 			workers.append(c)
 	if workers.is_empty():
 		bottleneck_reason = "NO INDUSTRIAL LABOR"
