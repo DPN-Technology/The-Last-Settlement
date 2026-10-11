@@ -62,10 +62,26 @@ static func bake_normal_image(albedo: Image) -> Image:
 static func new_ground_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	var color_image := bake_image()
-	mat.albedo_texture = ImageTexture.create_from_image(color_image)
-	mat.normal_enabled = true
-	mat.normal_texture = ImageTexture.create_from_image(bake_normal_image(color_image))
-	mat.normal_scale = 0.62
+	# The reference is photographic dirt/rock, not a low-resolution noise
+	# checker. Prefer the pinned CC0 Poly Haven 1K gravel PBR provided by
+	# the Windows build; preserve baked fallback for offline source checkouts.
+	var diffuse_path := "res://assets/3d/pbr/gravel_ground_01_diff_1k.png"
+	var normal_path := "res://assets/3d/pbr/gravel_ground_01_nor_gl_1k.png"
+	var photo_ready: bool=ResourceLoader.exists(diffuse_path) and ResourceLoader.exists(normal_path)
+	if photo_ready:
+		var photo_diffuse := load(diffuse_path) as Texture2D
+		var photo_normal := load(normal_path) as Texture2D
+		if photo_diffuse!=null and photo_normal!=null:
+			mat.albedo_texture=photo_diffuse
+			mat.normal_texture=photo_normal
+		else:
+			mat.albedo_texture=ImageTexture.create_from_image(color_image)
+			mat.normal_texture=ImageTexture.create_from_image(bake_normal_image(color_image))
+	else:
+		mat.albedo_texture=ImageTexture.create_from_image(color_image)
+		mat.normal_texture=ImageTexture.create_from_image(bake_normal_image(color_image))
+	mat.normal_enabled=true
+	mat.normal_scale=0.80
 	mat.albedo_color = Color("#e1d7c6")
 	mat.vertex_color_use_as_albedo = true
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS

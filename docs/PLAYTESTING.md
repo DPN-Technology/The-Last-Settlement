@@ -1,3 +1,15 @@
+# REFERENCE ART IMPLEMENTATION — NOT A CONCEPT IMAGE
+
+User supplied current in-game visual and a cinematic settlement reference. **Do not alter the existing DPN HUD.** The 3D scene is the actual task: rugged, densely detailed terrain, warm morning lighting, canopy service areas, watchtowers, slatted walkways, working yellow lamps, functional-looking clutter and distinct cutaway buildings.
+
+This PR adds `SettlementReferenceEnvironment3D` to the real Godot playable world. It uses gl-compatibility-safe MultiMesh scatter for 950 sage clumps, 540 slate rocks and 255 scrap fragments; five individually slatted planked paths; seven detailed lantern posts with OmniLight3D, 2 salvage field camps with patched awnings, and service stoops, pallets, barrels, conduit, pipes and facility-specific exterior props on each building. New meshes are decorative and preserve existing save data, people movement and entrances. Photographic **license-pinned CC0** gravel is now the primary in-game terrain diffuse+normal where the build-provisioned asset exists, with a deterministic locally baked fallback. The world at dawn has warmer, stronger sun and ambient lighting while night remains dark, and decorations do not alter the current DPN HUD.
+
+Smoke tests assert the **real mesh scene graph**, batch sizes, facility props, boards and warm light objects, and dawn/night sunlight targets. It does not assert photorealism; procedural boxes and low-poly assets remain and are being replaced in subsequent model milestones.
+
+**Required real Windows acceptance:** capture Day 1 07:02 full view and shelter/command/clinic close-ups, compare to reference; verify texture detail and morning exposure in GL Compatibility, working floor cutaways/doors, no red HUD artifacts, no blocked navigation, no FPS regression. These 3D improvements are not equivalent to an exact recreation of a photorealistically rendered still image. Further authored realistic 3D mesh/texture assets, cinematic tone mapping and detailed human animations are necessary.
+
+---
+
 # WINDOWS GRAPHICS CAPTURES — VISIBILITY REPAIR
 
 Newest player screenshots show that the room-identity layer DID load, but contained huge opaque covering surfaces. Shelter's brown rug masked beds; Command had an oversized dark floor and overlapping racks; Clinic had a white opaque corridor masking medical equipment. Multiple overhead Label3D signs showed solid white rectangles instead of letters on the GL Compatibility renderer. Node-existence smoke tests were insufficient to detect this visual failure.

@@ -1452,6 +1452,59 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
+	# This is the user's reference-image work, not another screenshot mockup.
+	# Assert that the *playable Godot world* contains the scenic 3D meshes.
+	var real_art: Node3D=world.terrain_layer.get_node_or_null("ReferenceQualityWorldDressing") as Node3D
+	if real_art==null:
+		push_error("SMOKE: visual reference world art was not integrated")
+		quit(1)
+		return
+	var shrub_scatter: MultiMeshInstance3D=real_art.get_node_or_null("ClumpedSageAndDryBrush") as MultiMeshInstance3D
+	var rock_scatter: MultiMeshInstance3D=real_art.get_node_or_null("BrokenSlateRockFaces") as MultiMeshInstance3D
+	if shrub_scatter==null or rock_scatter==null or shrub_scatter.multimesh.instance_count<900 or rock_scatter.multimesh.instance_count<500:
+		push_error("SMOKE: realistic flora/rock instancing not built")
+		quit(1)
+		return
+	var boards := 0
+	var warm_lamps := 0
+	var salvage_camps := 0
+	for item in real_art.get_children():
+		if str(item.name).begins_with("ReclaimedTimberBoardwalk_"):
+			boards+=1
+			if not (item is MultiMeshInstance3D):
+				push_error("SMOKE: camp wooden walkways not batched")
+				quit(1)
+				return
+		elif str(item.name).begins_with("WarmCampLighting_"):
+			warm_lamps+=1
+			if item.get_node_or_null("ReferenceWorkLight")==null:
+				push_error("SMOKE: working camp light missing from physical scene")
+				quit(1)
+				return
+		elif str(item.name).begins_with("SalvageCampCluster_"):
+			salvage_camps+=1
+	if boards<4 or warm_lamps<6 or salvage_camps<2:
+		push_error("SMOKE: reference-targeted outdoor infrastructure not built")
+		quit(1)
+		return
+	var decorated_facilities := 0
+	for structure in world.structure_layer.get_children():
+		if structure.get_node_or_null("ReferenceExteriorDetail")!=null:
+			decorated_facilities+=1
+	if decorated_facilities<7:
+		push_error("SMOKE: imported environment art omitted facility exteriors")
+		quit(1)
+		return
+	world._update_daylight(7.0)
+	if world.light.light_energy<0.55:
+		push_error("SMOKE: morning scene still too dark to read like the reference")
+		quit(1)
+		return
+	world._update_daylight(23.0)
+	if world.light.light_energy>0.12:
+		push_error("SMOKE: sunrise art pass incorrectly illuminated nighttime")
+		quit(1)
+		return
 	# Outer vegetation now uses real terrain heights, tapered trunks and
 	# varied foliage rather than three fixed-size green spheres per tree.
 	var woodland := 0

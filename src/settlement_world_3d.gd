@@ -266,14 +266,17 @@ func _update_daylight(hour: float) -> void:
 	prior_lighting_hour = hour
 	var solar := sin((hour - 6.0) / 12.0 * PI)
 	var daylight := clampf(solar, 0.0, 1.0)
+	# Match the reference's warm, readable 07:00–09:00 period; do not
+	# alter the actual simulation clock or nighttime darkness.
+	var visual_day := pow(daylight,0.57)
 	var twilight := clampf(1.0 - absf(hour - 18.0) / 3.5, 0.0, 1.0)
-	light.light_energy = lerpf(0.04, 1.32, daylight)
-	light.light_color = Color("#f5c293").lerp(Color("#e0e6ea"), daylight * 0.64)
+	light.light_energy = lerpf(0.04, 1.70, visual_day)
+	light.light_color = Color("#efaf70").lerp(Color("#ebd9ba"), visual_day * 0.62)
 	light.rotation_degrees = Vector3(-18.0 - daylight * 53.0, 35.0 + hour * 4.0, -3.0)
-	world_environment.ambient_light_energy = lerpf(0.14, 0.54, daylight)
+	world_environment.ambient_light_energy = lerpf(0.14, 0.71, visual_day)
 	world_environment.background_energy_multiplier = lerpf(0.14, 0.42, daylight)
-	world_environment.ambient_light_color = Color("#35465c").lerp(Color("#82939a"), daylight)
-	world_environment.fog_light_color = Color("#202d36").lerp(Color("#6c6d63"), daylight)
+	world_environment.ambient_light_color = Color("#35465c").lerp(Color("#b39b82"), visual_day)
+	world_environment.fog_light_color = Color("#202d36").lerp(Color("#a48a71"), visual_day)
 	sky_material.sky_top_color = Color("#0d1b2a").lerp(Color("#3b5566"), daylight)
 	sky_material.sky_horizon_color = Color("#222c3a").lerp(Color("#9d9788"), daylight)
 	world_environment.background_color = Color("#343944").lerp(Color("#8a8070"),daylight)
@@ -286,14 +289,15 @@ func _update_weather_environment(sim: SettlementSimulation) -> void:
 	var dust_strength := sim.weather_simulation.intensity if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM else 0.0
 	var solar := sin((sim.hour-6.0)/12.0*PI)
 	var daylight := clampf(solar,0.0,1.0)
-	var base_fog := Color("#202d36").lerp(Color("#6c6d63"),daylight)
+	var visual_day := pow(daylight,0.57)
+	var base_fog := Color("#202d36").lerp(Color("#a48a71"),visual_day)
 	var base_horizon := Color("#222c3a").lerp(Color("#9d9788"),daylight)
 	world_environment.fog_density=lerpf(0.00095,0.0085,dust_strength)
 	world_environment.fog_light_color=base_fog.lerp(Color("#8e7154"),dust_strength*0.75)
 	sky_material.sky_horizon_color=base_horizon.lerp(Color("#8e6c52"),dust_strength*0.75)
 	world_environment.background_color=Color("#343944").lerp(Color("#8a8070"),daylight).lerp(Color("#8e6c52"),dust_strength*0.75)
-	world_environment.ambient_light_energy=lerpf(0.14,0.54,daylight)*(1.0-0.20*dust_strength)
-	light.light_energy=lerpf(0.04,1.32,daylight)*(1.0-0.28*dust_strength)
+	world_environment.ambient_light_energy=lerpf(0.14,0.71,visual_day)*(1.0-0.20*dust_strength)
+	light.light_energy=lerpf(0.04,1.70,visual_day)*(1.0-0.28*dust_strength)
 
 func _box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
 	var obj := MeshInstance3D.new()
@@ -407,6 +411,7 @@ func _build_terrain() -> void:
 	WastelandDetail.build_terrain_dressing(terrain_layer, materials)
 	SettlementDistrict3D.build(terrain_layer,materials)
 	SettlementFidelity3D.terrain(terrain_layer,materials)
+	SettlementReferenceEnvironment3D.build_world(terrain_layer,materials)
 
 func _road(a: Vector3, b: Vector3, width: float) -> void:
 	var delta := b - a
@@ -646,6 +651,7 @@ func _build_structure(b: Dictionary) -> void:
 	SettlementInteriors3D.populate(group,type,size,materials)
 	SettlementWorldReadability3D.decorate(group,b,size,body_height,materials)
 	SettlementFidelity3D.exterior(group,type,size,body_height,float(b.get("condition",100.0)),materials)
+	SettlementReferenceEnvironment3D.detail_facility(group,type,size,materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
@@ -701,6 +707,14 @@ func _update_facility_lamps(sim: SettlementSimulation) -> void:
 	var day := clampf(sin((sim.hour-6.0)/12.0*PI),0.0,1.0)
 	var darkness := clampf(1.0-day*2.0,0.0,1.0)
 	var powered := bool(sim.utility_state.get("power_online",true))
+	var environmental: Node3D=terrain_layer.get_node_or_null("ReferenceQualityWorldDressing") as Node3D
+	if environmental!=null:
+		for post in environmental.get_children():
+			var work_light: OmniLight3D=post.get_node_or_null("ReferenceWorkLight") as OmniLight3D
+			if work_light==null:
+				work_light=post.get_node_or_null("WarmCampLighting_0/ReferenceWorkLight") as OmniLight3D
+			if work_light!=null:
+				work_light.light_energy=(0.50+0.25*darkness) if powered else 0.0
 	for group in structure_layer.get_children():
 		if group.is_queued_for_deletion():
 			continue
