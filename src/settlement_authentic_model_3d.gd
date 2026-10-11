@@ -80,9 +80,8 @@ static func add(parent: Node3D, asset: String, name: String, p: Vector3, width: 
 	return holder
 
 static func _hide_named(room: Node3D, names: Array[String]) -> void:
-	for name in names:
-		var item := room.find_child(name,true,false)
-		if item!=null:
+	for item in room.find_children("*","VisualInstance3D",true,false):
+		if item!=null and str(item.name) in names:
 			item.visible=false
 
 static func build_interiors(structure: Node3D, kind: String, size: Vector2) -> void:
@@ -104,9 +103,7 @@ static func build_interiors(structure: Node3D, kind: String, size: Vector2) -> v
 					if add(site,"vintage_bed","RealLivedInShelterBed",Vector3(side*size.x*0.30,0.31,depth*size.y),1.92,0.0)!=null:
 						bed_replacements+=1
 			if bed_replacements==4:
-				for primitive in room.get_children():
-					if str(primitive.name) in ["BedFrame","Mattress","Blanket","Pillow","BedLeg"]:
-						primitive.visible=false
+				_hide_named(room,["BedFrame","Mattress","Blanket","Pillow","BedLeg","BunkHeadboard","FoldedBlankets"])
 			for side in [-1.0,1.0]:
 				add(site,"shelf","RealShelterSupplyShelves",Vector3(side*size.x*0.35,0.31,hz*0.68),1.16,side*0.24)
 		"command":
@@ -118,13 +115,19 @@ static func build_interiors(structure: Node3D, kind: String, size: Vector2) -> v
 				add(site,"office_desk","RealEngineeringOperatorDesk",Vector3(side*size.x*0.25,0.31,-hz*0.21),1.73,PI if side>0.0 else 0.0)
 		"medical":
 			add(site,"bench","RealClinicVisitorsBench",Vector3(0,0.31,hz*0.67),1.23)
-			add(site,"tool_cart","RealClinicMedicalTrolley",Vector3(-size.x*0.27,0.31,hz*0.51),1.12,0.30)
+			if add(site,"tool_cart","RealClinicMedicalTrolley",Vector3(-size.x*0.27,0.31,hz*0.51),1.12,0.30)!=null:
+				_hide_named(room,["BedsideTreatmentCart","TriageCartLeg","SterileTray"])
+			var imported_beds := 0
 			for side in [-1.0,1.0]:
-				add(site,"medical_bed","RealClinicTreatmentFrame",Vector3(side*size.x*0.28,0.31,0),2.0)
+				if add(site,"medical_bed","RealClinicTreatmentFrame",Vector3(side*size.x*0.28,0.31,0),2.0)!=null:
+					imported_beds+=1
+			if imported_beds==2:
+				_hide_named(room,["BedFrame","Mattress","Blanket","Pillow","BedLeg"])
 			add(site,"storage_cart","RealClinicSupplyCart",Vector3(size.x*0.33,0.31,hz*0.44),1.26)
 			add(site,"shelf","RealMedicalSuppliesShelves",Vector3(size.x*0.31,0.31,hz*0.69),1.24)
 		"industry","storage":
-			add(site,"table","RealFabricationWorkSurface",Vector3(0,0.31,hz*0.45),2.22)
+			if add(site,"table","RealFabricationWorkSurface",Vector3(0,0.31,hz*0.45),2.22)!=null:
+				_hide_named(room,["SharedConveyor","FabricationMachine"])
 			for side in [-1.0,1.0]:
 				add(site,"rack","RealFabricationStorageRack",Vector3(side*size.x*0.34,0.31,hz*0.65),1.48)
 			add(site,"tool_cart","RealMaintenanceToolCart",Vector3(-size.x*0.21,0.31,-hz*0.23),1.18)
