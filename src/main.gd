@@ -1745,7 +1745,7 @@ func _draw_hud() -> void:
 		DPNUISkin.stroke(self,bolt[part],bolt[part+1],ACCENT,2.0)
 	draw_string(ThemeDB.fallback_font,badge.position+Vector2(4,35),"01",HORIZONTAL_ALIGNMENT_LEFT,16,8,MUTED)
 	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,22),"DPN // THE LAST SETTLEMENT" if vp.x>=1100 else "DPN // LAST SETTLEMENT",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,14 if vp.x>=1100 else 11,TEXT)
-	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,39),"LAST HAVEN   /   COMMAND" if vp.x>=1000 else "RECOVERY COMMAND",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,10,ACCENT if is_hovered else MUTED)
+	draw_string(ThemeDB.fallback_font,identity.position+Vector2(46,39),"LAST HAVEN / VISUAL R2" if vp.x>=1000 else "VISUAL R2",HORIZONTAL_ALIGNMENT_LEFT,identity.size.x-50,10,ACCENT if is_hovered else MUTED)
 	if is_hovered:
 		DPNUISkin.stroke(self,Vector2(identity.position.x+45,identity.end.y-2),Vector2(identity.end.x-6,identity.end.y-2),ACCENT,1.0)
 
