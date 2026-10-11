@@ -22,3 +22,9 @@ Additional CC0 PBR models for the visually furnished settlement rooms:
 - https://polyhaven.com/a/portable_generator — James Ray Cock
 - https://polyhaven.com/a/worn_metal_rack — Luca B
 - https://polyhaven.com/a/tool_cart — Savva Zakharov
+
+Room furniture CC0 source pages:
+- https://polyhaven.com/a/vintage_day_bed — Aron Łyczek
+- https://polyhaven.com/a/old_bed_frame — Luca B
+- https://polyhaven.com/a/metal_office_desk — Ulan Cabanilla
+- https://polyhaven.com/a/industrial_storage_cart — Jule Bielitz

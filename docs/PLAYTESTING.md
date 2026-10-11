@@ -1,3 +1,13 @@
+# REAL ROOM FURNITURE ASSET PASS
+
+Four new licensed 1K textured CC0 glTF assets replace primitive beds with
+quilted wooden daybeds in housing, add weathered metal bed frames to Clinic,
+operator steel desks in Command, and realistic rolling hospital/workshop carts.
+Shelter's primitive beds hide only if all four scanned bed scenes load.
+Art does not alter pathfinding, room occupancy or existing HUD.
+
+---
+
 # GUARD TOWER OVERHAUL — ACTUAL WORLD MESHES
 
 The previous guard towers in the actual screenshots were plain elevated

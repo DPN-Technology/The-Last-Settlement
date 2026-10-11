@@ -12,7 +12,7 @@ import time
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-ASSETS = ("barrel_03", "painted_wooden_table", "painted_wooden_bench", "covered_car", "concrete_road_barrier_02", "Shelf_01", "portable_generator", "worn_metal_rack", "tool_cart")
+ASSETS = ("barrel_03", "painted_wooden_table", "painted_wooden_bench", "covered_car", "concrete_road_barrier_02", "Shelf_01", "portable_generator", "worn_metal_rack", "tool_cart", "vintage_day_bed", "old_bed_frame", "metal_office_desk", "industrial_storage_cart")
 ROOT = Path("assets/3d/photoreal")
 ALLOWED_HOSTS = {"api.polyhaven.com", "dl.polyhaven.org"}
 USER_AGENT = "DPN-TheLastSettlement-ReferenceAssets/1"
