@@ -1479,6 +1479,33 @@ func _smoke() -> void:
 		push_error("SMOKE: reference architectural props are not integrated into actual game structures")
 		quit(1)
 		return
+	# A genuine rebuilt 3D facade is necessary for reference fidelity;
+	# the source should not merely place a photograph over the HUD.
+	var aged_shells := 0
+	for structure in world.structure_layer.get_children():
+		var facade := structure.get_node_or_null("DamagedReferenceBuildingFacade") as Node3D
+		if facade==null:
+			continue
+		aged_shells+=1
+		var near_windows := 0
+		var irregular := 0
+		for detail in facade.get_children():
+			if str(detail.name).begins_with("WindowReveal"):
+				near_windows+=1
+			if str(detail.name).ends_with("WallAging"):
+				irregular+=1
+				if detail.get_child_count()<2:
+					push_error("SMOKE: wall detail lacks physical surface wear")
+					quit(1)
+					return
+		if near_windows<8 or irregular<4:
+			push_error("SMOKE: modeled repaired window openings and weathered wall spans missing")
+			quit(1)
+			return
+	if aged_shells<7:
+		push_error("SMOKE: aged building facades were not integrated")
+		quit(1)
+		return
 	# Imported licensed, genuinely textured CC0 3D models must reach runtime.
 	var scenic_scan: Node3D=world.terrain_layer.get_node_or_null("RealCC0SettlementScans") as Node3D
 	if scenic_scan==null or scenic_scan.get_child_count()<5:

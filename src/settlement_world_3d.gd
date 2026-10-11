@@ -655,6 +655,7 @@ func _build_structure(b: Dictionary) -> void:
 	SettlementWorldReadability3D.decorate(group,b,size,body_height,materials)
 	SettlementFidelity3D.exterior(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	SettlementReferenceEnvironment3D.detail_facility(group,type,size,materials)
+	SettlementAgedFacade3D.decorate(group,type,size,body_height,materials)
 	SettlementProductionProps3D.decorate_facility(group,type,size,materials)
 	SettlementAuthenticModel3D.build_facility(group,type,size)
 	if type == "command":

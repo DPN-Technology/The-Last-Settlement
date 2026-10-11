@@ -1,3 +1,19 @@
+# MULTILAYER ARCHITECTURAL FACADE QUALITY PASS
+
+The latest real captured Windows-compatible 3D overview proves the previous
+room-layout and asset additions still leave large, featureless box walls.
+`SettlementAgedFacade3D` now builds damaged 3D wall plaster and rusted repair
+plates with bolted connections on all four facades, deep steel-framed window
+mullions and security bars, structural piers/braces and broken footing
+masonry. These are world-space geometry physically attached to every
+building, not UI changes or an image.
+
+The actual GL Compatibility renderer screenshots, not headless scene checks,
+remain the approval standard. Roof-cutaway interior geometry and door
+animations remain separate; no moves to doors or save schema.
+
+---
+
 # REAL GODOT VISUAL EVIDENCE REVIEW 2
 
 The first renderer captures were inspected, and did not meet the user's
