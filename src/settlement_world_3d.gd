@@ -717,7 +717,9 @@ func _update_facility_lamps(sim: SettlementSimulation) -> void:
 			if work_light==null:
 				work_light=post.get_node_or_null("WarmCampLighting_0/ReferenceWorkLight") as OmniLight3D
 			if work_light!=null:
-				work_light.light_energy=(0.50+0.25*darkness) if powered else 0.0
+				# A small emergency lamp glow remains under power shortfall, while
+				# normal powered illumination follows time of day.
+				work_light.light_energy=(0.50+0.25*darkness) if powered else 0.12
 	for group in structure_layer.get_children():
 		if group.is_queued_for_deletion():
 			continue

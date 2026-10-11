@@ -51,6 +51,13 @@ static func _scatter(parent: Node3D, name: String, mesh: Mesh, material: Materia
 	parent.add_child(layer)
 	var rng := RandomNumberGenerator.new()
 	rng.seed=seed
+	# Reuse one seeded noise object for all instanced foliage and rock heights.
+	# Creating 1,745 noise instances would unnecessarily stall the startup.
+	var height_noise := FastNoiseLite.new()
+	height_noise.seed=114722
+	height_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	height_noise.frequency=0.015
+	height_noise.fractal_octaves=4
 	for i in range(count):
 		var x: float=rng.randf_range(-96.0,96.0)
 		var z: float=rng.randf_range(-83.0,83.0)
@@ -62,7 +69,7 @@ static func _scatter(parent: Node3D, name: String, mesh: Mesh, material: Materia
 		var sx: float=rng.randf_range(0.35,1.70)
 		var sz: float=rng.randf_range(0.36,1.55)
 		var sy: float=rng.randf_range(0.48,1.22)
-		var y: float=_terrain_height(x,z)
+		var y: float=WastelandDetail.terrain_height(x,z,height_noise)
 		var basis := Basis(Vector3.UP,rng.randf_range(0.0,TAU)).scaled(Vector3(sx,sy,sz))
 		instances.set_instance_transform(i,Transform3D(basis,Vector3(x,y+0.12,z)))
 
