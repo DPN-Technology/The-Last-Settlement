@@ -85,7 +85,7 @@ static func _watchlight(parent: Node3D, mats: Dictionary) -> void:
 static func enrich_existing(parent: Node3D, mats: Dictionary) -> int:
 	var count := 0
 	for object in parent.get_children():
-		if not str(object.name).begins_with("PerimeterWatchtower"):
+		if not object.has_meta("last_haven_watchtower"):
 			continue
 		var style := Node3D.new()
 		style.name="RealisticTimberWatchTower"

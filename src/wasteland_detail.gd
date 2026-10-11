@@ -360,6 +360,7 @@ static func _build_watchpost(parent: Node3D, pos: Vector3, mats: Dictionary) -> 
 	var root := Node3D.new()
 	root.position = pos
 	root.name = "PerimeterWatchtower"
+	root.set_meta("last_haven_watchtower",true)
 	parent.add_child(root)
 	for dx in [-1.8, 1.8]:
 		for dz in [-1.8, 1.8]:
