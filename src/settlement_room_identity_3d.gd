@@ -62,11 +62,11 @@ static func _housing(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	# Real surfaces identify sleeping, storage and shared eating areas.
-	box(parent,"ShelterSleepingRug",Vector3(0,0.327,0.17),Vector3(1.12,0.017,size.y*0.52),mats["olive"])
+	box(parent,"ShelterSleepingRug",Vector3(0,0.327,0.17),Vector3(1.12,0.017,size.y*0.52),mats["cloth"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.60
 		box(parent,"BunkHeadboard",Vector3(x,0.89,-hz*0.40),Vector3(1.42,0.36,0.12),mats["rust"])
-		box(parent,"FoldedBlankets",Vector3(x,0.76,-hz*0.06),Vector3(1.24,0.065,0.43),mats["canvas"])
+		box(parent,"FoldedBlankets",Vector3(x,0.76,-hz*0.06),Vector3(1.24,0.065,0.43),mats["cloth"])
 		box(parent,"BedsideLocker",Vector3(side*hx*0.85,0.64,hz*0.04),Vector3(0.74,0.86,0.68),mats["darkmetal"])
 		box(parent,"LockerLatch",Vector3(side*hx*0.85,0.76,-0.04+hz*0.04),Vector3(0.29,0.10,0.06),mats["rooflight"])
 		_chair(parent,Vector3(side*hx*0.29,0,hz*0.40),mats)

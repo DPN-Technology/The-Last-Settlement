@@ -136,12 +136,12 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 	for side in [-1.0,1.0]:
 		_box(site,"ReclaimedSupport",Vector3(side*2.55,1.58,-1.75),Vector3(0.17,3.16,0.17),mats["rust"])
 		_box(site,"TentRoofPost",Vector3(side*2.55,1.34,1.72),Vector3(0.17,2.68,0.17),mats["steel"])
-		var wing := _box(site,"PatchworkCanvasAwning",Vector3(side*1.30,2.87,0),Vector3(2.82,0.11,4.5),mats["canvas"])
+		var wing := _box(site,"PatchworkCanvasAwning",Vector3(side*1.30,2.87,0),Vector3(2.82,0.11,4.5),mats["cloth"])
 		wing.rotation.z=-side*0.15
 		_cylinder(site,"DrumOfSupplies",Vector3(side*2.03,0.62,0.72),0.36,1.22,mats["blue"])
 	for index in range(4):
 		_box(site,"StackedRecoveryCrate",Vector3(-1.35+float(index)*0.92,0.46,1.12),Vector3(0.78,0.78,0.77),mats["rust"] if index%2==0 else mats["steel"])
-	_box(site,"ServiceBench",Vector3(0,0.93,-1.2),Vector3(2.30,0.15,0.84),mats["roof"])
+	_box(site,"ServiceBench",Vector3(0,0.93,-1.2),Vector3(2.30,0.15,0.84),mats["wood"])
 	_camp_light(site,Vector3(1.95,0,-1.4),mats)
 
 static func build_world(parent: Node3D, mats: Dictionary) -> Node3D:
@@ -151,11 +151,11 @@ static func build_world(parent: Node3D, mats: Dictionary) -> Node3D:
 	_natural_scrub(root,mats)
 	# Planked sections through the main camp, matching the reference's
 	# broken timber paths and retaining all existing walkable corridors.
-	_timber_walkway(root,Vector3(-24,0,8),Vector3(-12,0,8),mats["canvas"],1231)
-	_timber_walkway(root,Vector3(-8,0,14),Vector3(10,0,14),mats["roof"],1232)
-	_timber_walkway(root,Vector3(8,0,-9),Vector3(22,0,-9),mats["canvas"],1233)
-	_timber_walkway(root,Vector3(-4,0,19),Vector3(-4,0,27),mats["roof"],1234)
-	_timber_walkway(root,Vector3(28,0,13),Vector3(39,0,13),mats["canvas"],1235)
+	_timber_walkway(root,Vector3(-24,0,8),Vector3(-12,0,8),mats["wood"],1231)
+	_timber_walkway(root,Vector3(-8,0,14),Vector3(10,0,14),mats["wood"],1232)
+	_timber_walkway(root,Vector3(8,0,-9),Vector3(22,0,-9),mats["wood"],1233)
+	_timber_walkway(root,Vector3(-4,0,19),Vector3(-4,0,27),mats["wood"],1234)
+	_timber_walkway(root,Vector3(28,0,13),Vector3(39,0,13),mats["wood"],1235)
 	for light_pos in [
 		Vector3(-30.0,0,-14.0),Vector3(-20.0,0,12.0),
 		Vector3(-2.0,0,22.0),Vector3(16.0,0,-17.0),
@@ -173,7 +173,7 @@ static func _service_prop(parent: Node3D, mats: Dictionary, size: Vector2, kind:
 	for side in [-1.0,1.0]:
 		# Physical, imperfect salvage storage right beside the rear facade.
 		var x: float=side*(hx+1.20)
-		_box(parent,"DeliveryPallet",Vector3(x,0.18,hz*0.46),Vector3(1.53,0.22,1.00),mats["canvas"])
+		_box(parent,"DeliveryPallet",Vector3(x,0.18,hz*0.46),Vector3(1.53,0.22,1.00),mats["wood"])
 		for i in range(2):
 			_box(parent,"SideCargo",Vector3(x,0.58+float(i)*0.48,hz*0.46),Vector3(1.09,0.43,0.65),mats["rust"] if i%2==0 else mats["rooflight"])
 		_cylinder(parent,"SalvageWaterBarrel",Vector3(x,0.56,-hz*0.22),0.34,1.09,mats["blue"])

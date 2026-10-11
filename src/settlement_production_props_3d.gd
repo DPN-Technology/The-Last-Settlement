@@ -45,7 +45,7 @@ static func _barrel(parent: Node3D, p: Vector3, mats: Dictionary, blue: bool) ->
 	_cylinder(parent,"DrumLidBung",p+Vector3(0.19,1.23,0.11),0.085,0.046,mats["rooflight"])
 
 static func _crate(parent: Node3D, p: Vector3, mats: Dictionary) -> void:
-	_box(parent,"CrateRoughWoodCore",p+Vector3(0,0.43,0),Vector3(0.88,0.85,0.89),mats["canvas"])
+	_box(parent,"CrateRoughWoodCore",p+Vector3(0,0.43,0),Vector3(0.88,0.85,0.89),mats["wood"])
 	for side in [-1.0,1.0]:
 		for y in [0.19,0.64]:
 			_box(parent,"CrateStrapHorizontal",p+Vector3(0,y,side*0.46),Vector3(0.96,0.085,0.08),mats["rust"])
@@ -53,7 +53,7 @@ static func _crate(parent: Node3D, p: Vector3, mats: Dictionary) -> void:
 			_box(parent,"CrateEdgeReinforcement",p+Vector3(x,0.43,side*0.46),Vector3(0.08,0.88,0.08),mats["steel"])
 	for x in [-0.38,0.38]:
 		_box(parent,"CrateCrossGrain",p+Vector3(x,0.86,0),Vector3(0.10,0.08,0.85),mats["roof"])
-	_box(parent,"CrateLid",p+Vector3(0,0.90,0),Vector3(0.98,0.10,0.97),mats["rust"])
+	_box(parent,"CrateLid",p+Vector3(0,0.90,0),Vector3(0.98,0.10,0.97),mats["wood"])
 
 static func _sandbag(parent: Node3D, p: Vector3, mats: Dictionary) -> void:
 	var bag_mesh := CapsuleMesh.new()
@@ -64,7 +64,7 @@ static func _sandbag(parent: Node3D, p: Vector3, mats: Dictionary) -> void:
 	var piece := MeshInstance3D.new()
 	piece.name="DrapedSandbag_"+str(parent.get_child_count())
 	piece.mesh=bag_mesh
-	piece.material_override=mats["canvas"]
+	piece.material_override=mats["cloth"]
 	piece.rotation.z=PI*0.5
 	piece.scale=Vector3(1.0,1.1,0.65)
 	piece.position=p
@@ -121,7 +121,7 @@ static func _water(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 
 static func _workshop(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hz: float=size.y*0.5
-	_box(parent,"SalvageWorkbench",Vector3(0,0.94,hz+1.57),Vector3(2.52,0.12,1.0),mats["rust"])
+	_box(parent,"SalvageWorkbench",Vector3(0,0.94,hz+1.57),Vector3(2.52,0.12,1.0),mats["wood"])
 	for x in [-1.0,1.0]:
 		_box(parent,"WorkbenchFrame",Vector3(x,0.47,hz+1.57),Vector3(0.13,0.92,0.87),mats["steel"])
 	for i in range(5):

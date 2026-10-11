@@ -1,3 +1,9 @@
+# PHYSICAL MATERIAL PASS
+
+The gameplay 3D scene now contains an offline, baked triplanar **reclaimed timber** and **woven canvas** material library with diffuse and normal maps. Planked walkways and physical crates use dimensional wood grain instead of the formerly uniform brown material; patched tents and actual sandbags use canvas weave. Shelter interior blankets and runner are cloth rather than block-green, which helps close-up room photos read differently from stone and metal. This is a real Godot PBR material system applied to actual scene meshes, not composited imagery. The HUD remains unchanged.
+
+---
+
 # REFERENCE FACILITY ART — PHYSICAL 3D DETAIL
 
 The GL-safe `SettlementProductionProps3D` module adds physical (not composited screenshot) scene geometry for recognizable facility objects. Reclaimed wooden crates are built with separate cores, reinforced edges, grained lids and bands; drums have curved radial meshes and raised lids/bungs; the camp has low sandbag barricades; the clinic has an exterior triage stretcher and oxygen cylinders; the generator has a metal chassis, slotted radiator fins and vertical exhaust pipe; water facilities have routed manifolds and valve heads; workshop has a framed workbench and laid-out salvage tools; command has a mounted telemetry box and real physical resupply. Objects are placed outside simulated doorway centers and live under `DetailedPhysicalEquipment`, no UI redesign or simulation edits. These are procedural low-/medium-poly meshes, not a photorealistic asset-pack replacement.

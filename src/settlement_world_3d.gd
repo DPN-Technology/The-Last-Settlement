@@ -180,6 +180,8 @@ func _create_materials() -> void:
 	_mat("boots", Color("#242927"))
 	_mat("webbing", Color("#625b48"))
 	_mat("canvas", Color("#60563e"))
+	materials["wood"]=SettlementMaterialLibrary3D.create("timber")
+	materials["cloth"]=SettlementMaterialLibrary3D.create("cloth")
 	_mat("medic_uniform", Color("#9faaa2"))
 	_mat("guard_uniform", Color("#4a5951"))
 	_mat("workwear", Color("#ad8650"))

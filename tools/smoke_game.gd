@@ -1452,6 +1452,13 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
+	# Zoomed room objects must show material textures rather than flat blocks.
+	for material_name in ["wood","cloth"]:
+		var swatch: StandardMaterial3D=world.materials.get(material_name) as StandardMaterial3D
+		if swatch==null or swatch.albedo_texture==null or not swatch.normal_enabled or swatch.normal_texture==null:
+			push_error("SMOKE: no genuine PBR wood/fabric textures for "+material_name)
+			quit(1)
+			return
 	# Genuine staged physical models (not just flat UI art or image previews).
 	# Each facility category must present a recognizable object silhouette.
 	var physical_models := 0
