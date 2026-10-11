@@ -233,6 +233,40 @@ static func _facade_readability(parent: Node3D, size: Vector2, mats: Dictionary,
 			_box(parent, "ShutterRib", Vector3(0, 1.35 + float(stripe) * 0.34, hz + 0.18), Vector3(minf(2.65, size.x * 0.50), 0.065, 0.09), mats["steel"])
 
 
+static func _lived_in_facility_detail(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+	# Dedicated exterior dressing: never blocks the central front entrance.
+	# Deterministic variation keeps screenshots stable and saved games identical.
+	var hx: float = size.x * 0.5
+	var hz: float = size.y * 0.5
+	if kind in ["wall", "floor", "door", "pipe", "power_pole", "farm"]:
+		return
+	# Reclaimed braces create actual depth and self-shadow instead of drawn stripes.
+	for side in [-1.0, 1.0]:
+		var x: float = side * (hx + 0.12)
+		var brace := _box(parent, "PatchworkSideBrace", Vector3(x, 1.61, 0), Vector3(0.18, 3.03, 0.15), mats["wood"])
+		brace.rotation.x = side * 0.14
+		_box(parent, "CornerReinforcement", Vector3(x, 2.95, -hz + 0.34), Vector3(0.27, 0.20, 0.71), mats["rust"])
+	# Differentiated, human-scale signs give player-readable building identity.
+	var identity_color: Material = mats["steel"]
+	if kind in ["medical", "clinic"]:
+		identity_color = mats["clinic"]
+	elif kind in ["generator", "power", "industry"]:
+		identity_color = mats["warning"]
+	elif kind in ["command", "security", "watchtower"]:
+		identity_color = mats["blue"]
+	_box(parent, "FacilityMarkerPlate", Vector3(0, 3.18, -hz - 0.25), Vector3(1.42, 0.32, 0.13), identity_color)
+	_box(parent, "FacilityMarkerBacking", Vector3(0, 3.18, -hz - 0.18), Vector3(1.65, 0.45, 0.12), mats["darkmetal"])
+	# Compact everyday objects near the rear service yard, not on pedestrian paths.
+	if kind in ["storage", "command", "industry", "workshop", "generator", "power"]:
+		for index in range(3):
+			var offset: float = float(index) * 0.47
+			_box(parent, "ScrapLumberStack", Vector3(-hx * 0.48, 0.18 + offset * 0.22, hz + 0.68), Vector3(1.35, 0.12, 0.24), mats["wood"])
+		_cylinder(parent, "ServiceCanister", Vector3(hx * 0.53, 0.43, hz + 0.66), 0.21, 0.76, mats["rust"])
+	elif kind in ["medical", "clinic"]:
+		_box(parent, "MedicalSupplyCase", Vector3(hx * 0.50, 0.38, hz + 0.63), Vector3(0.91, 0.61, 0.51), mats["clinic"])
+		_box(parent, "MedicalCaseLatch", Vector3(hx * 0.50, 0.44, hz + 0.90), Vector3(0.18, 0.12, 0.055), mats["steel"])
+
+
 static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
@@ -244,6 +278,7 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	_service_prop(scene,mats,size,kind)
 	_facade_readability(scene,size,mats,kind)
 	_industrial_roof_detail(scene,size,mats,kind)
+	_lived_in_facility_detail(scene,size,mats,kind)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
 	_box(scene,"EntryStoop",Vector3(0,0.14,-hz-0.99),Vector3(2.85,0.22,1.15),mats["concrete"])
