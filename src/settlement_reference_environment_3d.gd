@@ -267,6 +267,30 @@ static func _lived_in_facility_detail(parent: Node3D, size: Vector2, mats: Dicti
 		_box(parent, "MedicalCaseLatch", Vector3(hx * 0.50, 0.44, hz + 0.90), Vector3(0.18, 0.12, 0.055), mats["steel"])
 
 
+static func _reclaimed_roof_patchwork(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+	# Low profile overlapping sheet-metal repairs follow the roof instead of
+	# covering doors, interaction targets or the camera-facing building facade.
+	if kind in ["wall", "floor", "door", "pipe", "power_pole", "farm"]:
+		return
+	var width: float = minf(size.x * 0.23, 2.0)
+	var depth: float = minf(size.y * 0.26, 1.8)
+	if width < 0.48 or depth < 0.48:
+		return
+	for index in range(4):
+		var col: int = index % 2
+		var row: int = int(index / 2)
+		var x: float = (float(col) - 0.5) * size.x * 0.42
+		var z: float = (float(row) - 0.5) * size.y * 0.40
+		var patch := _box(parent, "OverlappedReclaimedRoofSheet", Vector3(x, 3.97 + float(index) * 0.007, z), Vector3(width, 0.035, depth), mats["rooflight"] if index % 3 == 0 else mats["rust"])
+		patch.rotation.y = (float(index) - 1.5) * 0.035
+		for rib in range(3):
+			_box(parent, "SheetMetalRaisedSeam", Vector3(x + (float(rib) - 1.0) * width * 0.28, 4.005 + float(index) * 0.007, z), Vector3(0.035, 0.027, depth * 0.90), mats["steel"])
+	# Bracing on high walls creates visible layered silhouette from the
+	# playable elevated camera without replacing gameplay geometry.
+	for side in [-1.0, 1.0]:
+		_box(parent, "RoofEdgeFlashing", Vector3(side * (size.x * 0.5 - 0.12), 3.92, 0), Vector3(0.18, 0.13, size.y * 0.82), mats["darkmetal"])
+
+
 static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
@@ -279,6 +303,7 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	_facade_readability(scene,size,mats,kind)
 	_industrial_roof_detail(scene,size,mats,kind)
 	_lived_in_facility_detail(scene,size,mats,kind)
+	_reclaimed_roof_patchwork(scene,size,mats,kind)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
 	_box(scene,"EntryStoop",Vector3(0,0.14,-hz-0.99),Vector3(2.85,0.22,1.15),mats["concrete"])
