@@ -95,7 +95,7 @@ static func _weather_strip(parent: Node3D, length: float, h: float, at: Vector3,
 		patch.rotation.y=0.025 if horizontal else 0.0
 		for dx in [-0.32,0.32]:
 			for dy in [-0.15,0.15]:
-				var bolt := pos+right*(dx*patch_width)+up*(dy*patch_height)+outer*0.058
+				var bolt: Vector3 = pos+right*(float(dx)*patch_width)+up*(float(dy)*patch_height)+outer*0.058
 				box(root,"AgedRivet",bolt,Vector3(0.055,0.053,0.05),mats["rooflight"])
 
 static func _window_details(parent: Node3D, size: Vector2, h: float, mats: Dictionary) -> void:
