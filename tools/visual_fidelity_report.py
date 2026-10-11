@@ -11,7 +11,7 @@ from pathlib import Path
 import struct
 import zlib
 
-TARGET = {"mean_luminance":75.2,"detail":25.6,"luma_spread":41.6}
+TARGET = {"mean_luminance":76.4,"detail":25.6,"luma_spread":42.2,"structural_detail":32.8}
 # Built-in Python PNG decoder; dependency-free and safely bounds image sizes.
 def decode_png(path):
     data=Path(path).read_bytes()
@@ -79,6 +79,8 @@ def measure(png):
     top,bottom=int(130*scale_y),int(650*scale_y)
     area=[]
     edges=[]
+    structural=[]
+    last_blocks=None
     first=None
     for y in range(top,bottom):
         line=rows[y]
@@ -91,10 +93,28 @@ def measure(png):
         if first is not None:
             edges.extend(abs(v-first[i]) for i,v in enumerate(values))
         first=values
+        # Downsampling 4x4 blocks suppresses granular texture that would
+        # otherwise inflate a visual metric without enriching the buildings.
+        if (y-top)%4==3:
+            blocks=[]
+            for x in range(0,len(values)-3,4):
+                start=left+x
+                total=0.0
+                for yy in range(y-3,y+1):
+                    source=rows[yy]
+                    for xx in range(start,start+4):
+                        idx=xx*ch
+                        total+=(54*source[idx]+183*source[idx+1]+19*source[idx+2])/256.0
+                blocks.append(total/16.0)
+            structural.extend(abs(blocks[i]-blocks[i-1]) for i in range(1,len(blocks)))
+            if last_blocks is not None:
+                structural.extend(abs(current-prior) for current,prior in zip(blocks,last_blocks))
+            last_blocks=blocks
     mean=sum(area)/len(area)
     std=math.sqrt(sum((v-mean)**2 for v in area)/len(area))
     detail=sum(edges)/len(area) * 2 # Match adjacent x+y per-pixel detail
-    return {"mean_luminance":round(mean,1),"luma_spread":round(std,1),"detail":round(detail,1),"size":[width,height]}
+    shape_detail=sum(structural)/max(1,len(structural))*2
+    return {"mean_luminance":round(mean,1),"luma_spread":round(std,1),"detail":round(detail,1),"structural_detail":round(shape_detail,1),"size":[width,height]}
 
 def main():
     folder=Path("dist/visual")
@@ -106,9 +126,11 @@ def main():
     overview=outcomes["01_Overview_HUD"]
     overview["detail_fraction_of_target"]=round(overview["detail"]/TARGET["detail"],2)
     overview["brightness_fraction_of_target"]=round(overview["mean_luminance"]/TARGET["mean_luminance"],2)
+    overview["structural_fraction_of_target"]=round(overview["structural_detail"]/TARGET["structural_detail"],2)
     overview["reference_ready_metric_only"]=(
-        overview["detail_fraction_of_target"]>=0.78
-        and overview["brightness_fraction_of_target"]>=0.8
+        overview["structural_fraction_of_target"]>=0.87
+        and 0.78<=overview["brightness_fraction_of_target"]<=1.20
+        and overview["luma_spread"]>=TARGET["luma_spread"]*0.78
     )
     record={"source":"actual Godot gl_compatibility rendered frames","reference":"user-provided cinematic concept", "goal":TARGET,"captures":outcomes,"note":"Numeric similarity is NOT visual approval; manually inspect PNGs."}
     (folder/"visual-review.json").write_text(json.dumps(record,indent=2)+"\n")
