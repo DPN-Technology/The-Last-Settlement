@@ -67,6 +67,7 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 	var roof_first := group.get_child_count()
 	if kind == "housing":
 		_pitched_shelter_roof(group,size,height,mats)
+		_housing_dormer(group,size,height,mats)
 	elif kind == "medical":
 		_clinic_roof(group,size,height,mats)
 	else:
@@ -113,6 +114,26 @@ static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, m
 	for side in [-1.0,1.0]:
 		var patch := box(group,"WeatheredRoofPatch",Vector3(side*half*0.53,height+0.42+ridge*0.47,-size.y*0.17),Vector3(1.8,0.045,1.45),mats["rust"])
 		patch.rotation.z = -side*pitch
+
+static func _housing_dormer(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
+	# A small front-facing dormer breaks up the otherwise uninterrupted pitched
+	# roof. Positioned above the entrance; no collisions or door changes.
+	var ridge: float = 2.65
+	var half: float = size.x * 0.5
+	if half < 2.2 or size.y < 4.0:
+		return
+	var front_z: float = -size.y * 0.25
+	var dormer_width: float = minf(2.25, size.x * 0.25)
+	var dormer_depth: float = minf(1.5, size.y * 0.20)
+	var roof_base: float = height + ridge * 0.62
+	box(group, "ShelterDormerFront", Vector3(0, roof_base, front_z), Vector3(dormer_width, 1.04, 0.14), mats["wall"])
+	box(group, "ShelterDormerWindow", Vector3(0, roof_base + 0.03, front_z - 0.095), Vector3(dormer_width * 0.53, 0.59, 0.055), mats["glass"])
+	for side in [-1.0, 1.0]:
+		box(group, "DormerWindowTrim", Vector3(side * dormer_width * 0.30, roof_base + 0.02, front_z - 0.14), Vector3(0.09, 0.78, 0.11), mats["wood"])
+		var slope := box(group, "DormerRoofSlope", Vector3(side * dormer_width * 0.26, roof_base + 0.74, front_z + dormer_depth * 0.33), Vector3(dormer_width * 0.63, 0.12, dormer_depth), mats["roof"])
+		slope.rotation.z = -side * 0.36
+	box(group, "DormerRidge", Vector3(0, roof_base + 0.94, front_z + dormer_depth * 0.33), Vector3(0.12, 0.10, dormer_depth), mats["steel"])
+
 
 static func _clinic_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	box(group,"ClinicRoof",Vector3(0,height+0.25,0),Vector3(size.x+0.5,0.33,size.y+0.5),mats["rooflight"])
