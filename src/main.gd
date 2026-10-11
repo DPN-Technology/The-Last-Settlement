@@ -2813,6 +2813,12 @@ func _handle_inspector_click(position: Vector2) -> bool:
 				return true
 		return Rect2(x, y, 350, h).has_point(position)
 	if not selected_building.is_empty():
+		if pending_demolition_key!=_facility_key(selected_building) and _facility_focus_button().has_point(position):
+			_focus_world_position(Vector2(selected_building["position"]))
+			roof_view_mode=0
+			playtest_notice="FOCUSED  /  "+str(selected_building["name"]).to_upper()+"  /  ROOM REVEALED"
+			playtest_notice_seconds=4.0
+			return true
 		if pending_demolition_key!=_facility_key(selected_building) and _facility_roof_button().has_point(position):
 			_cycle_roof_view()
 			return true
@@ -2875,9 +2881,14 @@ func _cycle_roof_view() -> void:
 	playtest_notice="INTERIOR VISIBILITY  /  "+str(ROOF_VIEW_LABELS[roof_view_mode])
 	playtest_notice_seconds=5.0
 
+func _facility_focus_button() -> Rect2:
+	var area := SettlementUILayout.facility_inspector(get_viewport_rect().size)
+	return Rect2(area.position.x+16.0,area.position.y+270.0,(area.size.x-39.0)*0.40,29.0)
+
 func _facility_roof_button() -> Rect2:
 	var area := SettlementUILayout.facility_inspector(get_viewport_rect().size)
-	return Rect2(area.position.x+16.0,area.position.y+270.0,area.size.x-32.0,29.0)
+	var focus_action := _facility_focus_button()
+	return Rect2(focus_action.end.x+7.0,area.position.y+270.0,area.end.x-focus_action.end.x-23.0,29.0)
 
 func _draw_building_panel(b: Dictionary) -> void:
 	var vp := get_viewport_rect().size
@@ -2923,8 +2934,10 @@ func _draw_building_panel(b: Dictionary) -> void:
 	if pending_demolition_key==_facility_key(b):
 		draw_string(ThemeDB.fallback_font,Vector2(x+18,y+289),"CONFIRM SALVAGE  /  click again to demolish",HORIZONTAL_ALIGNMENT_LEFT,w-35,11,BAD)
 	else:
+		var focus_action := _facility_focus_button()
+		DPNUISkin.button(self,focus_action,"FOCUS [F]",focus_action.has_point(get_local_mouse_position()),false,false,true,true)
 		var roofs := _facility_roof_button()
-		DPNUISkin.button(self,roofs,"INTERIORS [TAB]  /  "+str(ROOF_VIEW_LABELS[roof_view_mode]),roofs.has_point(get_local_mouse_position()),roof_view_mode==1,false,true,true)
+		DPNUISkin.button(self,roofs,"ROOMS [TAB]  /  "+str(ROOF_VIEW_LABELS[roof_view_mode]),roofs.has_point(get_local_mouse_position()),roof_view_mode==1,false,true,true)
 	var labels := ["REPAIR [R]","CONFIRM" if pending_demolition_key==_facility_key(b) else "SALVAGE [X]","CLOSE"]
 	for index in range(3):
 		var button := SettlementUILayout.facility_action(vp,index)

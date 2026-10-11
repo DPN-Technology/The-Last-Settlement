@@ -1791,6 +1791,67 @@ func _smoke() -> void:
 			quit(1)
 			return
 	world._update_roof_views(sim,{}, {},int(instance.roof_view_mode))
+	# Every major facility in the user screenshots has a genuinely different
+	# room identity scene, not merely identical concrete boxes with beds.
+	var art_roots := 0
+	var expected_rooms := {"housing":"ShelterSleepingRug","medical":"ClinicTreatmentFloor","command":"SituationDisplay"}
+	var identified: Dictionary={}
+	for building in world.structure_layer.get_children():
+		if not building.has_meta("building_type"):
+			continue
+		var kind: String=str(building.get_meta("building_type"))
+		var identity_root: Node3D=building.get_node_or_null("InteriorFurnishings/FacilityInteriorIdentity") as Node3D
+		if identity_root==null:
+			if kind in ["farm","wall","floor","door","pipe","power_pole"]:
+				continue
+			push_error("SMOKE: "+kind+" facility lacks distinct interior identity")
+			quit(1)
+			return
+		art_roots+=1
+		if expected_rooms.has(kind):
+			if identity_root.get_node_or_null(str(expected_rooms[kind]))==null:
+				push_error("SMOKE: "+kind+" interior role-specific detail missing")
+				quit(1)
+				return
+			identified[kind]=true
+	if art_roots<6 or identified.size()<3:
+		push_error("SMOKE: shelter, clinic and command do not have full differentiated interiors")
+		quit(1)
+		return
+	# Facility inspector focus must actually move camera and switch out of
+	# roof-only mode. Hitboxes must not overlap the ROOMS visibility control.
+	var focus_rect: Rect2=instance._facility_focus_button()
+	var rooms_rect: Rect2=instance._facility_roof_button()
+	if focus_rect.intersects(rooms_rect) or focus_rect.size.x<90.0 or rooms_rect.size.x<90.0:
+		push_error("SMOKE: facility FOCUS and ROOMS controls overlap or truncate")
+		quit(1)
+		return
+	var previous_building: Dictionary=instance.selected_building
+	var previous_roof_mode: int=instance.roof_view_mode
+	var first_housing: Dictionary={}
+	for b in sim.buildings:
+		if str(b.get("type",""))=="housing":
+			first_housing=b
+			break
+	if first_housing.is_empty():
+		push_error("SMOKE: cannot test facility focus without a shelter")
+		quit(1)
+		return
+	instance.selected_building=first_housing
+	instance.roof_view_mode=2
+	world.focus=Vector3(116.0,0,115.0)
+	world._position_camera()
+	if not instance._handle_inspector_click(focus_rect.get_center()):
+		push_error("SMOKE: inspector FOCUS action not connected")
+		quit(1)
+		return
+	if instance.roof_view_mode!=0 or world.focus.distance_to(world.world_position(Vector2(first_housing["position"])))>0.08:
+		push_error("SMOKE: FOCUS does not return camera to revealed facility")
+		quit(1)
+		return
+	instance.selected_building=previous_building
+	instance.roof_view_mode=previous_roof_mode
+	world._update_roof_views(sim,instance.selected_building,{},previous_roof_mode)
 	# World-space interior props and animated door hinges must exist in the
 	# exported scene, with roof hiding limited to the chosen structure.
 	var has_interiors := 0

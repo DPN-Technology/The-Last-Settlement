@@ -1,3 +1,15 @@
+# BUILDING & ROOM VISUAL FIDELITY — OCTOBER 10 WINDOWS REVIEW
+
+The latest user screenshots show a correctly functioning, open-roof 3D Shelter A, Command and Clinic but the rooms still look interchangeable: a bare floor, thin central dividers, generic consoles/beds and unreadable activity distinctions. Facility management also stays on the right while the user navigates away from the selected building, making its subject ambiguous.
+
+**Actual Godot changes:** `SettlementRoomIdentity3D` introduces facility-specific furnished 3D geometry under each existing `InteriorFurnishings` node. Housing gets sleeping rugs, headboards, lockers, family shelving and place settings; Clinic gets a distinct treatment corridor, bedside equipment, medical cross signs and privacy posts; Command gets a dense planning table, physical rack-mounted screens, situation display and work chairs; workshop/storage gains toolboards and fabrication props; utility rooms have valves, telemetry panels and contrasting service floors. Real room lights remain scoped to the cutaway interior parent. This is transitional mesh art, not yet physically interactive furniture or high-poly PBR models.
+
+**Inspector navigation:** the management panel now has an explicit clickable `FOCUS [F]` button beside `ROOMS [TAB]`. Focus moves to the selected facility and enables selected-only room cutaway, so the player sees the building matching the inspector. The old keyboard F focus and Tab cycle remain available. No new UI strokes/shaders that might trigger the historic red-line graphics issue.
+
+**Automation:** check each starting housing, command, and medical structure has the expected distinct identity objects, all normal buildings include an interior identity, and click-to-focus does recenter the camera without overlapping room control hitboxes. Verify original room roof visibility tests still pass. Windows user screenshots remain necessary to assess legibility/scale, occupied-room visibility and frame rate. No save format, resource simulation, door animation or navigation changes.
+
+---
+
 # MINIMAP HOME NAVIGATION
 
 The screenshots show testers traveling far into empty wasteland until Last Haven is nearly off screen. A small **HOME** button now sits in the minimap title, visible whenever that map is available, using the same safe cached HUD button graphics as the rest of the game. Clicking it recenters the actual 3D camera at the playable camp and releases any active survivor camera follow. The existing Home keyboard shortcut remains unchanged. A live smoke test clicks this new hitbox after placing the camera 115m into the outskirts and verifies focus and follow state reset.
