@@ -267,11 +267,12 @@ static func _lived_in_facility_detail(parent: Node3D, size: Vector2, mats: Dicti
 		_box(parent, "MedicalCaseLatch", Vector3(hx * 0.50, 0.44, hz + 0.90), Vector3(0.18, 0.12, 0.055), mats["steel"])
 
 
-static func _reclaimed_roof_patchwork(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+static func _reclaimed_roof_patchwork(parent: Node3D, size: Vector2, mats: Dictionary, kind: String, body_height: float) -> void:
 	# Low profile overlapping sheet-metal repairs follow the roof instead of
 	# covering doors, interaction targets or the camera-facing building facade.
-	if kind in ["wall", "floor", "door", "pipe", "power_pole", "farm"]:
-		return
+	if kind in ["wall", "floor", "door", "pipe", "power_pole", "farm", "housing"]:
+		return # Pitched housing roofs require slope-matched panels, not flat patches.
+	var roof_y: float = body_height + 0.47
 	var width: float = minf(size.x * 0.23, 2.0)
 	var depth: float = minf(size.y * 0.26, 1.8)
 	if width < 0.48 or depth < 0.48:
@@ -281,14 +282,14 @@ static func _reclaimed_roof_patchwork(parent: Node3D, size: Vector2, mats: Dicti
 		var row: int = int(index / 2)
 		var x: float = (float(col) - 0.5) * size.x * 0.42
 		var z: float = (float(row) - 0.5) * size.y * 0.40
-		var patch := _box(parent, "OverlappedReclaimedRoofSheet", Vector3(x, 3.97 + float(index) * 0.007, z), Vector3(width, 0.035, depth), mats["rooflight"] if index % 3 == 0 else mats["rust"])
+		var patch := _box(parent, "OverlappedReclaimedRoofSheet", Vector3(x, roof_y + float(index) * 0.007, z), Vector3(width, 0.035, depth), mats["rooflight"] if index % 3 == 0 else mats["rust"])
 		patch.rotation.y = (float(index) - 1.5) * 0.035
 		for rib in range(3):
-			_box(parent, "SheetMetalRaisedSeam", Vector3(x + (float(rib) - 1.0) * width * 0.28, 4.005 + float(index) * 0.007, z), Vector3(0.035, 0.027, depth * 0.90), mats["steel"])
+			_box(parent, "SheetMetalRaisedSeam", Vector3(x + (float(rib) - 1.0) * width * 0.28, roof_y + 0.035 + float(index) * 0.007, z), Vector3(0.035, 0.027, depth * 0.90), mats["steel"])
 	# Bracing on high walls creates visible layered silhouette from the
 	# playable elevated camera without replacing gameplay geometry.
 	for side in [-1.0, 1.0]:
-		_box(parent, "RoofEdgeFlashing", Vector3(side * (size.x * 0.5 - 0.12), 3.92, 0), Vector3(0.18, 0.13, size.y * 0.82), mats["darkmetal"])
+		_box(parent, "RoofEdgeFlashing", Vector3(side * (size.x * 0.5 - 0.12), body_height + 0.40, 0), Vector3(0.18, 0.13, size.y * 0.82), mats["darkmetal"])
 
 
 static func _exterior_weathering(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
@@ -312,7 +313,7 @@ static func _exterior_weathering(parent: Node3D, size: Vector2, mats: Dictionary
 		_box(parent, "ReclaimedRearSiding", Vector3(x, 2.30, hz + 0.17), Vector3(minf(0.66, size.x * 0.16), 1.14 + float(i % 2) * 0.20, 0.055), mats["wood"] if i % 3 == 0 else mats["rooflight"])
 
 
-static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
+static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary, body_height: float) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
 	if kind in ["wall","floor","door","pipe","power_pole","farm"]:
@@ -324,7 +325,7 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	_facade_readability(scene,size,mats,kind)
 	_industrial_roof_detail(scene,size,mats,kind)
 	_lived_in_facility_detail(scene,size,mats,kind)
-	_reclaimed_roof_patchwork(scene,size,mats,kind)
+	_reclaimed_roof_patchwork(scene,size,mats,kind,body_height)
 	_exterior_weathering(scene,size,mats,kind)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
