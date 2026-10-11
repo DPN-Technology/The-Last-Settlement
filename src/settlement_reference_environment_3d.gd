@@ -291,6 +291,27 @@ static func _reclaimed_roof_patchwork(parent: Node3D, size: Vector2, mats: Dicti
 		_box(parent, "RoofEdgeFlashing", Vector3(side * (size.x * 0.5 - 0.12), 3.92, 0), Vector3(0.18, 0.13, size.y * 0.82), mats["darkmetal"])
 
 
+static func _exterior_weathering(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+	# Mesh-based surface wear remains deterministic and purely decorative.
+	# Broken plaster and patched cladding are kept shallow on rear/side walls.
+	if kind in ["wall", "floor", "door", "pipe", "power_pole", "farm"]:
+		return
+	var hx: float = size.x * 0.5
+	var hz: float = size.y * 0.5
+	for side in [-1.0, 1.0]:
+		for index in range(3):
+			var z: float = (float(index) - 1.0) * size.y * 0.21
+			var y: float = 1.12 + float((index + 1) % 3) * 0.76
+			var width: float = minf(size.y * 0.14, 0.85)
+			_box(parent, "BoltedSideRepairPlate", Vector3(side * (hx + 0.14), y, z), Vector3(0.055, 0.49, width), mats["rust"] if index != 1 else mats["rooflight"])
+			for z_sign in [-1.0, 1.0]:
+				_box(parent, "PlateRivet", Vector3(side * (hx + 0.185), y, z + z_sign * width * 0.38), Vector3(0.025, 0.07, 0.07), mats["steel"])
+	# Rear cladding avoids the front entrance and view facing the player.
+	for i in range(4):
+		var x: float = (float(i) - 1.5) * size.x * 0.18
+		_box(parent, "ReclaimedRearSiding", Vector3(x, 2.30, hz + 0.17), Vector3(minf(0.66, size.x * 0.16), 1.14 + float(i % 2) * 0.20, 0.055), mats["wood"] if i % 3 == 0 else mats["rooflight"])
+
+
 static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
@@ -304,6 +325,7 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	_industrial_roof_detail(scene,size,mats,kind)
 	_lived_in_facility_detail(scene,size,mats,kind)
 	_reclaimed_roof_patchwork(scene,size,mats,kind)
+	_exterior_weathering(scene,size,mats,kind)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
 	_box(scene,"EntryStoop",Vector3(0,0.14,-hz-0.99),Vector3(2.85,0.22,1.15),mats["concrete"])
