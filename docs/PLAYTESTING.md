@@ -1,3 +1,11 @@
+# REFERENCE FACILITY ART — PHYSICAL 3D DETAIL
+
+The GL-safe `SettlementProductionProps3D` module adds physical (not composited screenshot) scene geometry for recognizable facility objects. Reclaimed wooden crates are built with separate cores, reinforced edges, grained lids and bands; drums have curved radial meshes and raised lids/bungs; the camp has low sandbag barricades; the clinic has an exterior triage stretcher and oxygen cylinders; the generator has a metal chassis, slotted radiator fins and vertical exhaust pipe; water facilities have routed manifolds and valve heads; workshop has a framed workbench and laid-out salvage tools; command has a mounted telemetry box and real physical resupply. Objects are placed outside simulated doorway centers and live under `DetailedPhysicalEquipment`, no UI redesign or simulation edits. These are procedural low-/medium-poly meshes, not a photorealistic asset-pack replacement.
+
+**Acceptance:** compare the user's golden-hour concept directly against the launched Windows game at both overview and zoomed-in views. Validate barrel silhouettes/rims, external service machinery, light placement, floor shading, doors, camera cutaways, and overall FPS. The work is incomplete until approved on Windows; false equivalence to a reference image is not acceptable.
+
+---
+
 # REFERENCE ART IMPLEMENTATION — NOT A CONCEPT IMAGE
 
 User supplied current in-game visual and a cinematic settlement reference. **Do not alter the existing DPN HUD.** The 3D scene is the actual task: rugged, densely detailed terrain, warm morning lighting, canopy service areas, watchtowers, slatted walkways, working yellow lamps, functional-looking clutter and distinct cutaway buildings.

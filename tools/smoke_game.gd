@@ -1452,6 +1452,26 @@ func _smoke() -> void:
 		push_error("SMOKE: Industrial fan did not stop without power")
 		quit(1)
 		return
+	# Genuine staged physical models (not just flat UI art or image previews).
+	# Each facility category must present a recognizable object silhouette.
+	var physical_models := 0
+	var class_examples: Dictionary={}
+	for structure in world.structure_layer.get_children():
+		var equipment: Node3D=structure.get_node_or_null("DetailedPhysicalEquipment") as Node3D
+		if equipment==null:
+			continue
+		physical_models+=1
+		var kind: String=str(structure.get_meta("building_type",""))
+		if kind in ["housing","medical","command","industry","generator","water_pump","purifier","sewage"]:
+			if equipment.get_child_count()<3:
+				push_error("SMOKE: physical facility equipment not modeled: "+kind)
+				quit(1)
+				return
+			class_examples[kind]=true
+	if physical_models<7 or not class_examples.has("housing") or not class_examples.has("command") or not class_examples.has("medical"):
+		push_error("SMOKE: reference architectural props are not integrated into actual game structures")
+		quit(1)
+		return
 	# This is the user's reference-image work, not another screenshot mockup.
 	# Assert that the *playable Godot world* contains the scenic 3D meshes.
 	var real_art: Node3D=world.terrain_layer.get_node_or_null("ReferenceQualityWorldDressing") as Node3D

@@ -652,6 +652,7 @@ func _build_structure(b: Dictionary) -> void:
 	SettlementWorldReadability3D.decorate(group,b,size,body_height,materials)
 	SettlementFidelity3D.exterior(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	SettlementReferenceEnvironment3D.detail_facility(group,type,size,materials)
+	SettlementProductionProps3D.decorate_facility(group,type,size,materials)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])
