@@ -64,7 +64,7 @@ jobs:
             --script res://tools/capture_reference_views.gd 2>&1 | tee dist/visual/render.log
           EXIT="${PIPESTATUS[0]}"
           set -e
-          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|Parser Error|VISUAL QA:' dist/visual/render.log; then
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|Parser Error|VISUAL QA: (empty|cannot|no|missing)' dist/visual/render.log; then
             echo "::error::Real Godot render reported an error"
             exit 1
           fi

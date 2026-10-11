@@ -16,3 +16,9 @@ Build command: python3 tools/install_reference_models.py
 Then: godot --headless --path . --import
 
 Do not change the DPN UI or render a static concept image over gameplay.
+
+Additional CC0 PBR models for the visually furnished settlement rooms:
+- https://polyhaven.com/a/Shelf_01 — Gabriel Radić
+- https://polyhaven.com/a/portable_generator — James Ray Cock
+- https://polyhaven.com/a/worn_metal_rack — Luca B
+- https://polyhaven.com/a/tool_cart — Savva Zakharov

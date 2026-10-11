@@ -9,7 +9,11 @@ const MODELS := {
 	"table": "painted_wooden_table/painted_wooden_table_1k.gltf",
 	"bench": "painted_wooden_bench/painted_wooden_bench_1k.gltf",
 	"car": "covered_car/covered_car_1k.gltf",
-	"barrier": "concrete_road_barrier_02/concrete_road_barrier_02_1k.gltf"
+	"barrier": "concrete_road_barrier_02/concrete_road_barrier_02_1k.gltf",
+	"shelf": "Shelf_01/Shelf_01_1k.gltf",
+	"portable_generator": "portable_generator/portable_generator_1k.gltf",
+	"rack": "worn_metal_rack/worn_metal_rack_1k.gltf",
+	"tool_cart": "tool_cart/tool_cart_1k.gltf"
 }
 static var _cached: Dictionary={}
 
@@ -90,14 +94,23 @@ static func build_interiors(structure: Node3D, kind: String, size: Vector2) -> v
 			if add(site,"table","RealWeatheredCommunalTable",Vector3(0,0.31,hz*0.52),1.89,PI)!=null:
 				_hide_named(room,["SharedDiningTable","SharedShelterTable","CommandPlanningDesk"])
 			add(site,"bench","RealShelterSeat",Vector3(0,0.31,hz*0.23),1.18)
+			for side in [-1.0,1.0]:
+				add(site,"shelf","RealShelterSupplyShelves",Vector3(side*size.x*0.35,0.31,hz*0.68),1.16,side*0.24)
 		"command":
 			if add(site,"table","RealOperationsPlanningTable",Vector3(0,0.31,hz*0.51),2.24,PI)!=null:
 				_hide_named(room,["CommandPlanningDesk","CommandMapSurface","CommandTableMap"])
 			add(site,"bench","RealCommandStationSeat",Vector3(0,0.31,-hz*0.15),1.18)
+			for side in [-1.0,1.0]:
+				add(site,"rack","RealCommandSupplyEquipmentRack",Vector3(side*size.x*0.37,0.31,hz*0.60),1.45,side*0.12)
 		"medical":
 			add(site,"bench","RealClinicVisitorsBench",Vector3(0,0.31,hz*0.67),1.23)
+			add(site,"tool_cart","RealClinicMedicalTrolley",Vector3(-size.x*0.27,0.31,hz*0.51),1.12,0.30)
+			add(site,"shelf","RealMedicalSuppliesShelves",Vector3(size.x*0.31,0.31,hz*0.69),1.24)
 		"industry","storage":
 			add(site,"table","RealFabricationWorkSurface",Vector3(0,0.31,hz*0.45),2.22)
+			for side in [-1.0,1.0]:
+				add(site,"rack","RealFabricationStorageRack",Vector3(side*size.x*0.34,0.31,hz*0.65),1.48)
+			add(site,"tool_cart","RealMaintenanceToolCart",Vector3(-size.x*0.21,0.31,-hz*0.23),1.18)
 		_:
 			pass
 
@@ -111,6 +124,10 @@ static func build_facility(structure: Node3D, kind: String, size: Vector2) -> vo
 		add(site,"barrel","RealWeatheredBarrel_"+str(side),Vector3(side*(hx+1.35),0.31,hz*0.15),0.76,side*PI*0.34)
 	if kind in ["industry","generator","storage"]:
 		add(site,"barrier","RealBatteredConcreteRoadBarrier",Vector3(0,0.31,hz+2.70),1.70,PI*0.5)
+	if kind in ["generator","power","battery"]:
+		add(site,"portable_generator","RealPortableGenerator",Vector3(-hx*0.42,0.31,hz+1.70),1.35)
+	if kind in ["medical","command"]:
+		add(site,"rack","RealExternalSupplyRack",Vector3(hx+1.92,0.31,hz*0.24),1.36)
 	build_interiors(structure,kind,size)
 
 static func build_world(parent: Node3D) -> void:

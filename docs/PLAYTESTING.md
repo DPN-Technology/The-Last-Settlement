@@ -1,3 +1,24 @@
+# REAL GODOT VISUAL EVIDENCE REVIEW 2
+
+The first renderer captures were inspected, and did not meet the user's
+cinematic target. Visible improvements include brighter textured ground but
+the rooms still looked empty and boxy. First actual visual QA attempt rendered
+all four views, but its success message was caught by an overly broad error
+log filter. That false positive is fixed.
+
+9 real CC0 photoreal models now install via integrity-verified Poly Haven
+1K glTF packages, including aged shelves, a portable generator, worn metal
+racks and a detailed tool cart. These are instanced physically inside the
+existing cutaway structures, not HUD overlays. Existing geometry around
+shelter, command, clinic, workshops and generator remains simulated.
+
+The dirt color is dimmed towards the reference and the mipmapped photo-PBR
+material is sampled less aggressively to reduce distracting granular noise.
+No DPN HUD layout changes. Actual frame inspection is required before
+approving graphics quality.
+
+---
+
 # ARTIST-AUTHORED PHOTOREAL 3D MESH IMPORT
 
 The Godot settlement world and roof-cutaway interiors now load 1K CC0 textured
