@@ -188,6 +188,51 @@ static func _service_prop(parent: Node3D, mats: Dictionary, size: Vector2, kind:
 		var conduit := _box(parent,"OverheadConduitRack",Vector3(0,2.80,hz+0.20),Vector3(size.x*0.59,0.22,0.20),mats["steel"])
 		conduit.rotation.z=0.01
 
+static func _industrial_roof_detail(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+	# Compact silhouette detail. The core building owns the roof/cutaway; these
+	# additions remain under its roofline and do not affect selection or routes.
+	var hx: float = size.x * 0.5
+	var hz: float = size.y * 0.5
+	if kind in ["industry", "generator", "power", "workshop"]:
+		for i in range(3):
+			var x: float = (float(i) - 1.0) * minf(1.55, hx * 0.40)
+			_box(parent, "RoofVentHousing", Vector3(x, 4.22, hz * 0.16), Vector3(0.77, 0.37, 0.86), mats["darkmetal"])
+			_box(parent, "VentLouver", Vector3(x, 4.22, hz * 0.16 + 0.44), Vector3(0.65, 0.21, 0.04), mats["steel"])
+		var stack := _cylinder(parent, "ExhaustStack", Vector3(hx * 0.63, 4.84, hz * 0.47), 0.24, 1.7, mats["rust"])
+		_box(parent, "StackRainCap", stack.position + Vector3(0, 0.89, 0), Vector3(0.70, 0.10, 0.70), mats["darkmetal"])
+	elif kind in ["medical", "clinic"]:
+		_box(parent, "RoofAirHandling", Vector3(hx * 0.38, 4.13, hz * 0.17), Vector3(1.18, 0.49, 0.91), mats["clinic"])
+		_box(parent, "IntakeSlats", Vector3(hx * 0.38, 4.15, hz * 0.17 + 0.48), Vector3(0.97, 0.28, 0.055), mats["darkmetal"])
+	elif kind in ["command", "security", "watchtower"]:
+		_box(parent, "AntennaMast", Vector3(hx * 0.62, 4.94, hz * 0.39), Vector3(0.09, 2.11, 0.09), mats["steel"])
+		_box(parent, "RadioCrossarm", Vector3(hx * 0.62, 5.53, hz * 0.39), Vector3(0.94, 0.07, 0.07), mats["steel"])
+		_box(parent, "AmberWarningBeacon", Vector3(hx * 0.62, 6.05, hz * 0.39), Vector3(0.20, 0.20, 0.20), mats["warning"])
+
+
+static func _facade_readability(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
+	# Set-dressing in shallow layers instead of oversized flat panels; narrow
+	# window recesses, covered entrance and rain drains break up box silhouettes.
+	var hx: float = size.x * 0.5
+	var hz: float = size.y * 0.5
+	var window_count: int = clampi(int(floor((size.x - 3.1) / 2.4)), 0, 4)
+	for i in range(window_count):
+		var x: float = (float(i) - (float(window_count) - 1.0) * 0.5) * 2.4
+		if absf(x) < 1.45:
+			continue # Never obscure the existing physical door.
+		_box(parent, "RecessedWindow", Vector3(x, 2.03, -hz - 0.13), Vector3(0.99, 0.75, 0.035), mats["glass"])
+		_box(parent, "WindowHead", Vector3(x, 2.47, -hz - 0.17), Vector3(1.20, 0.09, 0.11), mats["steel"])
+		_box(parent, "WindowSill", Vector3(x, 1.59, -hz - 0.17), Vector3(1.23, 0.11, 0.18), mats["rust"])
+		for bar in [-0.29, 0.29]:
+			_box(parent, "SafetyGrille", Vector3(x + bar, 2.03, -hz - 0.20), Vector3(0.035, 0.73, 0.035), mats["darkmetal"])
+	for side in [-1.0, 1.0]:
+		var drain_x: float = side * (hx - 0.20)
+		_box(parent, "RainDownpipe", Vector3(drain_x, 1.65, -hz - 0.18), Vector3(0.12, 3.17, 0.14), mats["rust"])
+	if kind in ["storage", "industry", "workshop"]:
+		# Cargo shutter detail stays on the back facade away from the entry.
+		for stripe in range(5):
+			_box(parent, "ShutterRib", Vector3(0, 1.35 + float(stripe) * 0.34, hz + 0.18), Vector3(minf(2.65, size.x * 0.50), 0.065, 0.09), mats["steel"])
+
+
 static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
@@ -197,6 +242,8 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	scene.name="ReferenceExteriorDetail"
 	group.add_child(scene)
 	_service_prop(scene,mats,size,kind)
+	_facade_readability(scene,size,mats,kind)
+	_industrial_roof_detail(scene,size,mats,kind)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
 	_box(scene,"EntryStoop",Vector3(0,0.14,-hz-0.99),Vector3(2.85,0.22,1.15),mats["concrete"])
