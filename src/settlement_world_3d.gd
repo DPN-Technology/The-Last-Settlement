@@ -411,6 +411,7 @@ func _build_terrain() -> void:
 		_box(terrain_layer, p + Vector3(0, 0.6, 0), Vector3(1.9, 1.2, 1.9), materials["rust"])
 	WastelandDetail.detail_ruins(terrain_layer, materials)
 	WastelandDetail.build_terrain_dressing(terrain_layer, materials)
+	SettlementWatchTowerArt3D.enrich_existing(terrain_layer,materials)
 	SettlementDistrict3D.build(terrain_layer,materials)
 	SettlementFidelity3D.terrain(terrain_layer,materials)
 	SettlementReferenceEnvironment3D.build_world(terrain_layer,materials)

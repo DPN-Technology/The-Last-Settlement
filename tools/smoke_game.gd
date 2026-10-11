@@ -1479,6 +1479,33 @@ func _smoke() -> void:
 		push_error("SMOKE: reference architectural props are not integrated into actual game structures")
 		quit(1)
 		return
+	# Watchtowers are now physical built-up stations, not four bare posts.
+	var built_watchtowers := 0
+	for scene_child in world.terrain_layer.get_children():
+		if str(scene_child.name)!="PerimeterWatchtower":
+			continue
+		var details := scene_child.get_node_or_null("RealisticTimberWatchTower")
+		if details==null:
+			push_error("SMOKE: rebuilt watchtower has no structural art")
+			quit(1)
+			return
+		var lamp := details.get_node_or_null("WatchtowerNavigationLight/TowerWarmWorkLight") as OmniLight3D
+		var braces := 0
+		var roof_seams := 0
+		for section in details.get_children():
+			if str(section.name).begins_with("CrossBracedWatchTower"):
+				braces+=1
+			if str(section.name).begins_with("RaisedRainSeam"):
+				roof_seams+=1
+		if lamp==null or braces<4 or roof_seams<10:
+			push_error("SMOKE: detailed watchtower roof, braces or lighting absent")
+			quit(1)
+			return
+		built_watchtowers+=1
+	if built_watchtowers<2:
+		push_error("SMOKE: perimeter watchtower detail not integrated into world")
+		quit(1)
+		return
 	# A genuine rebuilt 3D facade is necessary for reference fidelity;
 	# the source should not merely place a photograph over the HUD.
 	var aged_shells := 0

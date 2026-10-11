@@ -1,3 +1,15 @@
+# GUARD TOWER OVERHAUL — ACTUAL WORLD MESHES
+
+The previous guard towers in the actual screenshots were plain elevated
+platforms. The towers now carry an attached timber deck with individually
+authored planks and edge caps, repaired corrugated-sheet roof ribs and seams,
+full cross-braced timber/steel legs, ladder rails and treads, upper railings
+with a visible ladder gap, and warm safety fixtures. These details are actual
+shaded scene geometry attached to the original simulation towers. The game
+HUD and gameplay save coordinates remain unchanged.
+
+---
+
 # MULTILAYER ARCHITECTURAL FACADE QUALITY PASS
 
 The latest real captured Windows-compatible 3D overview proves the previous
