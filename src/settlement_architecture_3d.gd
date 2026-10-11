@@ -119,10 +119,30 @@ static func _clinic_roof(group: Node3D, size: Vector2, height: float, mats: Dict
 	box(group,"MedicalVentPavilion",Vector3(-size.x*0.25,height+1.05,size.y*0.17),Vector3(2.1,1.42,2.4),mats["clinic"])
 	box(group,"MedicalVentCap",Vector3(-size.x*0.25,height+1.85,size.y*0.17),Vector3(2.5,0.17,2.7),mats["roof"])
 
+static func _industrial_sawtooth_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
+	# Functional sawtooth architecture: angled roof planes and clerestory
+	# glazing, instead of a second cube sitting on a flat roof.
+	var bays: int = 3
+	var bay_width: float = size.x / float(bays)
+	var rise: float = 1.10
+	for i in range(bays):
+		var x: float = -size.x * 0.5 + (float(i) + 0.5) * bay_width
+		var slope_length: float = sqrt(bay_width * bay_width + rise * rise)
+		var panel := box(group, "IndustrialSlopingRoofBay", Vector3(x,height+0.40+rise*0.5,0), Vector3(slope_length+0.16,0.15,size.y+0.54), mats["roof"])
+		panel.rotation.z = -atan2(rise,bay_width)
+		var high_edge: float = x + bay_width * 0.5
+		box(group, "ClerestoryFrame", Vector3(high_edge,height+0.42+rise*0.5,0), Vector3(0.14,rise,size.y+0.35),mats["steel"])
+		box(group, "ClerestoryGlass", Vector3(high_edge+0.025,height+0.42+rise*0.5,0), Vector3(0.06,rise*0.74,size.y*0.85),mats["glass"])
+		box(group, "IndustrialRaisedSeam", Vector3(x,height+0.47+rise*0.5,0), Vector3(0.065,0.07,size.y+0.60),mats["rooflight"])
+	for side in [-1.0,1.0]:
+		box(group,"SawtoothEndGutter",Vector3(0,height+0.29,side*(size.y*0.5+0.24)),Vector3(size.x+0.42,0.17,0.19),mats["rust"])
+
+
 static func _flat_service_roof(group: Node3D, size: Vector2, height: float, kind: String, mats: Dictionary) -> void:
 	box(group,"ServiceRoof",Vector3(0,height+0.26,0),Vector3(size.x+0.68,0.37,size.y+0.68),mats["roof"])
 	if kind in ["industry","storage"]:
-		# Two asymmetrical machine-room volumes create an industrial sawtooth skyline.
+		_industrial_sawtooth_roof(group,size,height,mats)
+		# Existing machine housing remains as rooftop mechanical equipment.
 		var shack := box(group,"RaisedMachineRoom",Vector3(-size.x*0.21,height+0.96,-size.y*0.17),Vector3(size.x*0.29,1.26,size.y*0.42),mats["steel"])
 		shack.rotation.y = 0.035
 		box(group,"RaisedMachineCap",Vector3(-size.x*0.21,height+1.66,-size.y*0.17),Vector3(size.x*0.34,0.16,size.y*0.49),mats["rooflight"])
