@@ -414,6 +414,7 @@ func _build_terrain() -> void:
 	SettlementDistrict3D.build(terrain_layer,materials)
 	SettlementFidelity3D.terrain(terrain_layer,materials)
 	SettlementReferenceEnvironment3D.build_world(terrain_layer,materials)
+	SettlementAuthenticModel3D.build_world(terrain_layer)
 
 func _road(a: Vector3, b: Vector3, width: float) -> void:
 	var delta := b - a
@@ -655,6 +656,7 @@ func _build_structure(b: Dictionary) -> void:
 	SettlementFidelity3D.exterior(group,type,size,body_height,float(b.get("condition",100.0)),materials)
 	SettlementReferenceEnvironment3D.detail_facility(group,type,size,materials)
 	SettlementProductionProps3D.decorate_facility(group,type,size,materials)
+	SettlementAuthenticModel3D.build_facility(group,type,size)
 	if type == "command":
 		_cylinder(group, Vector3(0,body_height+1.28,0),2.0,1.3,materials["darkmetal"])
 		_cylinder(group, Vector3(0,body_height+2.0,0),1.6,0.18,materials["glass"])

@@ -1,3 +1,16 @@
+# ARTIST-AUTHORED PHOTOREAL 3D MESH IMPORT
+
+The Godot settlement world and roof-cutaway interiors now load 1K CC0 textured
+glTF model packs, downloaded with exact size/MD5/texture dependency verification
+from Poly Haven (credits in assets/3d/REFERENCE-MODELS.md). Five real models
+comprise aged oil barrels, farmhouse tables and benches, covered junkyard
+cars and damaged concrete barriers. CI/Windows export downloads + imports
+all packages; smoke tests verify live 3D instances in housing and world. The
+previous primitive substitutes only hide if genuine 3D assets load. HUD unchanged.
+This is a substantial asset-pipeline step, not proof of exact target parity.
+
+---
+
 # PHYSICAL MATERIAL PASS
 
 The gameplay 3D scene now contains an offline, baked triplanar **reclaimed timber** and **woven canvas** material library with diffuse and normal maps. Planked walkways and physical crates use dimensional wood grain instead of the formerly uniform brown material; patched tents and actual sandbags use canvas weave. Shelter interior blankets and runner are cloth rather than block-green, which helps close-up room photos read differently from stone and metal. This is a real Godot PBR material system applied to actual scene meshes, not composited imagery. The HUD remains unchanged.

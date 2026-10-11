@@ -3,6 +3,9 @@
 .import/
 export.cfg
 
+# Verified downloaded artist-authored Poly Haven models
+assets/3d/photoreal/
+
 # Generated builds
 build/
 dist/

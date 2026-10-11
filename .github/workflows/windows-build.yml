@@ -14,6 +14,7 @@ on:
       - ".github/workflows/windows-build.yml"
       - "packaging/windows/**"
       - "tools/release_manifest.py"
+      - "tools/install_reference_models.py"
   pull_request:
     branches: [main]
     paths:
@@ -25,6 +26,7 @@ on:
       - ".github/workflows/windows-build.yml"
       - "packaging/windows/**"
       - "tools/release_manifest.py"
+      - "tools/install_reference_models.py"
   workflow_dispatch:
 
 permissions:
@@ -101,6 +103,8 @@ jobs:
           set -euo pipefail
           python3 tools/install_cc0_assets.py
           python3 tools/install_cc0_materials.py
+          python3 tools/install_reference_models.py
+          test -s assets/3d/photoreal/verified-manifest.json
           GODOT=".godot-build/Godot_v4.3-stable_linux.x86_64"
           "$GODOT" --headless --path . --import
           test -s assets/3d/characters/survivor.glb

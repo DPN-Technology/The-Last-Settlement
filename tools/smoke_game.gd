@@ -1479,6 +1479,31 @@ func _smoke() -> void:
 		push_error("SMOKE: reference architectural props are not integrated into actual game structures")
 		quit(1)
 		return
+	# Imported licensed, genuinely textured CC0 3D models must reach runtime.
+	var scenic_scan: Node3D=world.terrain_layer.get_node_or_null("RealCC0SettlementScans") as Node3D
+	if scenic_scan==null or scenic_scan.get_child_count()<5:
+		push_error("SMOKE: real glTF scanned vehicles/barriers missing from world")
+		quit(1)
+		return
+	var physical_facilities := 0
+	var imported_table := false
+	for structure in world.structure_layer.get_children():
+		var models := structure.get_node_or_null("RealReferenceExteriorAssets") as Node3D
+		if models==null:
+			continue
+		if models.get_child_count()<2:
+			push_error("SMOKE: imported barrels absent in "+str(structure.name))
+			quit(1)
+			return
+		physical_facilities+=1
+		if str(structure.get_meta("building_type",""))=="housing":
+			var room := structure.get_node_or_null("InteriorFurnishings/RealReferenceInteriorAssets") as Node3D
+			if room!=null and room.get_node_or_null("RealWeatheredCommunalTable")!=null:
+				imported_table=true
+	if physical_facilities<7 or not imported_table:
+		push_error("SMOKE: authentic CC0 models failed to reach cutaway interior")
+		quit(1)
+		return
 	# This is the user's reference-image work, not another screenshot mockup.
 	# Assert that the *playable Godot world* contains the scenic 3D meshes.
 	var real_art: Node3D=world.terrain_layer.get_node_or_null("ReferenceQualityWorldDressing") as Node3D
