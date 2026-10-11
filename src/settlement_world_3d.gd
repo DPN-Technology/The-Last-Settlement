@@ -657,6 +657,7 @@ func _build_structure(b: Dictionary) -> void:
 		_box(group,Vector3(0,2.88,-size.y*0.5-0.38),Vector3(5.15,0.09,0.19),materials["cross"])
 		var identity := Label3D.new()
 		identity.name="LastHavenPhysicalSign"
+		identity.visible=false # HUD provides GL-safe label typography.
 		identity.text="DPN  /  LAST HAVEN"
 		identity.font_size=30
 		identity.pixel_size=0.011

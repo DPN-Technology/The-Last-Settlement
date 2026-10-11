@@ -1,3 +1,13 @@
+# WINDOWS GRAPHICS CAPTURES — VISIBILITY REPAIR
+
+Newest player screenshots show that the room-identity layer DID load, but contained huge opaque covering surfaces. Shelter's brown rug masked beds; Command had an oversized dark floor and overlapping racks; Clinic had a white opaque corridor masking medical equipment. Multiple overhead Label3D signs showed solid white rectangles instead of letters on the GL Compatibility renderer. Node-existence smoke tests were insufficient to detect this visual failure.
+
+**Correction:** Narrow the housing rug to a realistic central aisle, reduce overlapping dining desk/headboards, narrow the clinic runner, reduce the command floor/desk/overlapping radio racks, and reduce industrial and utility slabs. Preserve staging systems and existing room interaction semantics. Hide broken Label3D nodes (retain text metadata) and render GL-safe world-anchored facility names in the 2D CanvasItem layer using the existing tested font/draw_rect path. Add concrete maximum-width smoke tests for problematic opaque surfaces, and assert 3D glyph billboards are hidden. Source remains descriptive; these are procedural geometry changes, not imported studio-quality furniture.
+
+**Windows visual acceptance:** repeat the user's same Shelter A, Command and Clinic screenshots at close camera distance, including doors and all-interiors view; the brown/black/white wide slabs and white segmented lettering should be gone. Readable small facility nameplates should appear at top of buildings. Verify labels don't cover selected panel or HUD, red-line regression remains absent, and buildings are still accessible. No claims about full realism or realistic character interaction yet.
+
+---
+
 # BUILDING & ROOM VISUAL FIDELITY — OCTOBER 10 WINDOWS REVIEW
 
 The latest user screenshots show a correctly functioning, open-roof 3D Shelter A, Command and Clinic but the rooms still look interchangeable: a bare floor, thin central dividers, generic consoles/beds and unreadable activity distinctions. Facility management also stays on the right while the user navigates away from the selected building, making its subject ambiguous.

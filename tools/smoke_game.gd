@@ -1791,6 +1791,57 @@ func _smoke() -> void:
 			quit(1)
 			return
 	world._update_roof_views(sim,{}, {},int(instance.roof_view_mode))
+	# Player Windows captures: prior Label3D glyphs were solid white bars.
+	# Name strings remain in metadata, but actual lettering is now rendered
+	# through CanvasItem's known-good fallback font.
+	var hidden_facility_labels := 0
+	for structure in world.structure_layer.get_children():
+		var label: Label3D=structure.get_node_or_null("FacilityNameMarker") as Label3D
+		if label!=null:
+			if label.visible or label.text.is_empty():
+				push_error("SMOKE: GL unsafe 3D facility labels exposed")
+				quit(1)
+				return
+			hidden_facility_labels+=1
+	if hidden_facility_labels<6:
+		push_error("SMOKE: no HUD-backed names for world facilities")
+		quit(1)
+		return
+	if instance._draw_world_facility_labels.is_valid()==false:
+		push_error("SMOKE: world-safe nameplate renderer missing")
+		quit(1)
+		return
+	var visual_housing: Node3D=null
+	for structure in world.structure_layer.get_children():
+		if str(structure.get_meta("building_type",""))=="housing":
+			visual_housing=structure.get_node_or_null("InteriorFurnishings/FacilityInteriorIdentity") as Node3D
+			if visual_housing!=null:
+				break
+	if visual_housing==null:
+		push_error("SMOKE: room props not built")
+		quit(1)
+		return
+	var runner := visual_housing.get_node_or_null("ShelterSleepingRug") as MeshInstance3D
+	if runner==null or not (runner.mesh is BoxMesh) or (runner.mesh as BoxMesh).size.x>1.25:
+		push_error("SMOKE: excessive opaque shelter floor slab still obscures beds")
+		quit(1)
+		return
+	var command_root: Node3D=null
+	for structure in world.structure_layer.get_children():
+		if str(structure.get_meta("building_type",""))=="command":
+			command_root=structure.get_node_or_null("InteriorFurnishings/FacilityInteriorIdentity") as Node3D
+			break
+	if command_root==null:
+		push_error("SMOKE: command room not built")
+		quit(1)
+		return
+	var command_floor := command_root.get_node_or_null("CommandOperationsFloor") as MeshInstance3D
+	if command_floor==null or not (command_floor.mesh is BoxMesh) or (command_floor.mesh as BoxMesh).size.x>1.30:
+		push_error("SMOKE: giant dark command floor still obscures consoles")
+		quit(1)
+		return
+	# Every role-specific room still inherits the reversible cutaway rules.
+	
 	# Every major facility in the user screenshots has a genuinely different
 	# room identity scene, not merely identical concrete boxes with beds.
 	var art_roots := 0

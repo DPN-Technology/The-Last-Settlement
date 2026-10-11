@@ -12,6 +12,9 @@ static func decorate(group: Node3D, b: Dictionary, size: Vector2, h: float, mats
 	name.outline_size=5
 	name.modulate=Color("#efdfc9")
 	name.billboard=BaseMaterial3D.BILLBOARD_ENABLED
+	# GL Compatibility intermittently renders Label3D glyphs as white bars.
+	# Keep metadata and source text, but render names via the 2D HUD instead.
+	name.visible=false
 	name.position=Vector3(0,h+1.68,0)
 	group.add_child(name)
 	var kind := str(b.get("type",""))

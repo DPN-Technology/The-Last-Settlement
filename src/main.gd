@@ -308,6 +308,36 @@ func _move_citizen_safely(c: Dictionary, distance: float, access_building: Dicti
 		citizen_paths[ident]=state
 	c["position"]=position
 
+# Draw text in the game's proven CanvasItem path: the Windows GL Compatibility
+# renderer turns several Label3D glyphs into solid white blocks. Keep labels
+# anchored to the same 3D world objects rather than hardcoding screen pixels.
+func _draw_world_facility_labels() -> void:
+	if settlement_world==null or settlement_world.camera==null:
+		return
+	if settlement_world.camera_distance>80.0 and selected_building.is_empty():
+		return
+	var vp := get_viewport_rect().size
+	for b in sim.buildings:
+		var kind: String=str(b.get("type",""))
+		if kind in ["wall","floor","door","pipe","power_pole","farm"]:
+			continue
+		var chosen := not selected_building.is_empty() and SettlementNavigation.building_key(b)==SettlementNavigation.building_key(selected_building)
+		if settlement_world.camera_distance>80.0 and not chosen:
+			continue
+		var h := 4.4 if kind in ["command","industry","power","generator"] else (3.8 if kind in ["housing","medical"] else 2.8)
+		var anchor: Vector3=settlement_world.world_position(Vector2(b["position"]))+Vector3(0,h+0.67,0)
+		if settlement_world.camera.is_position_behind(anchor):
+			continue
+		var at: Vector2=settlement_world.camera.unproject_position(anchor)
+		if at.x<72.0 or at.x>vp.x-72.0 or at.y<SettlementUILayout.TOP_H+30.0 or at.y>vp.y-SettlementUILayout.BOTTOM_H-28.0:
+			continue
+		var name: String=str(b.get("name","FACILITY")).to_upper()
+		var width := clampf(float(name.length())*7.0+20.0,93.0,186.0)
+		var plate := Rect2(at.x-width*0.5,at.y-19.0,width,22.0)
+		draw_rect(plate,Color("#0b1115e8"))
+		draw_rect(Rect2(plate.position,Vector2(3,22)),Color("#eb4054") if chosen else Color("#638c8a"))
+		draw_string(ThemeDB.fallback_font,plate.position+Vector2(10,15),name,HORIZONTAL_ALIGNMENT_LEFT,width-18.0,12,Color("#f8eade"))
+	
 func _draw() -> void:
 	# Issue #9: these actual draw groups are intentional test inputs.
 	# A clean WORLD_COMPOSITE but dirty HUD_ONLY proves the HUD itself is
@@ -330,6 +360,7 @@ func _draw() -> void:
 		_draw_world_map()
 	else:
 		_draw_world()
+		_draw_world_facility_labels()
 		_draw_utility_overlay()
 	if ui_diagnostic_pass != 3:
 		_draw_hud()

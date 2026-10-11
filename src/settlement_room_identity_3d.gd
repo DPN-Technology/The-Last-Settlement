@@ -54,6 +54,7 @@ static func _wall_label(parent: Node3D, label: String, x: float, z: float) -> vo
 	plaque.outline_size=3
 	plaque.modulate=Color("#eee8da")
 	plaque.position=Vector3(x,2.05,z)
+	plaque.visible=false # 3D GL Compatibility glyph atlas renders white bars; see HUD labels.
 	plaque.rotation.y=PI
 	parent.add_child(plaque)
 
@@ -61,19 +62,19 @@ static func _housing(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	# Real surfaces identify sleeping, storage and shared eating areas.
-	box(parent,"ShelterSleepingRug",Vector3(0,0.327,0.17),Vector3(size.x*0.57,0.017,size.y*0.58),mats["canvas"])
+	box(parent,"ShelterSleepingRug",Vector3(0,0.327,0.17),Vector3(1.12,0.017,size.y*0.52),mats["olive"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.60
-		box(parent,"BunkHeadboard",Vector3(x,1.02,-hz*0.39),Vector3(1.55,0.70,0.14),mats["rust"])
-		box(parent,"FoldedBlankets",Vector3(x,0.83,-hz*0.06),Vector3(1.24,0.095,0.52),mats["olive"])
+		box(parent,"BunkHeadboard",Vector3(x,0.89,-hz*0.40),Vector3(1.42,0.36,0.12),mats["rust"])
+		box(parent,"FoldedBlankets",Vector3(x,0.76,-hz*0.06),Vector3(1.24,0.065,0.43),mats["canvas"])
 		box(parent,"BedsideLocker",Vector3(side*hx*0.85,0.64,hz*0.04),Vector3(0.74,0.86,0.68),mats["darkmetal"])
 		box(parent,"LockerLatch",Vector3(side*hx*0.85,0.76,-0.04+hz*0.04),Vector3(0.29,0.10,0.06),mats["rooflight"])
 		_chair(parent,Vector3(side*hx*0.29,0,hz*0.40),mats)
 		box(parent,"FamilyShelf",Vector3(side*hx*0.66,1.42,hz*0.73),Vector3(1.34,0.12,0.45),mats["rust"])
-	box(parent,"SharedShelterTable",Vector3(0,0.93,hz*0.49),Vector3(2.0,0.12,0.92),mats["steel"])
+	box(parent,"SharedShelterTable",Vector3(0,0.93,hz*0.56),Vector3(1.42,0.10,0.65),mats["steel"])
 	for i in range(3):
 		var x: float=float(i-1)*0.56
-		cylinder(parent,"MealTin",Vector3(x,1.055,hz*0.49),0.14,0.047,mats["rooflight"])
+		cylinder(parent,"MealTin",Vector3(x,1.055,hz*0.56),0.12,0.047,mats["rooflight"])
 	_wall_label(parent,"SLEEP  /  COMMON AREA",0,hz-0.26)
 	_work_light(parent,Vector3(0,2.45,hz*0.47))
 
@@ -81,17 +82,19 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	# Distinct brighter treatment lane, occupied examination bays to its sides.
-	box(parent,"ClinicTreatmentFloor",Vector3(0,0.334,0),Vector3(2.32,0.018,size.y*0.76),mats["clinic"])
+	box(parent,"ClinicTreatmentFloor",Vector3(0,0.322,0),Vector3(1.04,0.012,size.y*0.69),mats["foundation"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.59
-		box(parent,"BedsideTreatmentCart",Vector3(x,0.79,hz*0.47),Vector3(1.14,1.10,0.68),mats["clinic"])
+		box(parent,"BedsideTreatmentCart",Vector3(x,0.86,hz*0.47),Vector3(0.90,0.11,0.58),mats["steel"])
+		for leg_side in [-1.0,1.0]:
+			box(parent,"TriageCartLeg",Vector3(x+leg_side*0.34,0.45,hz*0.47),Vector3(0.07,0.76,0.38),mats["darkmetal"])
 		box(parent,"SterileTray",Vector3(x,1.38,hz*0.47),Vector3(0.95,0.075,0.52),mats["steel"])
 		box(parent,"PatientObservationDisplay",Vector3(side*hx*0.81,1.95,-hz*0.50),Vector3(0.91,0.62,0.18),mats["darkmetal"])
 		box(parent,"VitalsScreen",Vector3(side*hx*0.81,1.97,-hz*0.61),Vector3(0.73,0.43,0.035),mats["glass"])
 		box(parent,"MedicalPrivacyPost",Vector3(side*hx*0.33,1.25,hz*0.37),Vector3(0.09,2.1,0.09),mats["steel"])
 		box(parent,"PrivacyCurtainEdge",Vector3(side*hx*0.33,2.21,hz*0.37),Vector3(0.10,0.21,1.9),mats["clinic"])
 	box(parent,"ClinicTriageStation",Vector3(0,0.98,hz*0.72),Vector3(2.25,0.14,0.83),mats["steel"])
-	box(parent,"SanitationSink",Vector3(0,0.92,hz*0.86),Vector3(0.83,0.17,0.40),mats["clinic"])
+	box(parent,"SanitationSink",Vector3(0,0.92,hz*0.86),Vector3(0.76,0.11,0.37),mats["clinic"])
 	for side in [-1.0,1.0]:
 		box(parent,"ClinicCrossBar",Vector3(side*hx*0.53,2.20,hz-0.29),Vector3(0.57,0.13,0.09),mats["cross"])
 		box(parent,"ClinicCrossStem",Vector3(side*hx*0.53,2.20,hz-0.28),Vector3(0.13,0.58,0.09),mats["cross"])
@@ -102,18 +105,18 @@ static func _command(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	# High contrast physical planning surfaces, visible even in isometric mode.
-	box(parent,"CommandOperationsFloor",Vector3(0,0.332,hz*0.27),Vector3(size.x*0.75,0.018,size.y*0.57),mats["darkmetal"])
-	box(parent,"CommandPlanningDesk",Vector3(0,1.02,hz*0.41),Vector3(3.10,0.18,1.28),mats["steel"])
-	box(parent,"CommandMapSurface",Vector3(0,1.13,hz*0.41),Vector3(2.83,0.024,1.07),mats["olive"])
+	box(parent,"CommandOperationsFloor",Vector3(0,0.325,hz*0.18),Vector3(1.16,0.012,size.y*0.48),mats["foundation"])
+	box(parent,"CommandPlanningDesk",Vector3(0,1.02,hz*0.52),Vector3(2.16,0.14,0.86),mats["steel"])
+	box(parent,"CommandMapSurface",Vector3(0,1.10,hz*0.52),Vector3(1.96,0.024,0.66),mats["olive"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.63
-		box(parent,"RadioOperationsRack",Vector3(x,1.13,hz*0.50),Vector3(1.31,1.68,0.88),mats["darkmetal"])
+		box(parent,"RadioOperationsRack",Vector3(x,1.13,hz*0.74),Vector3(0.88,1.54,0.47),mats["darkmetal"])
 		for row in range(2):
-			box(parent,"CommandDataScreen",Vector3(x,1.15+float(row)*0.66,hz*0.33),Vector3(0.99,0.46,0.055),mats["glass"])
-			box(parent,"CommandStatusLamp",Vector3(x+0.34,1.03+float(row)*0.66,hz*0.26),Vector3(0.10,0.075,0.035),mats["glow"])
+			box(parent,"CommandDataScreen",Vector3(x,1.15+float(row)*0.66,hz*0.62),Vector3(0.70,0.38,0.055),mats["glass"])
+			box(parent,"CommandStatusLamp",Vector3(x+0.22,1.03+float(row)*0.66,hz*0.60),Vector3(0.08,0.055,0.035),mats["glow"])
 		_chair(parent,Vector3(side*hx*0.27,0,-hz*0.15),mats)
-	box(parent,"SituationDisplayFrame",Vector3(0,1.77,hz-0.35),Vector3(3.75,1.32,0.19),mats["steel"])
-	box(parent,"SituationDisplay",Vector3(0,1.77,hz-0.47),Vector3(3.48,1.09,0.036),mats["glass"])
+	box(parent,"SituationDisplayFrame",Vector3(0,1.90,hz-0.35),Vector3(3.20,1.11,0.15),mats["steel"])
+	box(parent,"SituationDisplay",Vector3(0,1.90,hz-0.46),Vector3(2.97,0.88,0.036),mats["glass"])
 	for i in range(7):
 		var x: float=-1.50+float(i)*0.50
 		box(parent,"MissionTicker",Vector3(x,1.66,hz-0.49),Vector3(0.20,0.055,0.016),mats["warning"] if i%3==0 else mats["olive"])
@@ -123,7 +126,7 @@ static func _command(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
-	box(parent,"IndustrialWorkZone",Vector3(0,0.334,hz*0.25),Vector3(size.x*0.76,0.018,size.y*0.58),mats["steel"])
+	box(parent,"IndustrialWorkZone",Vector3(0,0.323,hz*0.18),Vector3(1.18,0.012,size.y*0.52),mats["foundation"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.60
 		box(parent,"FabricationFrame",Vector3(x,1.45,hz*0.43),Vector3(1.45,1.90,1.06),mats["darkmetal"])
@@ -140,7 +143,7 @@ static func _utilities(parent: Node3D, kind: String, size: Vector2, mats: Dictio
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	var wet := kind in ["water","water_pump","purifier","water_tank","sewage"]
-	box(parent,"UtilityMaintenanceFloor",Vector3(0,0.334,hz*0.24),Vector3(size.x*0.72,0.018,size.y*0.55),mats["blue"] if wet else mats["rust"])
+	box(parent,"UtilityMaintenanceFloor",Vector3(0,0.325,hz*0.21),Vector3(1.20,0.013,size.y*0.48),mats["blue"] if wet else mats["rust"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.59
 		cylinder(parent,"ServicePressurePipe",Vector3(x,0.99,hz*0.50),0.20,1.73,mats["pipe"])

@@ -63,7 +63,7 @@ static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictio
 	var z := size.y*0.5
 	var color: Material=mats["clinic"] if kind=="medical" else (mats["rust"] if kind in ["industry","storage"] else (mats["blue"] if kind in ["water","purifier","water_pump","water_tank","sewage"] else mats["olive"]))
 	for side in [-1.0,1.0]:
-		box(room,"FloorZone",Vector3(side*x*0.48,0.298,0),Vector3(maxf(0.60,x*0.44),0.015,size.y*0.70),mats["foundation"])
+		box(room,"FloorZone",Vector3(side*x*0.48,0.285,0),Vector3(maxf(0.60,x*0.36),0.008,size.y*0.65),mats["foundation"])
 		box(room,"RoomZoneStripe",Vector3(side*x*0.24,0.311,0),Vector3(0.10,0.020,size.y*0.66),color)
 	for depth in [-0.29,0.31]:
 		box(room,"CeilingLightRail",Vector3(0,2.75,depth*size.y),Vector3(minf(4.2,x),0.12,0.21),mats["rooflight"])
@@ -113,7 +113,7 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 				for depth in [-0.24,0.25]:
 					_bed(room,Vector3(side*hx*0.60,0,depth*size.y),mats)
 				_cabinet(room,Vector3(side*hx*0.66,0,size.y*0.40),mats)
-			box(room,"SharedDiningTable",Vector3(0,0.96,size.y*0.28),Vector3(2.2,0.14,1.13),mats["rust"])
+			box(room,"SharedDiningTable",Vector3(0,0.96,size.y*0.28),Vector3(1.65,0.12,0.76),mats["rust"])
 		"medical":
 			for side in [-1.0,1.0]:
 				_bed(room,Vector3(side*hx*0.56,0,0),mats)
