@@ -1482,7 +1482,7 @@ func _smoke() -> void:
 	# Watchtowers are now physical built-up stations, not four bare posts.
 	var built_watchtowers := 0
 	for scene_child in world.terrain_layer.get_children():
-		if str(scene_child.name)!="PerimeterWatchtower":
+		if not str(scene_child.name).begins_with("PerimeterWatchtower"):
 			continue
 		var details := scene_child.get_node_or_null("RealisticTimberWatchTower")
 		if details==null:
