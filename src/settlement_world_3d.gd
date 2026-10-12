@@ -729,10 +729,18 @@ func _try_authored_model(parent: Node3D, model_path: String, footprint: Vector2 
 	if model == null:
 		push_warning("Model root must be Node3D: " + model_path)
 		return false
-	# Imported scenes may contain placeholder mesh nodes with no resource.
-	# Disable those while detached; adding them to the live viewport first
-	# lets the renderer register them and emit null-mesh errors.
-	SettlementAuthenticModel3D._disable_empty_renderers(model)
+	# Remove empty imported renderers while detached; hiding them still lets
+	# Godot register a null mesh RID when the scene enters the viewport.
+	if model is MeshInstance3D and (model as MeshInstance3D).mesh == null:
+		model.free()
+		return false
+	if model is MultiMeshInstance3D and (
+		(model as MultiMeshInstance3D).multimesh == null
+		or (model as MultiMeshInstance3D).multimesh.mesh == null
+	):
+		model.free()
+		return false
+	SettlementAuthenticModel3D.remove_empty_renderers(model)
 	parent.add_child(model)
 	# Authored source models use meters, ground origin, forward -Z, and footprints
 	# consistent with game building plans. Scale is authored in Blender/glTF.

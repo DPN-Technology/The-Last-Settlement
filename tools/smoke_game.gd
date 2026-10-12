@@ -1,16 +1,16 @@
 extends SceneTree
 
-func _visible_renderables_have_mesh(node: Node) -> bool:
+func _all_renderers_have_mesh(node: Node) -> bool:
 	if node is MeshInstance3D:
 		var mesh_instance := node as MeshInstance3D
-		if mesh_instance.is_visible_in_tree() and mesh_instance.mesh == null:
+		if mesh_instance.mesh == null:
 			return false
 	elif node is MultiMeshInstance3D:
 		var multimesh_instance := node as MultiMeshInstance3D
-		if multimesh_instance.is_visible_in_tree() and (multimesh_instance.multimesh == null or multimesh_instance.multimesh.mesh == null):
+		if multimesh_instance.multimesh == null or multimesh_instance.multimesh.mesh == null:
 			return false
 	for child in node.get_children():
-		if not _visible_renderables_have_mesh(child):
+		if not _all_renderers_have_mesh(child):
 			return false
 	return true
 
@@ -196,6 +196,14 @@ func _smoke() -> void:
 		push_error("SMOKE: True 3D world scene unavailable")
 		quit(1)
 		return
+	var renderer_fixture := Node3D.new()
+	var empty_renderer := MeshInstance3D.new()
+	renderer_fixture.add_child(empty_renderer)
+	SettlementAuthenticModel3D.remove_empty_renderers(renderer_fixture)
+	if renderer_fixture.get_child_count() != 0:
+		push_error("SMOKE: Imported renderer sanitizer retained a mesh-less node")
+		quit(1)
+		return
 	if instance.settlement_world.camera == null or not (instance.settlement_world.camera is Camera3D):
 		push_error("SMOKE: Perspective Camera3D unavailable")
 		quit(1)
@@ -213,8 +221,8 @@ func _smoke() -> void:
 		push_error("SMOKE: 3D survivors were not created")
 		quit(1)
 		return
-	if not _visible_renderables_have_mesh(instance.settlement_world):
-		push_error("SMOKE: Visible 3D renderer has no mesh resource")
+	if not _all_renderers_have_mesh(instance):
+		push_error("SMOKE: 3D scene contains a renderer with no mesh resource")
 		quit(1)
 		return
 	# The industrial art has to be physical 3D equipment, and its mechanism
@@ -2491,6 +2499,10 @@ func _smoke() -> void:
 	var actual_delta := (total_loyalty_after-total_loyalty_before)/maxf(1.0,float(citizens_before.size()))
 	if str(gov.laws["speech"])!=str(preview["proposed"]) or absf(actual_delta-float(preview["loyalty_delta"]))>0.002:
 		push_error("SMOKE: Governance preview differs from real policy effects")
+		quit(1)
+		return
+	if not _all_renderers_have_mesh(instance):
+		push_error("SMOKE: Gameplay created a renderer without a mesh resource")
 		quit(1)
 		return
 	print("PLAYTEST SMOKE PASS: real prospective governance policy impact verified against applied game state")
