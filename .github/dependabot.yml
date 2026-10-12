@@ -9,7 +9,9 @@ updates:
     labels:
       - "dependencies"
       - "security"
-    # Keep CodeQL init, analyze and SARIF uploader on the same version.
+    # CodeQL init and analyze must resolve to the same action version.
+    # Individual Dependabot PRs broke CI when one step used 4.38.3 and
+    # the other still used 4.38.2.
     groups:
       codeql-actions:
         patterns:
