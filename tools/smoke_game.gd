@@ -255,19 +255,24 @@ func _smoke() -> void:
 			push_error("SMOKE: Terrain-conforming road mesh generated no vertices")
 			quit(1)
 			return
+		var road_role := str(road_mesh.get_meta("terrain_conforming_role",""))
 		var expected_lift := 0.075
-		if road_mesh.name=="ErodedGravelRoadShoulder":
+		if road_role=="shoulder":
 			expected_lift=0.025
-		elif road_mesh.name=="PhysicalRoadFissures":
+		elif road_role=="fissures":
 			expected_lift=0.081
 			cracked_road_sections+=1
 			if vertices.size()<20:
 				push_error("SMOKE: Physical asphalt fissures contain no actual geometry")
 				quit(1)
 				return
-		elif road_mesh.name=="WornCenterlineDashes":
+		elif road_role=="centerline":
 			expected_lift=0.101
 			centerline_mesh_found=true
+		elif road_role!="asphalt":
+			push_error("SMOKE: Terrain-conforming road piece has unknown geometry role: "+road_role)
+			quit(1)
+			return
 		var sample_stride := maxi(1,int(floor(float(vertices.size())/18.0)))
 		for vertex_index in range(0,vertices.size(),sample_stride):
 			var vertex := vertices[vertex_index]
@@ -283,7 +288,7 @@ func _smoke() -> void:
 				])
 				quit(1)
 				return
-			if road_mesh.name=="TerrainConformingBrokenAsphalt":
+			if road_role=="asphalt":
 				access_road_low=minf(access_road_low,vertex.y)
 				access_road_high=maxf(access_road_high,vertex.y)
 		conformed_road_sections+=1

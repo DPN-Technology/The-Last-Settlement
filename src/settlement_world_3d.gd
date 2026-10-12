@@ -530,18 +530,21 @@ func _road(a: Vector3, b: Vector3, width: float, center_line: bool = false) -> v
 	shoulder.mesh = _road_ribbon(a, b, width + 1.1, 0.025, steps, 4)
 	shoulder.material_override = materials["soil"]
 	shoulder.set_meta("terrain_conforming", true)
+	shoulder.set_meta("terrain_conforming_role", "shoulder")
 	terrain_layer.add_child(shoulder)
 	var road := MeshInstance3D.new()
 	road.name = "TerrainConformingBrokenAsphalt"
 	road.mesh = _road_ribbon(a, b, width, 0.075, steps, 6)
 	road.material_override = materials["pavement"]
 	road.set_meta("terrain_conforming", true)
+	road.set_meta("terrain_conforming_role", "asphalt")
 	terrain_layer.add_child(road)
 	var cracks := MeshInstance3D.new()
 	cracks.name = "PhysicalRoadFissures"
 	cracks.mesh = _road_cracks(a, b, width, maxi(2, int(floor(length / 12.0))))
 	cracks.material_override = materials["foundation"]
 	cracks.set_meta("terrain_conforming", true)
+	cracks.set_meta("terrain_conforming_role", "fissures")
 	terrain_layer.add_child(cracks)
 	if center_line:
 		var markings := MeshInstance3D.new()
@@ -549,6 +552,7 @@ func _road(a: Vector3, b: Vector3, width: float, center_line: bool = false) -> v
 		markings.mesh = _road_markings(a, b, width, 1.8, 3.8)
 		markings.material_override = materials["stripe"]
 		markings.set_meta("terrain_conforming", true)
+		markings.set_meta("terrain_conforming_role", "centerline")
 		terrain_layer.add_child(markings)
 
 func _tree(point: Vector3, scale: float) -> void:
