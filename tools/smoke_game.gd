@@ -2403,6 +2403,22 @@ func _smoke() -> void:
 		var interior: Node3D = structure.get_node_or_null("InteriorFurnishings") as Node3D
 		if interior!=null and interior.visible:
 			revealed+=1
+			var fixture_guards := 0
+			var ceiling_conduits := 0
+			for fixture in interior.get_children():
+				if str(fixture.name)=="CagedInteriorLightGuards" and fixture is MultiMeshInstance3D:
+					var cage := fixture as MultiMeshInstance3D
+					if cage.multimesh==null or cage.multimesh.mesh==null:
+						push_error("SMOKE: Interior light cage batch has no guard geometry")
+						quit(1)
+						return
+					fixture_guards=int(cage.multimesh.instance_count)
+				elif str(fixture.name)=="CeilingPowerConduit":
+					ceiling_conduits+=1
+			if fixture_guards<10 or ceiling_conduits!=2:
+				push_error("SMOKE: Revealed interior lacks caged practical lighting and wired ceiling fixtures")
+				quit(1)
+				return
 			for part in structure.get_children():
 				if part.has_meta("cutaway_roof") and part.visible:
 					push_error("SMOKE: roof blocks open 3D furnished interior")

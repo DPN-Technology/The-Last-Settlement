@@ -65,9 +65,36 @@ static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictio
 	for side in [-1.0,1.0]:
 		box(room,"FloorZone",Vector3(side*x*0.48,0.285,0),Vector3(maxf(0.60,x*0.36),0.008,size.y*0.65),mats["foundation"])
 		box(room,"RoomZoneStripe",Vector3(side*x*0.24,0.311,0),Vector3(0.10,0.020,size.y*0.66),color)
+	var guard_transforms: Array[Transform3D]=[]
 	for depth in [-0.29,0.31]:
-		box(room,"CeilingLightRail",Vector3(0,2.75,depth*size.y),Vector3(minf(4.2,x),0.12,0.21),mats["rooflight"])
-		box(room,"LightDiffuser",Vector3(0,2.68,depth*size.y),Vector3(minf(3.9,x),0.04,0.14),mats["glow"])
+		var fixture_span: float=minf(4.0,x*0.88)
+		var fixture_z: float=depth*size.y
+		box(room,"CeilingLightRail",Vector3(0,2.62,fixture_z),Vector3(fixture_span,0.12,0.21),mats["darkmetal"])
+		box(room,"LightDiffuser",Vector3(0,2.55,fixture_z),Vector3(fixture_span-0.18,0.045,0.105),mats["glow"])
+		for side in [-1.0,1.0]:
+			box(room,"LightCageLongitudinalGuard",Vector3(0,2.49,fixture_z+side*0.13),Vector3(fixture_span,0.045,0.045),mats["steel"])
+			box(room,"LightMountingStrap",Vector3(side*fixture_span*0.31,2.70,fixture_z),Vector3(0.055,0.14,0.20),mats["steel"])
+		for end in [-1.0,1.0]:
+			box(room,"LightCageEndGuard",Vector3(end*fixture_span*0.5,2.56,fixture_z),Vector3(0.065,0.16,0.31),mats["steel"])
+		for guard_index in range(5):
+			var guard_x: float=-fixture_span*0.38+float(guard_index)*fixture_span*0.19
+			guard_transforms.append(Transform3D(Basis.IDENTITY,Vector3(guard_x,2.50,fixture_z)))
+		box(room,"CeilingPowerConduit",Vector3(0,2.76,fixture_z+0.24),Vector3(fixture_span*0.72,0.055,0.055),mats["pipe"])
+		box(room,"LightJunctionBox",Vector3(-fixture_span*0.39,2.76,fixture_z+0.24),Vector3(0.18,0.10,0.10),mats["rust"])
+		box(room,"FixtureCableDrop",Vector3(-fixture_span*0.39,2.68,fixture_z+0.24),Vector3(0.04,0.10,0.04),mats["darkmetal"])
+	var guard_mesh := BoxMesh.new()
+	guard_mesh.size=Vector3(0.035,0.07,0.27)
+	var guard_instances := MultiMesh.new()
+	guard_instances.transform_format=MultiMesh.TRANSFORM_3D
+	guard_instances.mesh=guard_mesh
+	guard_instances.instance_count=guard_transforms.size()
+	for index in range(guard_transforms.size()):
+		guard_instances.set_instance_transform(index,guard_transforms[index])
+	var guards := MultiMeshInstance3D.new()
+	guards.name="CagedInteriorLightGuards"
+	guards.multimesh=guard_instances
+	guards.material_override=mats["darkmetal"]
+	room.add_child(guards)
 	match kind:
 		"housing":
 			for side in [-1.0,1.0]:
