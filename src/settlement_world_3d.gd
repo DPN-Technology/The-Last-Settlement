@@ -467,10 +467,14 @@ func _road_ribbon(a: Vector3, b: Vector3, width: float, lift: float, longitudina
 	surface.generate_normals()
 	return surface.commit()
 
-func _road_surface_strip(surface: SurfaceTool, first: Vector3, second: Vector3, half_width: float) -> void:
+func _road_surface_strip(surface: SurfaceTool, first: Vector3, second: Vector3, half_width: float, lift: float) -> void:
 	var tangent := Vector2(second.x-first.x, second.z-first.z).normalized()
 	var across := Vector3(-tangent.y, 0.0, tangent.x) * half_width
 	var points: Array[Vector3] = [first-across, first+across, second-across, second+across]
+	for point_index in range(points.size()):
+		var point := points[point_index]
+		point.y = WastelandDetail.terrain_height(point.x,point.z,terrain_height_noise) + lift
+		points[point_index] = point
 	for index in [0, 1, 2, 2, 1, 3]:
 		surface.add_vertex(points[index])
 
@@ -491,7 +495,7 @@ func _road_cracks(a: Vector3, b: Vector3, width: float, count: int) -> ArrayMesh
 			point += forward * rng.randf_range(-0.045, 0.045)
 			point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + 0.081
 			if step > 0:
-				_road_surface_strip(surface, previous, point, rng.randf_range(0.018, 0.032))
+				_road_surface_strip(surface, previous, point, rng.randf_range(0.018, 0.032), 0.081)
 			previous = point
 	surface.index()
 	surface.generate_normals()
