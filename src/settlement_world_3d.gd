@@ -421,13 +421,15 @@ func _build_terrain() -> void:
 	SettlementReferenceEnvironment3D.build_world(terrain_layer,materials)
 	SettlementAuthenticModel3D.build_world(terrain_layer)
 
+func _conform_road_point(point: Vector3, lift: float) -> Vector3:
+	point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + lift
+	return point
+
 func _road_point(a: Vector3, b: Vector3, progress: float, lateral: float, width: float, lift: float) -> Vector3:
 	var center := a.lerp(b, progress)
 	var direction := Vector2(b.x-a.x, b.z-a.z).normalized()
 	var across := Vector3(-direction.y, 0.0, direction.x)
-	var point := center + across * lateral * width
-	point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + lift
-	return point
+	return _conform_road_point(center + across * lateral * width, lift)
 
 func _road_ribbon(a: Vector3, b: Vector3, width: float, lift: float, longitudinal_steps: int, cross_steps: int) -> ArrayMesh:
 	var surface := SurfaceTool.new()
@@ -452,17 +454,17 @@ func _road_ribbon(a: Vector3, b: Vector3, width: float, lift: float, longitudina
 			var p01: Vector3 = rows[along][across+1]
 			var p11: Vector3 = rows[along+1][across+1]
 			surface.set_uv(Vector2(uv_x0, uv_y0))
-			surface.add_vertex(p00)
+			surface.add_vertex(_conform_road_point(p00, lift))
 			surface.set_uv(Vector2(uv_x0, uv_y1))
-			surface.add_vertex(p01)
+			surface.add_vertex(_conform_road_point(p01, lift))
 			surface.set_uv(Vector2(uv_x1, uv_y0))
-			surface.add_vertex(p10)
+			surface.add_vertex(_conform_road_point(p10, lift))
 			surface.set_uv(Vector2(uv_x1, uv_y0))
-			surface.add_vertex(p10)
+			surface.add_vertex(_conform_road_point(p10, lift))
 			surface.set_uv(Vector2(uv_x0, uv_y1))
-			surface.add_vertex(p01)
+			surface.add_vertex(_conform_road_point(p01, lift))
 			surface.set_uv(Vector2(uv_x1, uv_y1))
-			surface.add_vertex(p11)
+			surface.add_vertex(_conform_road_point(p11, lift))
 	surface.index()
 	surface.generate_normals()
 	return surface.commit()
@@ -472,9 +474,7 @@ func _road_surface_strip(surface: SurfaceTool, first: Vector3, second: Vector3, 
 	var across := Vector3(-tangent.y, 0.0, tangent.x) * half_width
 	var points: Array[Vector3] = [first-across, first+across, second-across, second+across]
 	for point_index in range(points.size()):
-		var point := points[point_index]
-		point.y = WastelandDetail.terrain_height(point.x,point.z,terrain_height_noise) + lift
-		points[point_index] = point
+		points[point_index] = _conform_road_point(points[point_index], lift)
 	for index in [0, 1, 2, 2, 1, 3]:
 		surface.add_vertex(points[index])
 
@@ -493,7 +493,7 @@ func _road_cracks(a: Vector3, b: Vector3, width: float, count: int) -> ArrayMesh
 			var progress := clampf(base_progress + rng.randf_range(-0.009, 0.009), 0.02, 0.98)
 			var point := _road_point(a, b, progress, lateral, width, 0.081)
 			point += forward * rng.randf_range(-0.045, 0.045)
-			point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + 0.081
+			point = _conform_road_point(point, 0.081)
 			if step > 0:
 				_road_surface_strip(surface, previous, point, rng.randf_range(0.018, 0.032), 0.081)
 			previous = point
@@ -517,7 +517,7 @@ func _road_markings(a: Vector3, b: Vector3, width: float, dash_length: float, ga
 		var p2 := _road_point(a, b, end_progress, -0.007, width, 0.101)
 		var p3 := _road_point(a, b, end_progress, 0.007, width, 0.101)
 		for point in [p0, p1, p2, p2, p1, p3]:
-			surface.add_vertex(point)
+			surface.add_vertex(_conform_road_point(point, 0.101))
 	surface.index()
 	surface.generate_normals()
 	return surface.commit()

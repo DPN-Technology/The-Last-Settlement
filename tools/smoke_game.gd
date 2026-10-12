@@ -273,7 +273,14 @@ func _smoke() -> void:
 			var vertex := vertices[vertex_index]
 			var terrain_y := WastelandDetail.terrain_height(vertex.x,vertex.z,world_3d.terrain_height_noise)
 			if absf(vertex.y-terrain_y-expected_lift)>0.003:
-				push_error("SMOKE: Road/shoulder/crack geometry floats above or cuts through sculpted terrain")
+				push_error("SMOKE: %s vertex %d is off terrain by %s m (mesh y=%s, terrain y=%s, expected lift=%s)" % [
+					road_mesh.name,
+					vertex_index,
+					str(absf(vertex.y-terrain_y-expected_lift)),
+					str(vertex.y),
+					str(terrain_y),
+					str(expected_lift)
+				])
 				quit(1)
 				return
 			if road_mesh.name=="TerrainConformingBrokenAsphalt":
