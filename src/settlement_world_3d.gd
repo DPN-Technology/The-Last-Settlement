@@ -729,6 +729,10 @@ func _try_authored_model(parent: Node3D, model_path: String, footprint: Vector2 
 	if model == null:
 		push_warning("Model root must be Node3D: " + model_path)
 		return false
+	# Imported scenes may contain placeholder mesh nodes with no resource.
+	# Disable those while detached; adding them to the live viewport first
+	# lets the renderer register them and emit null-mesh errors.
+	SettlementAuthenticModel3D._disable_empty_renderers(model)
 	parent.add_child(model)
 	# Authored source models use meters, ground origin, forward -Z, and footprints
 	# consistent with game building plans. Scale is authored in Blender/glTF.
