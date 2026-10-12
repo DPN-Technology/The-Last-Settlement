@@ -301,6 +301,7 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 		_cylinder(site,"RainBarrelReinforcingBand",Vector3(0,catchment_ground_y+band_y,2.42),0.405,0.055,mats["darkmetal"])
 	_cylinder_between(site,"BarrelFillElbow",Vector3(0,1.03,1.77),Vector3(0,catchment_ground_y+1.12,2.08),0.04,mats["steel"])
 	_box(site,"RainBarrelInspectionPlate",Vector3(0,catchment_ground_y+0.72,2.82),Vector3(0.30,0.24,0.045),mats["rust"])
+	_water_recovery_station(site,mats)
 	for side in [-1.0,1.0]:
 		for end in [-1.0,1.0]:
 			var stake_x: float=side*3.14
@@ -315,6 +316,42 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 		_box(site,"StackedRecoveryCrate",Vector3(-1.35+float(index)*0.92,0.46,1.12),Vector3(0.78,0.78,0.77),mats["rust"] if index%2==0 else mats["steel"])
 	_box(site,"ServiceBench",Vector3(0,0.93,-1.2),Vector3(2.30,0.15,0.84),mats["wood"])
 	_camp_light(site,Vector3(1.95,0,-1.4),mats)
+
+static func _water_recovery_station(site: Node3D, mats: Dictionary) -> void:
+	var station_x: float=-1.18
+	var station_z: float=2.52
+	var ground_y: float=_terrain_height(site.position.x+station_x,site.position.z+station_z)-site.position.y
+	_box(site,"WaterTreatmentTimberSkid",Vector3(station_x,ground_y+0.09,station_z),Vector3(1.48,0.18,1.14),mats["wood"])
+	for side in [-1.0,1.0]:
+		_box(site,"FilterRackUpright",Vector3(station_x+side*0.58,ground_y+0.91,station_z-0.26),Vector3(0.09,1.62,0.10),mats["steel"])
+		_box(site,"FilterRackShelf",Vector3(station_x+side*0.58,ground_y+0.35,station_z),Vector3(0.12,0.09,0.84),mats["darkmetal"])
+	_box(site,"FilterRackHeader",Vector3(station_x,ground_y+1.67,station_z-0.26),Vector3(1.24,0.10,0.10),mats["rust"])
+	var sediment_filter := _cylinder(site,"CeramicSedimentFilter",Vector3(station_x-0.20,ground_y+0.91,station_z),0.22,0.94,mats["rooflight"])
+	sediment_filter.rotation.z=0.015
+	for band_y in [0.50,0.84,1.21,1.34]:
+		_cylinder(site,"FilterHousingClamp",Vector3(station_x-0.20,ground_y+band_y,station_z),0.235,0.055,mats["darkmetal"])
+	_cylinder(site,"ActivatedCarbonCanister",Vector3(station_x+0.34,ground_y+0.64,station_z+0.12),0.15,0.56,mats["steel"])
+	for band_y in [0.40,0.87]:
+		_cylinder(site,"CarbonCanisterRetainingBand",Vector3(station_x+0.34,ground_y+band_y,station_z+0.12),0.164,0.05,mats["rust"])
+	_cylinder_between(site,"FilterManifoldHeader",Vector3(station_x-0.40,ground_y+1.43,station_z),Vector3(station_x+0.48,ground_y+1.43,station_z),0.045,mats["darkmetal"])
+	var barrel_feed_ground_y: float=_terrain_height(site.position.x-0.39,site.position.z+2.42)-site.position.y
+	_cylinder_between(site,"RainBarrelFilterFeed",Vector3(-0.39,barrel_feed_ground_y+0.88,2.42),Vector3(station_x+0.20,ground_y+0.88,2.42),0.035,mats["steel"])
+	_cylinder_between(site,"TreatedWaterOutlet",Vector3(station_x+0.40,ground_y+1.43,station_z),Vector3(station_x+0.40,ground_y+0.66,station_z+0.30),0.035,mats["blue"])
+	_cylinder(site,"ManualPumpBody",Vector3(station_x+0.40,ground_y+0.49,station_z+0.32),0.095,0.44,mats["rust"])
+	var pump_handle := _box(site,"HandPumpLever",Vector3(station_x+0.40,ground_y+0.79,station_z+0.32),Vector3(0.07,0.48,0.07),mats["steel"])
+	pump_handle.rotation.z=-0.38
+	_box(site,"PumpGrip",Vector3(station_x+0.49,ground_y+1.01,station_z+0.32),Vector3(0.28,0.075,0.075),mats["darkmetal"])
+	var gauge := _cylinder(site,"FilterPressureGauge",Vector3(station_x+0.38,ground_y+1.23,station_z+0.06),0.105,0.075,mats["glass"])
+	gauge.rotation.x=PI*0.5
+	_cylinder(site,"GaugeBezel",Vector3(station_x+0.38,ground_y+1.23,station_z+0.11),0.12,0.035,mats["steel"])
+	_box(site,"GaugeNeedle",Vector3(station_x+0.38,ground_y+1.23,station_z+0.133),Vector3(0.012,0.07,0.012),mats["warning"])
+	for can_index in range(2):
+		var can_x: float=station_x-0.38+float(can_index)*0.67
+		var can_z: float=station_z+0.82
+		var can_ground_y: float=_terrain_height(site.position.x+can_x,site.position.z+can_z)-site.position.y
+		_box(site,"TreatedWaterJerryCan",Vector3(can_x,can_ground_y+0.30,can_z),Vector3(0.39,0.57,0.28),mats["blue"])
+		_box(site,"JerryCanCarryHandle",Vector3(can_x,can_ground_y+0.61,can_z-0.02),Vector3(0.22,0.07,0.10),mats["darkmetal"])
+		_cylinder(site,"JerryCanFillerCap",Vector3(can_x+0.11,can_ground_y+0.61,can_z-0.02),0.06,0.055,mats["rust"])
 
 static func _canopy_point(tx: float, tz: float, wear_variant: float) -> Vector3:
 	var x := (tx-0.5)*5.25

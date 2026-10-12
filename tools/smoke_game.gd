@@ -1740,10 +1740,21 @@ func _smoke() -> void:
 					push_error("SMOKE: salvage shelter rainwater system missing "+shelter_part)
 					quit(1)
 					return
+			for treatment_part in ["WaterTreatmentTimberSkid","CeramicSedimentFilter","ActivatedCarbonCanister","FilterManifoldHeader","RainBarrelFilterFeed","TreatedWaterOutlet","ManualPumpBody","HandPumpLever","FilterPressureGauge","GaugeNeedle"]:
+				var treatment_part_found := false
+				for component in item.get_children():
+					if str(component.name).begins_with(treatment_part+"_"):
+						treatment_part_found=true
+						break
+				if not treatment_part_found:
+					push_error("SMOKE: rainwater treatment station is missing "+treatment_part)
+					quit(1)
+					return
 			var gutter_brackets := 0
 			var rain_barrel_bands := 0
 			var guyline_count := 0
 			var anchor_count := 0
+			var treated_water_cans := 0
 			var camp_terrain_noise := SettlementReferenceEnvironment3D._terrain_noise()
 			for component in item.get_children():
 				if str(component.name).begins_with("RainCatchmentBarrel_"):
@@ -1756,6 +1767,32 @@ func _smoke() -> void:
 					var pallet_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42,camp_terrain_noise)-item.position.y
 					if absf(component.position.y-0.08-pallet_ground_y)>0.02:
 						push_error("SMOKE: rain barrel pallet is not grounded to terrain")
+						quit(1)
+						return
+				elif str(component.name).begins_with("WaterTreatmentTimberSkid_"):
+					var skid_ground_y: float=WastelandDetail.terrain_height(item.position.x-1.18,item.position.z+2.52,camp_terrain_noise)-item.position.y
+					if absf(component.position.y-0.09-skid_ground_y)>0.02:
+						push_error("SMOKE: water treatment station skid is not grounded")
+						quit(1)
+						return
+				elif str(component.name).begins_with("TreatedWaterJerryCan_"):
+					treated_water_cans+=1
+					var can_ground_y: float=WastelandDetail.terrain_height(item.position.x+component.position.x,item.position.z+component.position.z,camp_terrain_noise)-item.position.y
+					if absf(component.position.y-0.30-can_ground_y)>0.02:
+						push_error("SMOKE: treated water container is not grounded")
+						quit(1)
+						return
+				elif str(component.name).begins_with("RainBarrelFilterFeed_"):
+					var feed_mesh := component.mesh as CylinderMesh
+					var barrel_feed_y: float=WastelandDetail.terrain_height(item.position.x-0.39,item.position.z+2.42,camp_terrain_noise)-item.position.y
+					var filter_feed_y: float=WastelandDetail.terrain_height(item.position.x-1.18,item.position.z+2.52,camp_terrain_noise)-item.position.y
+					var expected_feed_length := Vector3(-0.59,filter_feed_y-barrel_feed_y,0.0).length()
+					if feed_mesh==null:
+						push_error("SMOKE: rain barrel filter feed is not cylinder geometry")
+						quit(1)
+						return
+					if absf(feed_mesh.height-expected_feed_length)>0.02:
+						push_error("SMOKE: rain barrel is not physically piped into the filter station")
 						quit(1)
 						return
 				if str(component.name).begins_with("TautCanvasGuyline_"):
@@ -1775,8 +1812,8 @@ func _smoke() -> void:
 						push_error("SMOKE: shelter tie-down stake is floating above terrain")
 						quit(1)
 						return
-			if guyline_count!=4 or anchor_count!=4 or gutter_brackets!=5 or rain_barrel_bands!=3:
-				push_error("SMOKE: salvage shelter tie-down or rainwater system is incomplete")
+			if guyline_count!=4 or anchor_count!=4 or gutter_brackets!=5 or rain_barrel_bands!=3 or treated_water_cans!=2:
+				push_error("SMOKE: salvage shelter tie-down, rainwater or treatment system is incomplete")
 				quit(1)
 				return
 	if boards<4 or warm_lamps<7 or salvage_camps<2:
