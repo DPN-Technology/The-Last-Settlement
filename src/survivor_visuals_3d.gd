@@ -106,6 +106,35 @@ static func _box(parent: Node3D, name: String, pos: Vector3, size: Vector3, mat:
 	visual.material_override = mat
 	parent.add_child(visual)
 
+static func _sphere(parent: Node3D, name: String, pos: Vector3, dimensions: Vector3, mat: Material) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.name=name
+	var mesh := SphereMesh.new()
+	mesh.radius=0.5
+	mesh.height=1.0
+	mesh.radial_segments=16
+	mesh.rings=8
+	visual.mesh=mesh
+	visual.position=pos
+	visual.scale=dimensions
+	visual.material_override=mat
+	parent.add_child(visual)
+	return visual
+
+static func _cylinder(parent: Node3D, name: String, pos: Vector3, radius: float, height: float, mat: Material) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.name=name
+	var mesh := CylinderMesh.new()
+	mesh.top_radius=radius
+	mesh.bottom_radius=radius
+	mesh.height=height
+	mesh.radial_segments=12
+	visual.mesh=mesh
+	visual.position=pos
+	visual.material_override=mat
+	parent.add_child(visual)
+	return visual
+
 static func _rounded_pack(parent: Node3D, material: Material) -> void:
 	# Small curved hiking rucksack replaces the conspicuous floating cube.
 	var pack_mesh := CapsuleMesh.new()
@@ -131,12 +160,41 @@ static func _kit(root: Node3D, citizen: Dictionary, palette: Dictionary) -> void
 	var metal: Material = palette["darkmetal"]
 	var band: Material = palette["webbing"]
 	_rounded_pack(gear, pack)
+	var bedroll_mesh := CapsuleMesh.new()
+	bedroll_mesh.radius=0.12
+	bedroll_mesh.height=0.82
+	bedroll_mesh.radial_segments=12
+	bedroll_mesh.rings=5
+	var bedroll := MeshInstance3D.new()
+	bedroll.name="RolledBedroll"
+	bedroll.mesh=bedroll_mesh
+	bedroll.position=Vector3(0,1.53,0.30)
+	bedroll.rotation.z=PI*0.5
+	bedroll.material_override=pack
+	gear.add_child(bedroll)
+	for side in [-1.0,1.0]:
+		_box(gear,"BedrollCompressionStrap",Vector3(side*0.17,1.53,0.30),Vector3(0.045,0.27,0.27),band)
 	# Low-profile clips and webbing remain readable at settlement view,
 	# without hiding the actual human upper body like the old square backpack.
 	_box(gear, "PackFastener", Vector3(0, 1.21, 0.42), Vector3(0.07, 0.15, 0.035), metal)
 	_box(gear, "ShoulderStrapLeft", Vector3(-0.16, 1.30, -0.11), Vector3(0.06, 0.44, 0.045), band)
 	_box(gear, "ShoulderStrapRight", Vector3(0.16, 1.30, -0.11), Vector3(0.06, 0.44, 0.045), band)
 	_box(gear, "WaistBelt", Vector3(0, 0.94, -0.05), Vector3(0.38, 0.08, 0.20), band)
+	for side in [-1.0,1.0]:
+		_box(gear,"UtilityBeltPouch",Vector3(side*0.17,1.00,-0.17),Vector3(0.13,0.17,0.08),pack)
+		_box(gear,"PouchFastener",Vector3(side*0.17,1.04,-0.215),Vector3(0.055,0.035,0.018),metal)
+	_cylinder(gear,"FieldCanteen",Vector3(0.24,1.19,0.22),0.075,0.27,metal)
+	var headwear: Material=pack
+	if job=="Medic":
+		headwear=palette["clinic"]
+	elif job in ["Guard","Engineer","Builder"]:
+		headwear=metal
+	var brim_radius: float=0.18 if job in ["Guard","Engineer","Builder"] else (0.24 if job=="Farmer" else 0.16)
+	_cylinder(gear,"SurvivorFieldCapBrim",Vector3(0,1.63,-0.015),brim_radius,0.045,headwear)
+	_sphere(gear,"SurvivorFieldCapCrown",Vector3(0,1.69,0.005),Vector3(0.28,0.17,0.27),headwear)
+	if job=="Medic":
+		_box(gear,"MedicCapMark",Vector3(0,1.69,-0.132),Vector3(0.045,0.075,0.018),palette["cross"])
+		_box(gear,"MedicCapMarkCrossbar",Vector3(0,1.69,-0.134),Vector3(0.09,0.025,0.02),palette["cross"])
 	match job:
 		"Medic":
 			_box(gear, "MedicCase", Vector3(0.26, 0.82, 0), Vector3(0.28, 0.33, 0.30), palette["clinic"])

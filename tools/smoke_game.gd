@@ -350,14 +350,34 @@ func _smoke() -> void:
 	var worker_mesh: Node3D=world_3d.people[worker_id]
 	visual_worker["current_action"]="Work: Engineering"
 	SettlementActivity3D.update(worker_mesh,visual_worker,false,false,0.4)
-	if not bool((worker_mesh.get_node("LiveDutyEquipment/Construction") as Node3D).visible):
+	var construction_kit := worker_mesh.get_node("LiveDutyEquipment/Construction") as Node3D
+	if not construction_kit.visible:
 		push_error("SMOKE: Working Engineer lacks visible 3D work equipment")
+		quit(1)
+		return
+	var first_work_pose: Vector3=construction_kit.position
+	var first_work_rotation: Vector3=construction_kit.rotation
+	SettlementActivity3D.update(worker_mesh,visual_worker,false,false,0.9)
+	if first_work_pose.is_equal_approx(construction_kit.position) and first_work_rotation.is_equal_approx(construction_kit.rotation):
+		push_error("SMOKE: Construction work tool does not animate during an active shift")
+		quit(1)
+		return
+	SettlementActivity3D.update(worker_mesh,visual_worker,false,true,0.9)
+	var paused_work_pose: Vector3=construction_kit.position
+	var paused_work_rotation: Vector3=construction_kit.rotation
+	SettlementActivity3D.update(worker_mesh,visual_worker,false,true,1.8)
+	if not paused_work_pose.is_equal_approx(construction_kit.position) or not paused_work_rotation.is_equal_approx(construction_kit.rotation):
+		push_error("SMOKE: Work equipment moves while the simulation is paused")
 		quit(1)
 		return
 	visual_worker["current_action"]="Off Duty"
 	SettlementActivity3D.update(worker_mesh,visual_worker,false,false,0.4)
-	if bool((worker_mesh.get_node("LiveDutyEquipment/Construction") as Node3D).visible):
+	if construction_kit.visible:
 		push_error("SMOKE: Off-duty worker still appears to use machinery tools")
+		quit(1)
+		return
+	if worker_mesh.get_node_or_null("SurvivorEquipment/RolledBedroll") == null or worker_mesh.get_node_or_null("SurvivorEquipment/SurvivorFieldCapCrown") == null or worker_mesh.get_node_or_null("SurvivorEquipment/FieldCanteen") == null:
+		push_error("SMOKE: Survivor lacks layered field kit, canteen, or role-readable headwear")
 		quit(1)
 		return
 	visual_worker["on_expedition"]=true

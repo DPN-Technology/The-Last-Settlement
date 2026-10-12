@@ -43,10 +43,10 @@ static func attach(person: Node3D, mats: Dictionary) -> void:
 
 	var field := Node3D.new()
 	field.name = "Farming"
-	field.position = Vector3(0.56,0.84,-0.13)
+	field.position = Vector3(0.50,0.92,-0.13)
 	duty.add_child(field)
-	_cylinder(field,"HoeHandle",Vector3(0,0.55,0),0.045,1.4,mats["canvas"])
-	_box(field,"SoilHoeBlade",Vector3(0,1.26,-0.22),Vector3(0.47,0.13,0.24),mats["steel"])
+	_cylinder(field,"HoeHandle",Vector3(0,0.02,0),0.045,1.05,mats["canvas"])
+	_box(field,"SoilHoeBlade",Vector3(0,-0.48,-0.18),Vector3(0.38,0.11,0.18),mats["steel"])
 
 	var aid := Node3D.new()
 	aid.name = "Medical"
@@ -78,7 +78,11 @@ static func attach(person: Node3D, mats: Dictionary) -> void:
 	_box(skillet,"PanHandle",Vector3(0.42,0,0),Vector3(0.55,0.09,0.08),mats["darkmetal"])
 
 	for child in duty.get_children():
-		(child as Node3D).visible=false
+		var prop := child as Node3D
+		prop.visible=false
+		prop.set_meta("rest_position",prop.position)
+		prop.set_meta("rest_rotation",prop.rotation)
+		prop.set_meta("active_activity","")
 
 static func current_activity(citizen: Dictionary) -> String:
 	var action := str(citizen.get("current_action",""))
@@ -111,9 +115,37 @@ static func update(person: Node3D, citizen: Dictionary, traveling: bool, paused:
 	if duty==null:
 		return
 	var current := "" if traveling or bool(citizen.get("on_expedition",false)) or bool(citizen.get("incarcerated",false)) else current_activity(citizen)
+	var phase: float=clock*3.0+float(citizen.get("id",0))*0.45
+	var stroke: float=sin(phase)
 	for child in duty.get_children():
 		var prop := child as Node3D
+		var rest_position: Vector3=prop.get_meta("rest_position",prop.position)
+		var rest_rotation: Vector3=prop.get_meta("rest_rotation",prop.rotation)
 		prop.visible=prop.name==current and current!=""
 		if prop.visible:
-			# Freeze small work motions on pause; never move when off duty.
-			prop.rotation.z = 0.0 if paused else 0.085*sin(clock*3.0+float(citizen.get("id",0))*0.45)
+			if paused and str(prop.get_meta("active_activity",""))==current:
+				continue
+			prop.position=rest_position
+			prop.rotation=rest_rotation
+			if not paused:
+				match current:
+					"Construction":
+						prop.rotation.x=-0.20+maxf(0.0,stroke)*0.42
+						prop.position.y+=maxf(0.0,stroke)*0.08
+					"Farming":
+						prop.rotation.x=0.16+stroke*0.32
+						prop.position.y+=absf(stroke)*0.055
+					"Medical":
+						prop.rotation.z=stroke*0.10
+					"Security":
+						prop.rotation.y=stroke*0.12
+					"Hauling":
+						prop.rotation.x=absf(stroke)*0.08
+						prop.position.y+=absf(stroke)*0.035
+					"Cooking":
+						prop.rotation.y=stroke*0.24
+			prop.set_meta("active_activity",current)
+		else:
+			prop.position=rest_position
+			prop.rotation=rest_rotation
+			prop.set_meta("active_activity","")
