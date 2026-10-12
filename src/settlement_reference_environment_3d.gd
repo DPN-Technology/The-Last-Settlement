@@ -303,8 +303,8 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 	_box(site,"RainBarrelInspectionPlate",Vector3(0,catchment_ground_y+0.72,2.82),Vector3(0.30,0.24,0.045),mats["rust"])
 	for side in [-1.0,1.0]:
 		for end in [-1.0,1.0]:
-			var stake_x := side*3.14
-			var stake_z := end*2.37
+			var stake_x: float=side*3.14
+			var stake_z: float=end*2.37
 			var stake_y: float=_terrain_height(site.position.x+stake_x,site.position.z+stake_z)-site.position.y
 			var stake := _cylinder(site,"CanvasGuylineGroundStake",Vector3(stake_x,stake_y+0.15,stake_z),0.065,0.30,mats["darkmetal"])
 			stake.rotation.z=side*0.12
