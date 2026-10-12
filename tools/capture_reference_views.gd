@@ -41,9 +41,10 @@ func _render_capture_suite() -> void:
 		quit(1)
 		return
 	# Keep the simulation and 3D layout stable across all captured viewpoints.
+	# Exteriors stay roofed for honest comparison with the cinematic settlement target.
 	game.sim.paused=true
 	game.sim.hour=8.1
-	game.roof_view_mode=1
+	game.roof_view_mode=2
 	game.settlement_world.pitch=deg_to_rad(52.0)
 	game.settlement_world.yaw=0.0
 	game.settlement_world.camera_distance=63.0
@@ -65,7 +66,7 @@ func _render_capture_suite() -> void:
 			quit(1)
 			return
 		game.selected_building=building
-		game.roof_view_mode=0
+		game.roof_view_mode=2
 		game.settlement_world.focus_game(Vector2(building["position"]))
 		game.settlement_world.camera_distance=24.0
 		game.settlement_world._position_camera()
