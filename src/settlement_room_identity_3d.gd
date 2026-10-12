@@ -29,6 +29,42 @@ static func cylinder(parent: Node3D, name: String, p: Vector3, radius: float, h:
 	parent.add_child(obj)
 	return obj
 
+static func _privacy_curtain_mesh(width: float, height: float, depth: float) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var width_segments := 24
+	var height_segments := 8
+	for row in range(height_segments):
+		var v0 := float(row)/float(height_segments)
+		var v1 := float(row+1)/float(height_segments)
+		for column in range(width_segments):
+			var u0 := float(column)/float(width_segments)
+			var u1 := float(column+1)/float(width_segments)
+			var points := [
+				Vector2(u0,v0),Vector2(u0,v1),Vector2(u1,v0),
+				Vector2(u1,v0),Vector2(u0,v1),Vector2(u1,v1)
+			]
+			for uv in points:
+				var fold := sin(uv.x*TAU*8.0)*depth
+				var droop := sin(uv.x*PI)*0.055*(1.0-uv.y)
+				var point := Vector3(fold,height*uv.y+droop,(uv.x-0.5)*width)
+				var lower_wear := lerpf(0.88,1.0,uv.y)
+				var fold_shade := 0.91+0.09*cos(uv.x*TAU*8.0)
+				surface.set_uv(Vector2(uv.x*3.2,uv.y*1.7))
+				surface.set_color(Color(lower_wear*fold_shade,lower_wear*fold_shade,lower_wear*fold_shade,1.0))
+				surface.add_vertex(point)
+	surface.generate_normals()
+	return surface.commit()
+
+static func _privacy_curtain(parent: Node3D, name: String, pos: Vector3, width: float, height: float, mat: Material) -> void:
+	var curtain := MeshInstance3D.new()
+	curtain.name=name
+	curtain.mesh=_privacy_curtain_mesh(width,height,0.055)
+	curtain.position=pos
+	curtain.material_override=mat
+	curtain.set_meta("clinic_privacy_curtain",true)
+	parent.add_child(curtain)
+
 static func _chair(parent: Node3D, p: Vector3, mats: Dictionary) -> void:
 	box(parent,"ChairedSeat",p+Vector3(0,0.55,0),Vector3(0.63,0.13,0.64),mats["canvas"])
 	box(parent,"BackRest",p+Vector3(0,1.05,0.28),Vector3(0.63,0.85,0.12),mats["steel"])
@@ -91,8 +127,19 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 		box(parent,"SterileTray",Vector3(x,1.38,hz*0.47),Vector3(0.95,0.075,0.52),mats["steel"])
 		box(parent,"PatientObservationDisplay",Vector3(side*hx*0.81,1.95,-hz*0.50),Vector3(0.91,0.62,0.18),mats["darkmetal"])
 		box(parent,"VitalsScreen",Vector3(side*hx*0.81,1.97,-hz*0.61),Vector3(0.73,0.43,0.035),mats["glass"])
-		box(parent,"MedicalPrivacyPost",Vector3(side*hx*0.33,1.25,hz*0.37),Vector3(0.09,2.1,0.09),mats["steel"])
-		box(parent,"PrivacyCurtainEdge",Vector3(side*hx*0.33,2.21,hz*0.37),Vector3(0.10,0.21,1.9),mats["clinic"])
+		var screen_x: float=side*hx*0.33
+		var screen_z: float=hz*0.37
+		box(parent,"MedicalPrivacyPost",Vector3(screen_x,1.25,screen_z),Vector3(0.09,2.1,0.09),mats["steel"])
+		box(parent,"PrivacyCurtainTrack",Vector3(screen_x,2.21,screen_z),Vector3(0.10,0.10,1.9),mats["darkmetal"])
+		_privacy_curtain(parent,"PleatedClinicPrivacyCurtain",Vector3(screen_x,1.22,screen_z),1.82,0.91,mats["cloth"])
+		for hook_index in range(5):
+			var hook_z: float=screen_z-0.72+float(hook_index)*0.36
+			cylinder(parent,"CurtainTrackRoller",Vector3(screen_x,2.13,hook_z),0.055,0.12,mats["steel"])
+	box(parent,"ClinicOxygenManifold",Vector3(0,1.78,-hz*0.66),Vector3(1.62,0.12,0.12),mats["pipe"])
+	for side in [-1.0,1.0]:
+		var oxygen_drop := cylinder(parent,"PatientOxygenDrop",Vector3(side*hx*0.36,1.34,-hz*0.62),0.035,0.78,mats["steel"])
+		oxygen_drop.set_meta("clinic_oxygen_delivery",true)
+		cylinder(parent,"OxygenFlowMeter",Vector3(side*hx*0.36,1.82,-hz*0.62),0.105,0.24,mats["glass"])
 	box(parent,"ClinicTriageStation",Vector3(0,0.98,hz*0.72),Vector3(2.25,0.14,0.83),mats["steel"])
 	box(parent,"SanitationSink",Vector3(0,0.92,hz*0.86),Vector3(0.76,0.11,0.37),mats["clinic"])
 	for side in [-1.0,1.0]:

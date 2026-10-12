@@ -197,6 +197,16 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 	_stage_rooms(room,kind,size,mats)
 	SettlementFidelity3D.interior(room,kind,size,mats)
 	SettlementRoomIdentity3D.populate(room,kind,size,mats)
+	if kind=="medical":
+		var curtain_material := (mats["cloth"] as StandardMaterial3D).duplicate() as StandardMaterial3D
+		curtain_material.albedo_color=Color("#e4e0d1")
+		curtain_material.vertex_color_use_as_albedo=true
+		curtain_material.cull_mode=BaseMaterial3D.CULL_DISABLED
+		curtain_material.uv1_triplanar=false
+		curtain_material.roughness=0.98
+		for curtain in room.find_children("*","MeshInstance3D",true,false):
+			if bool(curtain.get_meta("clinic_privacy_curtain",false)):
+				curtain.material_override=curtain_material
 	# Restrict internal light to revealed interiors; no glowing exterior boxes.
 	var light := OmniLight3D.new()
 	light.name="InteriorWorkLight"

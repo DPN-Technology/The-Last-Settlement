@@ -2322,6 +2322,8 @@ func _smoke() -> void:
 	var art_roots := 0
 	var expected_rooms := {"housing":"ShelterSleepingRug","medical":"ClinicTreatmentFloor","command":"SituationDisplay"}
 	var identified: Dictionary={}
+	var clinic_curtains := 0
+	var clinic_oxygen_drops := 0
 	for building in world.structure_layer.get_children():
 		if not building.has_meta("building_type"):
 			continue
@@ -2340,8 +2342,33 @@ func _smoke() -> void:
 				quit(1)
 				return
 			identified[kind]=true
+		if kind=="medical":
+			for detail in identity_root.get_children():
+				if bool(detail.get_meta("clinic_privacy_curtain",false)):
+					clinic_curtains+=1
+					var curtain_mesh := detail.mesh as ArrayMesh
+					if curtain_mesh==null or curtain_mesh.get_surface_count()==0 or detail.material_override==null:
+						push_error("SMOKE: clinic privacy curtain lacks folded mesh detail or fabric material")
+						quit(1)
+						return
+					var curtain_arrays: Array=curtain_mesh.surface_get_arrays(0)
+					var curtain_vertices: PackedVector3Array=curtain_arrays[Mesh.ARRAY_VERTEX]
+					if curtain_vertices.size()<500:
+						push_error("SMOKE: clinic privacy curtain lacks folded mesh detail or fabric material")
+						quit(1)
+						return
+				elif bool(detail.get_meta("clinic_oxygen_delivery",false)):
+					clinic_oxygen_drops+=1
+					if not (detail.mesh is CylinderMesh):
+						push_error("SMOKE: clinic oxygen delivery run is not modeled pipe geometry")
+						quit(1)
+						return
 	if art_roots<6 or identified.size()<3:
 		push_error("SMOKE: shelter, clinic and command do not have full differentiated interiors")
+		quit(1)
+		return
+	if clinic_curtains!=2 or clinic_oxygen_drops!=2:
+		push_error("SMOKE: clinic patient bays lack paired privacy curtains or oxygen drops")
 		quit(1)
 		return
 	# Facility inspector focus must actually move camera and switch out of
