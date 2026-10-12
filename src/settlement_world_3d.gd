@@ -88,6 +88,19 @@ var cutaway_views := 0
 var visual_time := 0.0
 var terrain_height_noise := FastNoiseLite.new()
 
+func _commit_validated_surface(surface: SurfaceTool) -> ArrayMesh:
+	var vertices := surface.get_vertex_array()
+	var indices := surface.get_index_array()
+	var colors := surface.get_color_array()
+	var mesh := surface.commit()
+	if mesh == null:
+		return null
+	mesh.set_meta("validation_vertices", vertices)
+	mesh.set_meta("validation_indices", indices)
+	mesh.set_meta("validation_colors", colors)
+	mesh.set_meta("validation_surface_count", 1)
+	return mesh
+
 func _ready() -> void:
 	_create_materials()
 	_create_environment()
@@ -465,7 +478,7 @@ func _road_ribbon(a: Vector3, b: Vector3, width: float, lift: float, longitudina
 			surface.add_vertex(p11)
 	surface.index()
 	surface.generate_normals()
-	return surface.commit()
+	return _commit_validated_surface(surface)
 
 func _road_surface_strip(surface: SurfaceTool, first: Vector3, second: Vector3, half_width: float) -> void:
 	var tangent := Vector2(second.x-first.x, second.z-first.z).normalized()
@@ -495,7 +508,7 @@ func _road_cracks(a: Vector3, b: Vector3, width: float, count: int) -> ArrayMesh
 			previous = point
 	surface.index()
 	surface.generate_normals()
-	return surface.commit()
+	return _commit_validated_surface(surface)
 
 func _road_markings(a: Vector3, b: Vector3, width: float, dash_length: float, gap: float) -> ArrayMesh:
 	var surface := SurfaceTool.new()
@@ -516,7 +529,7 @@ func _road_markings(a: Vector3, b: Vector3, width: float, dash_length: float, ga
 			surface.add_vertex(point)
 	surface.index()
 	surface.generate_normals()
-	return surface.commit()
+	return _commit_validated_surface(surface)
 
 func _road(a: Vector3, b: Vector3, width: float, center_line: bool = false) -> void:
 	var length := Vector2(b.x-a.x, b.z-a.z).length()
