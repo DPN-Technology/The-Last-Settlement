@@ -38,6 +38,18 @@ void fragment() {
 }
 """
 
+static func _disable_empty_renderers(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null:
+			mesh_instance.visible = false
+	elif node is MultiMeshInstance3D:
+		var multimesh_instance := node as MultiMeshInstance3D
+		if multimesh_instance.multimesh == null or multimesh_instance.multimesh.mesh == null:
+			multimesh_instance.visible = false
+	for child in node.get_children():
+		_disable_empty_renderers(child)
+
 static func _collect_mesh_bounds(node: Node, model: Node3D, bounds: Dictionary) -> void:
 	if node is MeshInstance3D:
 		var visual := node as MeshInstance3D
@@ -82,8 +94,16 @@ static func _make_garment(job: String, id: int) -> ShaderMaterial:
 static func _shade_meshes(node: Node, garment: ShaderMaterial) -> int:
 	var count := 0
 	if node is MeshInstance3D:
-		(node as MeshInstance3D).material_override = garment
-		count += 1
+		var visual := node as MeshInstance3D
+		if visual.mesh != null:
+			visual.material_override = garment
+			count += 1
+		else:
+			visual.visible = false
+	elif node is MultiMeshInstance3D:
+		var visual := node as MultiMeshInstance3D
+		if visual.multimesh == null or visual.multimesh.mesh == null:
+			visual.visible = false
 	for child in node.get_children():
 		count += _shade_meshes(child, garment)
 	return count
@@ -143,6 +163,7 @@ static func _kit(root: Node3D, citizen: Dictionary, palette: Dictionary) -> void
 			_box(gear, "SalvageSidepack", Vector3(0.31, 1.10, 0.04), Vector3(0.22, 0.33, 0.26), palette["steel"])
 
 static func prepare(model: Node3D, owner: Node3D, citizen: Dictionary, palette: Dictionary) -> void:
+	_disable_empty_renderers(model)
 	var bounds: Dictionary = {
 		"low": Vector3(999999,999999,999999),
 		"high": Vector3(-999999,-999999,-999999),

@@ -32,6 +32,18 @@ static func _get_scene(asset: String) -> PackedScene:
 		_cached[asset]=scene
 	return scene
 
+static func _disable_empty_renderers(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null:
+			mesh_instance.visible = false
+	elif node is MultiMeshInstance3D:
+		var multimesh_instance := node as MultiMeshInstance3D
+		if multimesh_instance.multimesh == null or multimesh_instance.multimesh.mesh == null:
+			multimesh_instance.visible = false
+	for child in node.get_children():
+		_disable_empty_renderers(child)
+
 static func _bounds(model: Node3D) -> AABB:
 	# Calculate bounds in the parent-model local space, handling nested nodes.
 	var aabb := AABB(Vector3.INF,Vector3.ZERO)
@@ -60,6 +72,7 @@ static func add(parent: Node3D, asset: String, name: String, p: Vector3, width: 
 	var instance := scene.instantiate() as Node3D
 	if instance==null:
 		return null
+	_disable_empty_renderers(instance)
 	var holder := Node3D.new()
 	holder.name=name
 	holder.position=p

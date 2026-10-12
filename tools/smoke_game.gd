@@ -1,5 +1,19 @@
 extends SceneTree
 
+func _visible_renderables_have_mesh(node: Node) -> bool:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.is_visible_in_tree() and mesh_instance.mesh == null:
+			return false
+	elif node is MultiMeshInstance3D:
+		var multimesh_instance := node as MultiMeshInstance3D
+		if multimesh_instance.is_visible_in_tree() and (multimesh_instance.multimesh == null or multimesh_instance.multimesh.mesh == null):
+			return false
+	for child in node.get_children():
+		if not _visible_renderables_have_mesh(child):
+			return false
+	return true
+
 # Lightweight non-interactive boot test for Windows preview candidates.
 # Executes the real main scene and the UI's command input without writing a save.
 func _initialize() -> void:
@@ -199,6 +213,10 @@ func _smoke() -> void:
 		push_error("SMOKE: 3D survivors were not created")
 		quit(1)
 		return
+	if not _visible_renderables_have_mesh(instance.settlement_world):
+		push_error("SMOKE: Visible 3D renderer has no mesh resource")
+		quit(1)
+		return
 	# The industrial art has to be physical 3D equipment, and its mechanism
 	# must only run when an active job and eligible worker exist.
 	var world_3d: SettlementWorld3D=instance.settlement_world
@@ -219,7 +237,16 @@ func _smoke() -> void:
 			push_error("SMOKE: Terrain-conforming road mesh has no rendered surface")
 			quit(1)
 			return
-		var vertices: PackedVector3Array=road_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var arrays: Array = road_mesh.mesh.surface_get_arrays(0)
+		if arrays.is_empty() or arrays.size() <= Mesh.ARRAY_VERTEX or arrays[Mesh.ARRAY_VERTEX] == null:
+			push_error("SMOKE: Terrain-conforming road mesh has no vertex arrays to validate")
+			quit(1)
+			return
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+		if vertices == null or vertices.is_empty():
+			push_error("SMOKE: Terrain-conforming road mesh vertex array is empty")
+			quit(1)
+			return
 		var expected_lift := 0.075
 		if road_mesh.name=="ErodedGravelRoadShoulder":
 			expected_lift=0.025
