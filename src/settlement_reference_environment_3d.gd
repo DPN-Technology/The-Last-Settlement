@@ -61,6 +61,14 @@ static func _terrain_height(x: float,z: float) -> float:
 	noise.fractal_octaves=4
 	return WastelandDetail.terrain_height(x,z,noise)
 
+static func _terrain_noise() -> FastNoiseLite:
+	var noise := FastNoiseLite.new()
+	noise.seed=114722
+	noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency=0.015
+	noise.fractal_octaves=4
+	return noise
+
 static func _scatter(parent: Node3D, name: String, mesh: Mesh, material: Material, count: int, seed: int, band: int) -> void:
 	var layer := MultiMeshInstance3D.new()
 	layer.name=name
@@ -286,7 +294,7 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 		var bracket_x := -2.2+float(bracket_index)*1.1
 		_box(site,"GutterMountingStrap",Vector3(bracket_x,2.57,1.75),Vector3(0.055,0.14,0.16),mats["steel"])
 	_cylinder_between(site,"RainwaterDownspout",Vector3(0,2.60,1.77),Vector3(0,1.03,1.77),0.045,mats["darkmetal"])
-	var catchment_ground_y: float=WastelandDetail.terrain_height(site.position.x,site.position.z+2.42)-site.position.y
+	var catchment_ground_y: float=_terrain_height(site.position.x,site.position.z+2.42)-site.position.y
 	_box(site,"RainBarrelReclaimedPallet",Vector3(0,catchment_ground_y+0.08,2.42),Vector3(0.98,0.16,0.92),mats["wood"])
 	_cylinder(site,"RainCatchmentBarrel",Vector3(0,catchment_ground_y+0.68,2.42),0.39,1.20,mats["blue"])
 	for band_y in [0.25,0.62,0.99]:
@@ -297,7 +305,7 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 		for end in [-1.0,1.0]:
 			var stake_x := side*3.14
 			var stake_z := end*2.37
-			var stake_y: float=WastelandDetail.terrain_height(site.position.x+stake_x,site.position.z+stake_z)-site.position.y
+			var stake_y: float=_terrain_height(site.position.x+stake_x,site.position.z+stake_z)-site.position.y
 			var stake := _cylinder(site,"CanvasGuylineGroundStake",Vector3(stake_x,stake_y+0.15,stake_z),0.065,0.30,mats["darkmetal"])
 			stake.rotation.z=side*0.12
 			var top := Vector3(side*2.46,2.62 if end>0.0 else 2.96,end*1.61)

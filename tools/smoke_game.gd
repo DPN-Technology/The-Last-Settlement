@@ -1744,15 +1744,16 @@ func _smoke() -> void:
 			var rain_barrel_bands := 0
 			var guyline_count := 0
 			var anchor_count := 0
+			var camp_terrain_noise := SettlementReferenceEnvironment3D._terrain_noise()
 			for component in item.get_children():
 				if str(component.name).begins_with("RainCatchmentBarrel_"):
-					var barrel_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42)-item.position.y
+					var barrel_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42,camp_terrain_noise)-item.position.y
 					if absf(component.position.y-0.68-barrel_ground_y)>0.02:
 						push_error("SMOKE: rain catchment barrel is floating above its pallet")
 						quit(1)
 						return
 				elif str(component.name).begins_with("RainBarrelReclaimedPallet_"):
-					var pallet_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42)-item.position.y
+					var pallet_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42,camp_terrain_noise)-item.position.y
 					if absf(component.position.y-0.08-pallet_ground_y)>0.02:
 						push_error("SMOKE: rain barrel pallet is not grounded to terrain")
 						quit(1)
@@ -1769,7 +1770,7 @@ func _smoke() -> void:
 					rain_barrel_bands+=1
 				elif str(component.name).begins_with("CanvasGuylineGroundStake_"):
 					anchor_count+=1
-					var stake_ground_y: float=WastelandDetail.terrain_height(item.position.x+component.position.x,item.position.z+component.position.z)-item.position.y
+					var stake_ground_y: float=WastelandDetail.terrain_height(item.position.x+component.position.x,item.position.z+component.position.z,camp_terrain_noise)-item.position.y
 					if absf(component.position.y-0.15-stake_ground_y)>0.02:
 						push_error("SMOKE: shelter tie-down stake is floating above terrain")
 						quit(1)
