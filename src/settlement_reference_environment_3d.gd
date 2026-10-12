@@ -58,14 +58,26 @@ static func _scatter(parent: Node3D, name: String, mesh: Mesh, material: Materia
 	height_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
 	height_noise.frequency=0.015
 	height_noise.fractal_octaves=4
+	var cluster_count: int=maxi(12,int(sqrt(float(count))))
+	var cluster_centers: Array[Vector2]=[]
+	for cluster_index in range(cluster_count):
+		var center := Vector2(rng.randf_range(-91.0,91.0),rng.randf_range(-77.0,77.0))
+		if absf(center.x)<39.0 and absf(center.y)<34.0:
+			if band==0:
+				center.x=(1.0 if center.x>=0.0 else -1.0)*rng.randf_range(43.0,88.0)
+			else:
+				center.y=(1.0 if center.y>=0.0 else -1.0)*rng.randf_range(38.0,76.0)
+		cluster_centers.append(center)
+	var spread: float=4.8 if band==0 else 7.0
 	for i in range(count):
-		var x: float=rng.randf_range(-96.0,96.0)
-		var z: float=rng.randf_range(-83.0,83.0)
+		var center: Vector2=cluster_centers[rng.randi_range(0,cluster_centers.size()-1)]
+		var x: float=clampf(rng.randfn(center.x,spread),-104.0,104.0)
+		var z: float=clampf(rng.randfn(center.y,spread),-92.0,92.0)
 		if absf(x)<39.0 and absf(z)<34.0:
 			if band==0:
-				x=signf(x)*rng.randf_range(41.0,91.0)
+				x=(1.0 if x>=0.0 else -1.0)*rng.randf_range(41.0,91.0)
 			else:
-				z=signf(z)*rng.randf_range(36.0,80.0)
+				z=(1.0 if z>=0.0 else -1.0)*rng.randf_range(36.0,80.0)
 		var sx: float=rng.randf_range(0.35,1.70)
 		var sz: float=rng.randf_range(0.36,1.55)
 		var sy: float=rng.randf_range(0.48,1.22)
