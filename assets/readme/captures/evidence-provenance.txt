@@ -1,0 +1,4 @@
+repository=DPN-Technology/The-Last-Settlement
+commit=c99fba1cd1d4833013a3fc9b124d1994c3e19015
+workflow_run=https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783
+godot_version=4.3.stable.official.77dcf97d8

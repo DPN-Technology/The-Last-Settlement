@@ -1,0 +1,78 @@
+{
+  "source": "actual Godot gl_compatibility rendered frames",
+  "reference": "player-provided 1600x900 reference-image measurements",
+  "goal": {
+    "mean_luminance": 76.4,
+    "detail": 25.6,
+    "luma_spread": 42.2,
+    "structural_detail": 32.8
+  },
+  "captures": {
+    "01_Overview_HUD": {
+      "mean_luminance": 92.2,
+      "luma_spread": 32.3,
+      "detail": 35.4,
+      "structural_detail": 18.3,
+      "size": [
+        1600,
+        900
+      ],
+      "detail_fraction_of_target": 1.38,
+      "brightness_fraction_of_target": 1.21,
+      "structural_fraction_of_target": 0.56,
+      "reference_ready_metric_only": false
+    },
+    "02_housing_HUD": {
+      "mean_luminance": 76.8,
+      "luma_spread": 35.2,
+      "detail": 31.4,
+      "structural_detail": 13.4,
+      "size": [
+        1600,
+        900
+      ]
+    },
+    "02_command_HUD": {
+      "mean_luminance": 74.2,
+      "luma_spread": 37.8,
+      "detail": 30.3,
+      "structural_detail": 15.7,
+      "size": [
+        1600,
+        900
+      ]
+    },
+    "02_medical_HUD": {
+      "mean_luminance": 81.3,
+      "luma_spread": 44.4,
+      "detail": 31.4,
+      "structural_detail": 17.9,
+      "size": [
+        1600,
+        900
+      ]
+    },
+    "03_AccessRoad_HUD": {
+      "mean_luminance": 95.5,
+      "luma_spread": 17.6,
+      "detail": 39.7,
+      "structural_detail": 12.3,
+      "size": [
+        1600,
+        900
+      ]
+    },
+    "03_AccessRoad_WORLD": {
+      "mean_luminance": 94.8,
+      "luma_spread": 18.1,
+      "detail": 41.0,
+      "structural_detail": 12.2,
+      "size": [
+        1600,
+        900
+      ]
+    }
+  },
+  "access_road_world_roi": "central 84% width, central 76% height",
+  "note": "Metrics are guardrails, not visual approval; compare the actual PNGs to the supplied art direction."
+}
