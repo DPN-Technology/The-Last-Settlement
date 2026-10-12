@@ -89,9 +89,9 @@ var visual_time := 0.0
 var terrain_height_noise := FastNoiseLite.new()
 
 func _commit_validated_surface(surface: SurfaceTool) -> ArrayMesh:
-	var vertices := surface.get_vertex_array()
-	var indices := surface.get_index_array()
-	var colors := surface.get_color_array()
+	var vertices: PackedVector3Array = surface.get_vertex_array()
+	var indices: PackedInt32Array = surface.get_index_array()
+	var colors: PackedColorArray = surface.get_color_array()
 	var mesh := surface.commit()
 	if mesh == null:
 		return null

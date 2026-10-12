@@ -87,9 +87,9 @@ static func terrain_mesh() -> ArrayMesh:
 	# gradients shade smoothly across triangle boundaries, not as flat slabs.
 	tool.index()
 	tool.generate_normals()
-	var vertices := tool.get_vertex_array()
-	var indices := tool.get_index_array()
-	var colors := tool.get_color_array()
+	var vertices: PackedVector3Array = tool.get_vertex_array()
+	var indices: PackedInt32Array = tool.get_index_array()
+	var colors: PackedColorArray = tool.get_color_array()
 	var mesh := tool.commit()
 	if mesh != null:
 		mesh.set_meta("validation_vertices", vertices)
@@ -129,8 +129,8 @@ static func horizon_ring_mesh() -> ArrayMesh:
 			tool.add_vertex(point)
 	tool.index()
 	tool.generate_normals()
-	var vertices := tool.get_vertex_array()
-	var indices := tool.get_index_array()
+	var vertices: PackedVector3Array = tool.get_vertex_array()
+	var indices: PackedInt32Array = tool.get_index_array()
 	var mesh := tool.commit()
 	if mesh != null:
 		mesh.set_meta("validation_vertices", vertices)
