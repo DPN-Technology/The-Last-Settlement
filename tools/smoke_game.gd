@@ -241,11 +241,16 @@ func _smoke() -> void:
 			quit(1)
 			return
 		var road_mesh: MeshInstance3D=road_piece as MeshInstance3D
-		if road_mesh.mesh==null or not road_mesh.mesh.has_meta("validation_surface_count") or int(road_mesh.mesh.get_meta("validation_surface_count"))!=1:
-			push_error("SMOKE: Terrain-conforming road mesh has no generated surface")
+		if road_mesh.mesh==null or road_mesh.mesh.get_surface_count()!=1:
+			push_error("SMOKE: Terrain-conforming road mesh has no rendered surface")
 			quit(1)
 			return
-		var vertices: PackedVector3Array=road_mesh.mesh.get_meta("validation_vertices",PackedVector3Array())
+		var arrays: Array=road_mesh.mesh.surface_get_arrays(0)
+		if arrays.is_empty() or arrays.size()<=Mesh.ARRAY_VERTEX or arrays[Mesh.ARRAY_VERTEX]==null:
+			push_error("SMOKE: Terrain-conforming road mesh has no vertex arrays to validate")
+			quit(1)
+			return
+		var vertices: PackedVector3Array=arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
 		if vertices == null or vertices.is_empty():
 			push_error("SMOKE: Terrain-conforming road mesh generated no vertices")
 			quit(1)
@@ -1733,12 +1738,9 @@ func _smoke() -> void:
 	# dipping beneath the plane revealed sharp artificial brown plateaus.
 	# Check every triangle, not only vertices: the continuation must contain
 	# no surface anywhere in the sculpted 320x320 central map.
-	if not far_ground.mesh.has_meta("validation_vertices") or not far_ground.mesh.has_meta("validation_indices"):
-		push_error("SMOKE: terrain continuation ring is missing generated geometry data")
-		quit(1)
-		return
-	var ring_vertices: PackedVector3Array=far_ground.mesh.get_meta("validation_vertices",PackedVector3Array())
-	var ring_indices: PackedInt32Array=far_ground.mesh.get_meta("validation_indices",PackedInt32Array())
+	var ring_arrays: Array=far_ground.mesh.surface_get_arrays(0)
+	var ring_vertices: PackedVector3Array=ring_arrays[Mesh.ARRAY_VERTEX]
+	var ring_indices: PackedInt32Array=ring_arrays[Mesh.ARRAY_INDEX]
 	if ring_indices.size()<24:
 		push_error("SMOKE: terrain continuation ring has no indexed triangles")
 		quit(1)
@@ -1749,11 +1751,8 @@ func _smoke() -> void:
 			push_error("SMOKE: horizon terrain overlaps sculpted mountains inside playfield")
 			quit(1)
 			return
-	if not ground.mesh.has_meta("validation_indices"):
-		push_error("SMOKE: terrain is missing generated geometry data")
-		quit(1)
-		return
-	var indices: PackedInt32Array=ground.mesh.get_meta("validation_indices",PackedInt32Array())
+	var actual_terrain_arrays: Array=ground.mesh.surface_get_arrays(0)
+	var indices: PackedInt32Array=actual_terrain_arrays[Mesh.ARRAY_INDEX]
 	if indices.size()<30000:
 		push_error("SMOKE: terrain triangles are too coarse or do not share vertices")
 		quit(1)
@@ -1799,11 +1798,8 @@ func _smoke() -> void:
 	# Real terrain macro color must vary by slope in the actual vertex buffer,
 	# rather than masking the entire landscape with one flat brown material.
 	var visible_mesh: ArrayMesh=ground.mesh as ArrayMesh
-	if not visible_mesh.has_meta("validation_colors"):
-		push_error("SMOKE: physical terrain is missing generated vertex colors")
-		quit(1)
-		return
-	var terrain_colors: PackedColorArray=visible_mesh.get_meta("validation_colors",PackedColorArray())
+	var surface_data: Array=visible_mesh.surface_get_arrays(0)
+	var terrain_colors: PackedColorArray=surface_data[Mesh.ARRAY_COLOR]
 	if terrain_colors.size()<15000 or not ground_material.vertex_color_use_as_albedo:
 		push_error("SMOKE: physical terrain lacks gradient material vertex colors")
 		quit(1)

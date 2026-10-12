@@ -87,16 +87,7 @@ static func terrain_mesh() -> ArrayMesh:
 	# gradients shade smoothly across triangle boundaries, not as flat slabs.
 	tool.index()
 	tool.generate_normals()
-	var vertices: PackedVector3Array = tool.get_vertex_array()
-	var indices: PackedInt32Array = tool.get_index_array()
-	var colors: PackedColorArray = tool.get_color_array()
-	var mesh := tool.commit()
-	if mesh != null:
-		mesh.set_meta("validation_vertices", vertices)
-		mesh.set_meta("validation_indices", indices)
-		mesh.set_meta("validation_colors", colors)
-		mesh.set_meta("validation_surface_count", 1)
-	return mesh
+	return tool.commit()
 
 # A separate exterior ring—not a giant overlapping plane. The previous
 # 1400x1400 floor sat beneath the entire sculpted heightfield; whenever a
@@ -129,14 +120,7 @@ static func horizon_ring_mesh() -> ArrayMesh:
 			tool.add_vertex(point)
 	tool.index()
 	tool.generate_normals()
-	var vertices: PackedVector3Array = tool.get_vertex_array()
-	var indices: PackedInt32Array = tool.get_index_array()
-	var mesh := tool.commit()
-	if mesh != null:
-		mesh.set_meta("validation_vertices", vertices)
-		mesh.set_meta("validation_indices", indices)
-		mesh.set_meta("validation_surface_count", 1)
-	return mesh
+	return tool.commit()
 
 static func detail_building(group: Node3D, kind: String, size: Vector2, height: float, condition: float, mats: Dictionary) -> void:
 	# Housing uses a genuine sloped roof. Applying the old common flat-roof

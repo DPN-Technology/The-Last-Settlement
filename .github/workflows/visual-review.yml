@@ -55,10 +55,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if ! command -v xvfb-run >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y xvfb libgl1-mesa-dri
+          fi
           mkdir -p dist/visual
           GODOT=".godot-visual/Godot_v4.3-stable_linux.x86_64"
           set +e
-          timeout 180s "$GODOT" --headless --path . \
+          timeout 180s xvfb-run -a -s "-screen 0 1600x900x24" env LIBGL_ALWAYS_SOFTWARE=1 \
+            "$GODOT" --path . --rendering-method gl_compatibility --resolution 1600x900 \
             --script res://tools/smoke_game.gd 2>&1 | tee dist/visual/smoke-game.log
           EXIT="${PIPESTATUS[0]}"
           set -e
