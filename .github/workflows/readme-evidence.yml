@@ -1,0 +1,118 @@
+name: DPN Settlement README Screenshot Evidence
+
+# Publishes optimized, verifiable frames produced by the REAL Godot renderer.
+# No image-generation or stock screenshots. Only commit reviewed PNG derivatives.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/readme-evidence.yml
+  workflow_dispatch:
+    inputs:
+      visual_run_id:
+        description: 'Successful DPN Settlement Real Render Visual Review run ID'
+        required: true
+        default: '38295997783'
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: last-settlement-readme-evidence
+  cancel-in-progress: false
+
+jobs:
+  publish-verified-captures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main (restricted to bot commit)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Verify exact GitHub visual-review source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.visual_run_id || '38295997783' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > /tmp/capture-run.json
+          python3 - <<'PY'
+          import json,os
+          r=json.load(open('/tmp/capture-run.json'))
+          assert r['status']=='completed' and r['conclusion']=='success', 'visual run must have succeeded'
+          assert r['path'].endswith('/visual-review.yml'), 'source must be actual 3D visual-review workflow'
+          assert r['repository']['full_name']==os.environ['GITHUB_REPOSITORY'], 'wrong source repository'
+          assert r['head_branch']=='feature/windows-playtest-loop', 'not the approved 3D playtest branch'
+          print('Verified run:',r['id'],'head_sha:',r['head_sha'])
+          PY
+          echo "SOURCE_RUN_ID=$SOURCE_RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Retrieve generated frames (not concepts)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/visual
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "LastSettlement-Real-Rendered-Visual-Evidence" --dir dist/visual
+          grep -Fx "repository=$GITHUB_REPOSITORY" dist/visual/evidence-provenance.txt
+          grep -Fx "workflow_run=https://github.com/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" dist/visual/evidence-provenance.txt
+          sha256sum --check --status dist/visual/SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          j=json.load(open('dist/visual/visual-review.json'))
+          assert j['source']=='actual Godot gl_compatibility rendered frames'
+          assert len(j['captures']) >= 5, 'missing capture data'
+          print('Renderer evidence checks passed.')
+          PY
+
+      - name: Convert real frames to README-friendly images
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg
+          mkdir -p assets/readme/captures
+          for name in 01_Overview 02_housing 02_command 02_medical 03_AccessRoad; do
+            for layer in HUD WORLD; do
+              test -s "dist/visual/${name}_${layer}.png"
+              ffmpeg -hide_banner -loglevel error -nostdin -y -i "dist/visual/${name}_${layer}.png" -vf "scale=1280:720:flags=lanczos" -frames:v 1 -q:v 5 "assets/readme/captures/${name}_${layer}.jpg"
+              test -s "assets/readme/captures/${name}_${layer}.jpg"
+            done
+          done
+          cp dist/visual/evidence-provenance.txt assets/readme/captures/evidence-provenance.txt
+          cp dist/visual/visual-review.json assets/readme/captures/visual-review.json
+          cp dist/visual/SHA256SUMS.txt assets/readme/captures/original-png-sha256sums.txt
+          sha256sum assets/readme/captures/*.jpg > assets/readme/captures/JPEG-SHA256SUMS.txt
+          {
+            echo "# Real Godot 3D screenshot evidence"
+            echo
+            echo "These images were resized from real Godot-rendered PNGs. They are not AI artwork."
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID"
+            echo
+            echo "Original PNG hashes: \`original-png-sha256sums.txt\`. Published JPEG hashes: \`JPEG-SHA256SUMS.txt\`."
+            echo "The capture runner was a Linux GL Compatibility software renderer; Windows player screenshots are still required for final visual acceptance."
+            echo "No finished-art or stable-release claim is implied."
+          } > assets/readme/captures/README.md
+
+      - name: Commit screenshot evidence only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/readme/captures/
+          if git diff --cached --quiet; then
+            echo "No screenshot asset changes."
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "docs(readme): publish verified Godot 3D screenshot evidence [skip ci]"
+          git push origin HEAD:main
