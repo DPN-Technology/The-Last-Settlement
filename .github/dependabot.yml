@@ -9,3 +9,8 @@ updates:
     labels:
       - "dependencies"
       - "security"
+    # Keep CodeQL init, analyze and SARIF uploader on the same version.
+    groups:
+      codeql-actions:
+        patterns:
+          - "github/codeql-action/*"
