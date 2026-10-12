@@ -352,6 +352,27 @@ static func _water_recovery_station(site: Node3D, mats: Dictionary) -> void:
 		_box(site,"TreatedWaterJerryCan",Vector3(can_x,can_ground_y+0.30,can_z),Vector3(0.39,0.57,0.28),mats["blue"])
 		_box(site,"JerryCanCarryHandle",Vector3(can_x,can_ground_y+0.61,can_z-0.02),Vector3(0.22,0.07,0.10),mats["darkmetal"])
 		_cylinder(site,"JerryCanFillerCap",Vector3(can_x+0.11,can_ground_y+0.61,can_z-0.02),0.06,0.055,mats["rust"])
+	var first_can_x: float=station_x-0.38
+	var second_can_x: float=station_x+0.29
+	var fill_header_y: float=ground_y+1.02
+	var fill_header_z: float=station_z+0.58
+	_cylinder_between(site,"TreatedWaterRiser",Vector3(station_x+0.40,ground_y+0.70,station_z+0.32),Vector3(station_x+0.40,fill_header_y,fill_header_z),0.03,mats["steel"])
+	_cylinder_between(site,"TreatedWaterFillManifold",Vector3(first_can_x-0.18,fill_header_y,fill_header_z),Vector3(station_x+0.40,fill_header_y,fill_header_z),0.035,mats["steel"])
+	var support_positions: Array[float]=[first_can_x-0.25,second_can_x+0.14]
+	for support_x in support_positions:
+		var support_ground_y: float=_terrain_height(site.position.x+support_x,site.position.z+fill_header_z)-site.position.y
+		_cylinder_between(site,"FillManifoldSupport",Vector3(support_x,support_ground_y,fill_header_z),Vector3(support_x,fill_header_y,fill_header_z),0.045,mats["darkmetal"])
+		_box(site,"FillManifoldFoot",Vector3(support_x,support_ground_y+0.035,fill_header_z),Vector3(0.18,0.07,0.18),mats["rust"])
+	for can_index in range(2):
+		var tap_x: float=first_can_x+float(can_index)*0.67
+		var can_z: float=station_z+0.82
+		var can_ground_y: float=_terrain_height(site.position.x+tap_x,site.position.z+can_z)-site.position.y
+		var valve_y: float=fill_header_y-0.10
+		_cylinder_between(site,"JerryCanFillDropPipe",Vector3(tap_x,fill_header_y,fill_header_z),Vector3(tap_x,valve_y,fill_header_z),0.025,mats["steel"])
+		_cylinder_between(site,"JerryCanFillSpout",Vector3(tap_x,valve_y,fill_header_z),Vector3(tap_x,can_ground_y+0.66,can_z-0.11),0.022,mats["darkmetal"])
+		var valve_wheel := _cylinder(site,"JerryCanFillShutoffWheel",Vector3(tap_x-0.08,valve_y+0.04,fill_header_z),0.07,0.035,mats["rust"])
+		valve_wheel.rotation.z=PI*0.5
+		_cylinder(site,"JerryCanFillValveHub",Vector3(tap_x-0.105,valve_y+0.04,fill_header_z),0.027,0.045,mats["steel"])
 
 static func _canopy_point(tx: float, tz: float, wear_variant: float) -> Vector3:
 	var x := (tx-0.5)*5.25

@@ -1740,7 +1740,7 @@ func _smoke() -> void:
 					push_error("SMOKE: salvage shelter rainwater system missing "+shelter_part)
 					quit(1)
 					return
-			for treatment_part in ["WaterTreatmentTimberSkid","CeramicSedimentFilter","ActivatedCarbonCanister","FilterManifoldHeader","RainBarrelFilterFeed","TreatedWaterOutlet","ManualPumpBody","HandPumpLever","FilterPressureGauge","GaugeNeedle"]:
+			for treatment_part in ["WaterTreatmentTimberSkid","CeramicSedimentFilter","ActivatedCarbonCanister","FilterManifoldHeader","RainBarrelFilterFeed","TreatedWaterOutlet","ManualPumpBody","HandPumpLever","FilterPressureGauge","GaugeNeedle","TreatedWaterRiser","TreatedWaterFillManifold"]:
 				var treatment_part_found := false
 				for component in item.get_children():
 					if str(component.name).begins_with(treatment_part+"_"):
@@ -1755,6 +1755,10 @@ func _smoke() -> void:
 			var guyline_count := 0
 			var anchor_count := 0
 			var treated_water_cans := 0
+			var fill_spouts := 0
+			var fill_valves := 0
+			var manifold_supports := 0
+			var manifold_feet := 0
 			var camp_terrain_noise := SettlementReferenceEnvironment3D._terrain_noise()
 			for component in item.get_children():
 				if str(component.name).begins_with("RainCatchmentBarrel_"):
@@ -1795,6 +1799,23 @@ func _smoke() -> void:
 						push_error("SMOKE: rain barrel is not physically piped into the filter station")
 						quit(1)
 						return
+				elif str(component.name).begins_with("JerryCanFillSpout_"):
+					fill_spouts+=1
+					if not (component.mesh is CylinderMesh):
+						push_error("SMOKE: treated-water fill spout is not modeled pipe geometry")
+						quit(1)
+						return
+				elif str(component.name).begins_with("JerryCanFillShutoffWheel_"):
+					fill_valves+=1
+				elif str(component.name).begins_with("FillManifoldSupport_"):
+					manifold_supports+=1
+				elif str(component.name).begins_with("FillManifoldFoot_"):
+					manifold_feet+=1
+					var foot_ground_y: float=WastelandDetail.terrain_height(item.position.x+component.position.x,item.position.z+component.position.z,camp_terrain_noise)-item.position.y
+					if absf(component.position.y-0.035-foot_ground_y)>0.02:
+						push_error("SMOKE: water fill manifold support foot is not grounded")
+						quit(1)
+						return
 				if str(component.name).begins_with("TautCanvasGuyline_"):
 					guyline_count+=1
 					if not (component.mesh is CylinderMesh):
@@ -1812,8 +1833,8 @@ func _smoke() -> void:
 						push_error("SMOKE: shelter tie-down stake is floating above terrain")
 						quit(1)
 						return
-			if guyline_count!=4 or anchor_count!=4 or gutter_brackets!=5 or rain_barrel_bands!=3 or treated_water_cans!=2:
-				push_error("SMOKE: salvage shelter tie-down, rainwater or treatment system is incomplete")
+			if guyline_count!=4 or anchor_count!=4 or gutter_brackets!=5 or rain_barrel_bands!=3 or treated_water_cans!=2 or fill_spouts!=2 or fill_valves!=2 or manifold_supports!=2 or manifold_feet!=2:
+				push_error("SMOKE: salvage shelter tie-down, rainwater treatment or dispensing system is incomplete")
 				quit(1)
 				return
 	if boards<4 or warm_lamps<7 or salvage_camps<2:
