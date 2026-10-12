@@ -1,958 +1,251 @@
-<p align="center">
-  <img src="assets/readme/the-last-settlement-banner.svg" alt="The Last Settlement banner" width="100%">
-</p>
+<div align="center">
 
-<p align="center">
-  <strong>DPN TECHNOLOGY // CIVILIZATION RECOVERY NETWORK</strong><br>
-  <em>The old world died. Build the next one.</em>
-</p>
+<img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/the-last-settlement-banner.svg" width="100%" alt="The Last Settlement game banner"/>
 
-<p align="center">
-  <img alt="Godot" src="https://img.shields.io/badge/Godot-4.x-20252b?style=for-the-badge&logo=godot-engine&logoColor=white">
-  <img alt="Platform" src="https://img.shields.io/badge/Target-PC-7d2d2d?style=for-the-badge">
-  <img alt="Build" src="https://img.shields.io/badge/Build-1.0.5-c94640?style=for-the-badge">
-  <img alt="Status" src="https://img.shields.io/badge/Transmission-ACTIVE-a46d45?style=for-the-badge">
-</p>
+### THE LAST SETTLEMENT
+**The old world died. Build the next one.**
 
-<p align="center">
-  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml"><img alt="DPN Settlement CI Gate" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml"><img alt="DPN Settlement CodeQL" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml"><img alt="DPN Settlement Supply Chain" src="https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml/badge.svg?branch=main"></a>
-</p>
+*An evolving 3D survival, settlement management and civilization simulation from DPN Technology.*
+
+[![Stable Windows](https://img.shields.io/github/v/release/DPN-Technology/The-Last-Settlement?style=for-the-badge&label=STABLE%20WINDOWS&color=8d463b)](https://github.com/DPN-Technology/The-Last-Settlement/releases/latest)
+[![Godot](https://img.shields.io/badge/ENGINE-GODOT%204.3-283f50?style=for-the-badge&logo=godot-engine&logoColor=white)](https://godotengine.org/)
+[![3D playtest](https://img.shields.io/badge/3D%20PLAYTEST-PR%20%236-cb3f4a?style=for-the-badge)](https://github.com/DPN-Technology/The-Last-Settlement/pull/6)
+[![Windows](https://img.shields.io/badge/TARGET-WINDOWS%20x64-56403e?style=for-the-badge&logo=windows)](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml)
+
+[**Download stable release**](https://github.com/DPN-Technology/The-Last-Settlement/releases/latest) · [**3D development PR**](https://github.com/DPN-Technology/The-Last-Settlement/pull/6) · [**Real gameplay image evidence**](https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783) · [**Report a bug**](https://github.com/DPN-Technology/The-Last-Settlement/issues)
+
+</div>
 
 ---
 
-```text
-[DPN CIVILIZATION RECOVERY NETWORK]
+> [!IMPORTANT]
+> **3D development and the public release are not the same build.** The currently published **v1.0.5 Windows stable** is still the earlier **2D overhead** version. The genuine **Godot 3D settlement**, expanded world geometry, newer DPN command interface, interactive systems and ongoing graphics work are in [unmerged PR #6](https://github.com/DPN-Technology/The-Last-Settlement/pull/6), pending Windows player approval. Nothing here should be read as a claim that the 3D work is already a released or photorealistic game.
 
-> Establishing emergency uplink..................... CONNECTED
-> Locating active population centers................ NETWORK CAPABLE
-> Verifying command authority....................... ACCEPTED
-> Settlement designation............................ LAST HAVEN // SITE-01
-> Recovery network status........................... EXPANDING
-> Recovery directive................................. ACTIVE
+<img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/settlement-3d-illustration.svg" width="100%" alt="Stylized diagram of Last Haven facilities and 3D settlement development — illustration, not a game screenshot"/>
 
-THE LAST SETTLEMENT IS ONLINE.
-```
+<p align="center"><sub>Original DPN editorial artwork illustrating the project direction. For actual unmodified Godot gameplay captures, see <a href="#02--real-3d-visual-evidence">the verified evidence archive</a> below.</sub></p>
 
-# THE LAST SETTLEMENT
+## 01 // THE MISSION
 
-**The Last Settlement** is an original PC survival, colony, and civilization simulation developed under **DPN Technology**.
+You do not just place buildings. **You manage the last organized community, its people, infrastructure, politics and future.**
 
-You do not simply place buildings and watch numbers rise.
+The settlement starts with scarce materials and survivors who need food, water, housing, medicine and a reason to stay. An outage can stop water purification; a failed harvest can weaken a workforce; wounded specialists can stall construction; shortages can undermine morale, security and legitimacy. Your decisions become part of the history of **Last Haven** and the network of communities it may build.
 
-You are responsible for the last known organized human settlement after the collapse of the old world. Every survivor is an individual. Every shortage has consequences. Every system can fail. Every decision becomes part of the settlement's history.
+**The central promise:** *Survive the night. Stabilize the settlement. Rebuild civilization.*
 
-The game begins with a handful of survivors and almost nothing else.
+| Pillar | Player responsibility |
+|---|---|
+| **Survivors** | Named people, roles, skill growth, needs, shifts, stress, injury, relationships and families |
+| **Construction** | Foundations, walls, facilities, costs, blueprints, repairs and demolition |
+| **Survival & utilities** | Food, water, power, fuel, sewage, production, stockpiles and failures |
+| **Exploration** | Dangerous ruins, expeditions, radio relays, salvaged resources and casualties |
+| **Society** | Laws, security, crime, elections, stability, politics and social response |
+| **Industry & diplomacy** | Manufacturing, trade, convoys, factions, reputation and conflict |
+| **Civilization** | Secondary settlements, logistics routes, federal choices and recovery megaprojects |
 
-The long-term goal is to rebuild **civilization itself**.
+## 02 // REAL 3D VISUAL EVIDENCE
 
-> **Survive the night. Stabilize the settlement. Rebuild the world.**
+The 3D playtest branch contains a reproducible visual test that **runs the actual Godot 4.3 scene** through GL Compatibility rendering. It captures a **1600×900** frame with the live HUD and a **separate world-only render** at each of five locations. These are real engine captures — **not concept images, stock photos or AI-generated scenery**.
 
----
-
-## CURRENT TRANSMISSION // BUILD 1.0.5
-
-The current foundation is already moving beyond a static colony prototype.
-
-### STABLE WINDOWS RELEASE // v1.0.5
-
-The first stable Windows release is live on GitHub.
-
-- Release: **The Last Settlement v1.0.5**
-- Stable tag: `v1.0.5`
-- Stable release source: `fd1e5cd403ac7d1d9325f2057dd9b7b15afa4e86`
-- Windows MSI installer published
-- Windows x86_64 portable ZIP published
-- Combined SHA-256 manifest published
-- Machine-readable `windows-release.json` published
-- In-game Update Command now has a live `/releases/latest` target
-- Release was promoted only after Windows Build, CI Gate, CodeQL, Supply Chain and Code Quality were all green on the release source
-
-### LIVE NOW
-
-- Overhead settlement simulation
-- Clickable survivors
-- Clickable infrastructure
-- Full survivor inspection panel
-- Individual names, ages, jobs, traits, health, morale, loyalty and stress
-- Hunger, thirst and fatigue
-- Needs-driven behavior
-- Eating, drinking and sleeping
-- Day/night work schedules
-- Job-specific work states
-- Farming production
-- Engineering and power support
-- Construction/material output
-- Medical recovery support
-- Scavenging output
-- Pocket inventory foundation
-- Survivor skill matrix
-- Dynamic event feed
-- Settlement resources
-- Building condition and capacity
-- Pause and multi-speed simulation
-- Camera pan and zoom
-- DPN reconstruction-command HUD
-
-### SETTLEMENT OPERATIONS // LIVE
-
-- Physical stockpiles by settlement zone
-- Item movement through hauler work
-- Work-order queue
-- Survivor-specific work priorities
-- Day / night shift assignment
-- Skill-based production efficiency
-- Injury states
-- Medical treatment progress
-- Meals as a separate consumable
-- Save/load to JSON
-- Incidents that now damage or add to real stockpiles
-
-### CONSTRUCTION SYSTEM // LIVE
-
-- Toggleable build mode
-- Grid-snapped blueprint placement
-- Wall construction
-- Floor construction
-- Door construction
-- Rotatable walls and doors
-- Shelter modules
-- Storage modules
-- Construction material costs
-- Builder assignment to active blueprints
-- Construction-skill-based build speed
-- Visible blueprint completion progress
-- Demolition and salvage recovery
-- Repair work orders
-- Basic enclosed-room detection
-- Wall-aware survivor movement
-- Construction state saved and restored
-
-### UTILITIES SYSTEM // LIVE
-
-- Generator production versus settlement demand
-- Battery charge, discharge and reserve capacity
-- Power consumers across command, housing, industry, medical and utilities
-- Water extraction pumps
-- Raw-water reserve
-- Water purification
-- Clean-water production rate
-- Water storage
-- Sewage generation from population
-- Sewage processing capacity
-- Sanitation rating
-- Grid trips and pump failures
-- Engineer-driven service recovery
-- Utility consequences that affect thirst, stress, morale and health
-- Utility build catalog: generators, batteries, poles, pumps, purifiers, tanks, pipes and sewage processors
-- Power, water and sewage overlays
-- Infrastructure status in the building inspector
-- Utility state persisted in save version 3
-
-### RELATIONSHIPS + FAMILIES // LIVE
-
-- Persistent relationship scores between survivors
-- Personality-driven compatibility
-- Positive and negative social interactions
-- Social need pressure
-- Morale/stress consequences from interactions
-- Persistent memory records
-- Arguments and meaningful-conversation memories
-- Partner formation
-- Relationship breakups
-- Family names
-- Biological sex state for family simulation
-- Pregnancy and birth
-- Parent/child relationship links
-- Children as persistent settlement citizens
-- Aging and birthdays
-- Coming-of-age transition into the workforce
-- Social/family data persisted in save version 4
-- Survivor inspector now shows partner, children, memory count and latest memory
-
-### WORLD + EXPEDITIONS // LIVE
-
-- Regional world map
-- Fog-of-war discovery
-- Settlement-centered radio range
-- Discoverable ruins, relay sites and unknown signals
-- Expedition team formation from available adult specialists
-- Expedition food, water and medical loadouts
-- Outbound travel time
-- Search/scavenge phase
-- Return travel
-- Radio-contact state
-- Location danger ratings
-- Security-skill risk reduction
-- Expedition injuries
-- Expedition deaths
-- Salvage cargo
-- Resource returns into real settlement stockpiles
-- Depleted locations
-- Radio relay restoration and extended range
-- Active expedition tracking
-- World/expedition state persisted in save version 5
-- Expedition members removed from home occupancy/social simulation while away
-
-### GOVERNMENT + SOCIETY // LIVE
-
-- Interim civic council and settlement leader
-- Recurring elections
-- Council membership
-- Government legitimacy
-- Settlement unrest
-- Crime pressure driven by scarcity, stress and security staffing
-- Political blocs / factions
-- Citizen political values: liberty, order and welfare
-- Law register
-- Rationing policy
-- Security policy
-- Labor policy
-- Justice policy
-- Speech policy
-- Citizen loyalty reactions to laws
-- Theft, assault and sabotage cases
-- Guard-driven investigations
-- Court resolution
-- Restorative, balanced and punitive justice outcomes
-- Incarceration and sentence completion
-- Protests at high unrest
-- Governance crisis escalation
-- Civic Command panel
-- Government state persisted in save version 6
-
-### INDUSTRY + ECONOMY // LIVE
-
-- Manufacturing recipes
-- Workshop production queue
-- Skill-weighted production speed
-- Machine parts
-- Components
-- Tool kits
-- Fuel blending
-- Industrial stock
-- Settlement credits
-- Scarcity-driven market prices
-- Buying and selling
-- Trade log
-- Vehicle condition and fuel foundation
-- Industry/economy command panel
-- Economy state persisted in save version 7
-
-### INDUSTRIAL LOGISTICS // LIVE
-
-- Multiple production lines based on workshop count
-- Warehouse capacity from storage modules
-- Warehouse overflow pressure
-- Industrial material loss under severe storage pressure
-- Production efficiency penalties from storage congestion
-- Tool-kit production bonuses
-- Generator fuel consumption
-- Vehicle fuel consumption
-- Vehicle-assisted hauling bonus
-- Automatic vehicle refueling from industrial fuel stock
-- Vehicle repair kits
-- Player-triggered vehicle repair
-- Production bottleneck reporting
-- Trade activity influencing future market prices
-- Industrial logistics persisted in save version 8
-
-### REGIONAL TRADE // LIVE
-
-- Discoverable trade-hub settlements
-- Cedar Union regional market
-- Riverbend Collective regional market
-- Faction-specific market inventories
-- Faction-specific price modifiers
-- Reputation discounts
-- Inbound trade caravans
-- Route-risk / caravan loss
-- 36-hour trading windows
-- Caravan return routes
-- Regional market stock persistence
-- World-map caravan visualization
-- Industry Command market-source switching
-- Regional buy/sell transactions
-- Regional trade history
-- Player-created production orders
-- Utility-truck manufacturing
-- Regional trade state persisted in save version 9
-
-### FACTIONS + CONFLICT // LIVE
-
-- Regional AI faction settlements
-- Cedar Union, Riverbend Collective, Iron Pact and Lantern Medics
-- Faction reputation
-- Neutral / friendly / allied / hostile dispositions
-- Faction strength, wealth and intelligence
-- Diplomacy command interface
-- Aid shipments that improve relations
-- Trade agreements
-- Trade-agreement caravan discounts
-- Truce offers
-- Hostile espionage
-- Infrastructure sabotage
-- Raid warnings with ETA
-- Raid attack strength
-- Settlement defense score
-- Guards contributing security skill
-- Walls and command infrastructure contributing defense
-- Raid victories and breaches
-- Resource theft after breaches
-- Building damage
-- Guard injuries
-- Morale and government-unrest consequences
-- Friendly/allied support events
-- Conflict history
-- Faction state persisted in save version 10
-- Radio relay progression fixed so restoration permanently extends range
-
-### CIVILIZATION NETWORK // LIVE
-
-- Civilization-wide recovery layer
-- Player-founded secondary settlements
-- Four-survivor founding teams drawn from the live Last Haven population
-- Colonists retain their actual survivor identities
-- Secondary-settlement specialization based on founding site
-- Agriculture, medical, industrial, logistics and general colonies
-- Independent colony food, water, medicine, materials, fuel and parts stores
-- Secondary-settlement morale, infrastructure and security
-- Automatic permanent logistics routes
-- Daily bidirectional regional surplus transfers using real settlement stockpiles
-- Civilization recovery score
-- Civilization stability score
-- Recovery phases: Survive → Stabilize → Expand → Regional Power → Rebuild Civilization
-- Civilization milestones
-- Historical archive
-- Critical incidents automatically written into civilization history
-- Multi-settlement world-map nodes
-- Civilization Command interface
-- Civilization state persisted in save version 14
-- Founding sites created from secured and cleared ruins
-
-### SYSTEM STATUS // BUILD 1.0.5
-
-| Layer | Status | Live Integration |
+| Real captured view | What was visibly rendered | Files in the artifact |
 |---|---|---|
-| Survivor AI + Needs | **ONLINE** | Hunger, thirst, fatigue, work, injuries, treatment |
-| Construction | **ONLINE** | Blueprints, builders, materials, repairs, demolition |
-| Utilities | **ONLINE** | Power, fuel, water, purification, sewage, sanitation |
-| Relationships | **ONLINE** | Memories, partners, families, births, aging |
-| World / Expeditions | **ONLINE** | Fog of war, ruins, risk, casualties, salvage |
-| Government | **ONLINE** | Laws, elections, crime, courts, legitimacy, unrest |
-| Industry / Economy | **ONLINE** | Production, warehouses, vehicles, markets, caravans |
-| Factions / Conflict | **ONLINE** | Reputation, diplomacy, espionage, raids, defense |
-| Civilization Network | **ONLINE — EXPANDING** | Multiple settlements, routes, archive, recovery score |
-| Large-Scale Optimization | **IN DEVELOPMENT** | Performance profiling and population scaling |
+| **Full settlement overview** | 3D buildings, fields, dirt terrain, command HUD and minimap | `01_Overview_HUD.png` · `01_Overview_WORLD.png` |
+| **Shelter A** | Roofed housing geometry and clickable facility inspector | `02_housing_HUD.png` · `02_housing_WORLD.png` |
+| **Command center** | Modeled command facility, physical props and DPN inspector | `02_command_HUD.png` · `02_command_WORLD.png` |
+| **Medical clinic** | 3D clinical structure, roof cutaway and details | `02_medical_HUD.png` · `02_medical_WORLD.png` |
+| **Access road** | Roadside environment, scatter/detail and actual world camera | `03_AccessRoad_HUD.png` · `03_AccessRoad_WORLD.png` |
 
-### CIVILIZATION OPERATIONS // LIVE
+### [View the actual October 12 engine renders and download the screenshot archive →](https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783)
 
-- Colony status states: Stable, Recovering, Degraded and Emergency
-- Colony emergencies: food shortage, water crisis, infrastructure failure, security incident, storm damage, disease cluster and equipment failure
-- Emergency aid packages using real Last Haven food, water and medicine
-- Player-controlled colony specialization changes
-- Colony specialization refocus costs real materials and machine parts
-- Civilization-wide autonomy policy
-- Civilization-wide freight policy
-- Civilization-wide security policy
-- Configurable freight-route on/off state
-- Freight route priority levels
-- Freight cargo focus: Balanced, Survival or Industrial
-- Policy-driven colony production and security growth
-- Policy-driven regional freight throughput
-- Save schema version 12 persistence for policies and emergencies
-- Backward normalization for older civilization saves
+[**Direct visual-evidence artifact**](https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783/artifacts/11768167550) · [**Capture code**](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/tools/capture_reference_views.gd) · [**Godot render workflow**](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/.github/workflows/visual-review.yml) · [**Metrics implementation**](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/tools/visual_fidelity_report.py)
 
-### COLONY DEVELOPMENT + RECOVERY PROJECTS // LIVE
+<details>
+<summary><strong>Show screenshot provenance and actual limitations</strong></summary>
 
-- Permanent colony module construction
-- Housing Blocks
-- Farm Complexes
-- Clinic Modules
-- Workshop Bays
-- Defense Perimeters
-- Freight Depots
-- Radio Towers
-- Colony-local construction costs using delivered materials, parts and medicine
-- Colonist construction/engineering skill driving project speed
-- Module counts visible in Civilization Command
-- Farm modules increase colony food production
-- Clinic modules increase medicine production and can contain disease outbreaks
-- Workshop modules produce materials and machine parts
-- Defense modules strengthen colony security
-- Freight Depots increase route throughput
-- Radio Towers improve colony morale/security
-- Four civilization-scale recovery megaprojects
-- Regional Power Grid
-- Clean Water Network
-- Medical Corridor
-- Communications Backbone
-- Incremental funding from real Last Haven stockpiles
-- Recovery-project completion bonuses
-- Completed recovery projects increase civilization recovery score
-- True **CIVILIZATION RESTORED** state requires all recovery projects, 3+ settlements, 90+ recovery and 75+ stability
-- Save schema version 13 persistence for colony and recovery projects
+**Evidence run:** [#38295997783](https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783), completed successfully October 12, 2026. PR head: `cab6100609160c734605b09de7bb82cc7edd41eb`. The archive's provenance file records GitHub Actions checkout revision `c99fba1cd1d4833013a3fc9b124d1994c3e19015` and Godot `4.3.stable.official.77dcf97d8`.
 
-### FOUNDING TEAMS + FEDERAL GOVERNANCE // LIVE
+The evidence ZIP includes ten PNGs plus `SHA256SUMS.txt`, `evidence-provenance.txt`, `visual-review.json`, gameplay smoke results and renderer logs. **The recorded overview structural-detail ratio is 0.56 of the user reference target; reference-ready is false.** This is a passing *render/capture* workflow, not an art-quality signoff.
 
-- Manual four-survivor founding roster
-- Eligible colonist cycling and roster toggle controls
-- Manual founding roster persisted in saves
-- Automatic founding selection remains available when no manual roster is set
-- Survivor migration from Last Haven into established colonies
-- Colony housing capacity based on Housing Block modules
-- Migration blocked when a colony is full
-- Offsite survivors removed from Last Haven-local morale calculations
-- Settlement representatives selected from real resident survivors
-- Federal representation charter
-- Federal contribution/tithe charter
-- Federal rights charter
-- Federal legitimacy
-- Recovery-network cohesion
-- Federal reserve / treasury
-- Weekly federal council sessions
-- Council accord, session and deadlock outcomes
-- Federal disputes when cohesion collapses
-- Colony morale reactions to charter changes
-- Federal legitimacy and cohesion now feed directly into civilization stability
-- Federal emergency reserve support for colony crises
-- Save schema version 14 persistence for federal governance + founding roster
+GitHub Actions artifacts expire according to the run's configured retention period (30 days for this run). The source-controlled capture script can regenerate the evidence. Player-provided F8 Windows captures are still important to confirm the experience on a real GPU.
 
-### RELEASE + UPDATE CHANNEL // LIVE
+</details>
 
-- Versioned Windows distribution pipeline
-- Development builds from `main`
-- Prerelease channel from hyphenated `v*` tags
-- Stable release channel from clean `vX.Y.Z` tags
-- Machine-readable `windows-release.json`
-- Release schema version 1
-- Portable ZIP SHA-256 and size metadata
-- MSI SHA-256 and size metadata
-- Save-schema compatibility metadata
-- Signing-state metadata
-- Release asset URLs on tagged builds
-- CI self-test for update-manifest hashes
-- Tag-only GitHub Release publishing
-- Job-scoped release write permission
-- Existing tagged releases updated with asset replacement instead of duplicated
-- Portable ZIP + MSI + combined checksums + update manifest published together
-- Full update-channel contract documented in `docs/UPDATE_CHANNEL.md`
+### Architecture and testing, illustrated
 
-### SECURE UPDATE COMMAND // LIVE
+<img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/three-d-evidence-pipeline.svg" width="100%" alt="Illustrated engineering pipeline from actual Godot 3D world to simulation and rendered QA evidence"/>
 
-- Automatic stable-release check on Windows startup
-- Dedicated **DPN Update Command** panel
-- **F10** opens/closes Update Command and retries release checks
-- **F11** downloads the approved MSI only when a newer release is available
-- **F12** saves the settlement and explicitly approves installer handoff
-- Release manifest schema validation
-- Product and Windows-platform validation
-- Newer-version requirement / downgrade rejection
-- Save-schema downgrade protection
-- Authorized DPN GitHub release-origin policy
-- HTTPS-only update endpoints
-- Installer size metadata validation
-- SHA-256 verification after download
-- SHA-256 re-verification immediately before installer launch
-- Staged downloads under the game's user data directory
-- Failed or hash-mismatched installers are removed
-- No `OS.execute` / process-spawning updater path
-- User-approved Windows shell handoff only
-- Unsigned release state is displayed in Update Command
-- Updater security markers enforced by the repository security audit
-- Godot parser gate validates the updater as part of every green build
+<sub>Architecture diagram anchored in tracked source files; not a gameplay screenshot.</sub>
 
-### ACTIVE DEVELOPMENT
+## 03 // WHAT IS LIVE, WHAT IS IN DEVELOPMENT
 
-- Founding-team role requirements and expedition-style loadouts
-- Founding-team selection UI
-- Civilization-wide government
-- Full faction population/economy simulation
-- Offensive player operations
-- Formal war declarations and peace treaties
-- Defensive emplacements and automated defenses
-- Expanded endgame branches and post-restoration play
-- Performance profiling for large populations
+| Layer | Stable [v1.0.5](https://github.com/DPN-Technology/The-Last-Settlement/releases/tag/v1.0.5) | Unmerged [3D Windows preview](https://github.com/DPN-Technology/The-Last-Settlement/pull/6) |
+|---|---|---|
+| World renderer | **2D overhead** | **Real Node3D / Camera3D** world |
+| Survivor simulation | Named survivors, jobs, needs, skills, stress and families | Retained plus more detailed worker actions and exterior avoidance |
+| Construction | Real blueprints, repair and salvage | Simulated buildings shown as actual 3D facilities with interactive inspectors |
+| Visual assets | Earlier lightweight renderer | Modular 3D buildings, room cutaways, PBR/CC0 assets and lighting passes |
+| Interface | Original command HUD | Compact black/crimson DPN HUD, clickable command screens and better usability |
+| Packaging | Published Windows MSI / portable ZIP | Windows CI playtest artifact, not published as a stable 3D release |
+| Approval | Official public stable build | **Iterative playtest, visual and gameplay approval pending** |
 
----
+### The real 3D technical foundation
 
-# THE CORE PROMISE
+The newer game does not fake depth with still images. Its [3D world module](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_world_3d.gd) builds actual `Node3D` scene geometry and renders it with `Camera3D` through a `SubViewport`. Structure geometry updates when the simulated settlement changes, while survivors' world transforms remain tied to real simulation data.
 
-Most management games treat disasters as isolated modifiers.
-
-**The Last Settlement is being built around cascading consequences.**
-
-```text
-GENERATOR FAILURE
-      │
-      ▼
-POWER LOSS
-      │
-      ├──────────────► WATER PUMPS STOP
-      │                        │
-      │                        ▼
-      │                 CLEAN WATER FALLS
-      │                        │
-      │                        ▼
-      │                  HYGIENE DECLINES
-      │                        │
-      │                        ▼
-      │                 DISEASE INCREASES
-      │
-      └──────────────► FOOD STORAGE FAILS
-                               │
-                               ▼
-                         FOOD SPOILS
-                               │
-                               ▼
-                         RATIONING BEGINS
-                               │
-                               ▼
-                     MORALE / LOYALTY FALL
-                               │
-                               ▼
-                      THEFT / UNREST RISES
-                               │
-                               ▼
-                      GOVERNMENT PRESSURE
-```
-
-No major system should exist in isolation.
-
-That rule drives the entire architecture.
-
----
-
-# SURVIVORS ARE PEOPLE, NOT WORKER ICONS
-
-Every survivor is intended to become a persistent simulated person with their own history.
-
-Current survivor data already includes:
-
-```text
-SURVIVOR // #007
-────────────────────────────────────────
-NAME            Mara Kane
-AGE             31
-ROLE            Medic
-TRAIT           Protective
-CURRENT ACTION  Work: Medical
-
-HEALTH          91%
-MORALE          74%
-LOYALTY         83%
-HUNGER          22%
-THIRST          18%
-REST            68%
-STRESS          29%
-
-SKILLS
-Medicine        78
-Engineering     22
-Farming         31
-Construction    26
-Security        17
-```
-
-The current social layer already tracks memories, relationships, partnerships, families, children, aging, political values, faction affiliation and criminal history foundations.
-
-The remaining depth will push further into trauma, fears, personal goals, rivalries, leadership ambitions, education and multi-generation legacy.
-
-The design target remains simple:
-
-> The player should remember **people**, not just statistics.
-
----
-
-# FROM CAMP TO CIVILIZATION
-
-```text
-5–30 PEOPLE
-SURVIVOR CAMP
-     │
-     ▼
-30–150 PEOPLE
-SETTLEMENT
-     │
-     ▼
-150–500 PEOPLE
-TOWN
-     │
-     ▼
-500–3,000 PEOPLE
-CITY
-     │
-     ▼
-MULTIPLE SETTLEMENTS
-REGIONAL CIVILIZATION
-     │
-     ▼
-THE WORLD BEGINS AGAIN
-```
-
-The simulation is designed to change as scale increases.
-
-At the start, losing one good engineer can cripple the settlement.
-
-Later, you may be managing elections, factories, trade routes, hospitals, electrical grids, regional defense, diplomacy, and multiple cities.
-
----
-
-# SIMULATION PILLARS
-
-| System | Direction |
+| Source-backed 3D milestone | Implementation |
 |---|---|
-| **Citizens** | Needs, health, traits, skills, memory, relationships and generations |
-| **Construction** | Rooms, walls, doors, materials, damage and repair |
-| **Utilities** | Power, water, sewage, heat, fuel and communications |
-| **Food** | Farming, cooking, storage, spoilage and nutrition |
-| **Industry** | Workshops, factories, machine tools and supply chains |
-| **Medicine** | Injuries, disease, surgery, medicine and mental health |
-| **Security** | Guards, patrols, crime, investigations and prisons |
-| **Government** | Laws, elections, councils, authority and unrest |
-| **Economy** | Barter, currency, pricing, trade and scarcity |
-| **Exploration** | Expeditions, ruins, loadouts, radio and discovery |
-| **Factions** | Diplomacy, trade, rivalry, espionage and war |
-| **Environment** | Weather, seasons, contamination and disasters |
-| **Technology** | Recovered knowledge, research and lost expertise |
-| **History** | Named events, archives, generations and settlement legacy |
+| Settlement world and camera | [`settlement_world_3d.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_world_3d.gd) |
+| Pitched roof and modular facility geometry | [`settlement_architecture_3d.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_architecture_3d.gd) |
+| Facility-specific cutaway furnishing | [`settlement_room_identity_3d.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_room_identity_3d.gd) |
+| Wasteland ground, props and buildings | [`settlement_reference_environment_3d.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_reference_environment_3d.gd) |
+| Imported rigged survivor visual | [`survivor_visuals_3d.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/survivor_visuals_3d.gd) |
+| Exterior obstacle-avoidance route logic | [`settlement_navigation.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_navigation.gd) |
+| Live command panels and shared hit testing | [`dpn_ui_skin.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/dpn_ui_skin.gd) · [`settlement_ui_layout.gd`](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/src/settlement_ui_layout.gd) |
 
----
+**Art direction:** rusted post-collapse structures, layered industrial debris, worn steel and concrete, rebuilding-era lighting, practical tools and exposed utilities — with DPN's black/crimson language focused on the **command interface**, not pasted over the landscape.
 
-# CIVILIZATION MEMORY
+**Asset provenance:** the preview's build process downloads and validates selected licensed **CC0** GLB and photographic PBR content (survivor base, concrete, rust, gravel, barrels, furniture, equipment). Installed binaries are **not all committed to Git**; they are imported at build time and packaged for offline play. [Read the exact licenses, authors and sources](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/assets/3d/ASSET-CREDITS.md) · [Reference models](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/assets/3d/REFERENCE-MODELS.md).
 
-The **Civilization Archive is now live** and grows with the save.
+> [!NOTE]
+> The imported survivor is still a base rig, not a fully finished cinematic character. Realistic authored environments, polished animation, door traversal and complete interior AI navigation remain works in progress. The branch's current navigation takes survivors around solid structures toward **exterior** entrances; it does not establish fully traversable rooms. See [navigation playtest requirements](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/EXTERIOR_NAVIGATION_PLAYTEST.md).
 
-Critical incidents and recovery milestones are recorded as part of the civilization timeline.
+## 04 // THE CIVILIZATION SIMULATION
+
+The original mechanical foundation remains central to the new 3D direction.
+
+**Survival & citizen AI:** individual needs and skills, fatigue, hunger, thirst, health, injuries, healing, priorities, shifts, work, personal memories, relationships, children and generational persistence.
+
+**Construction & infrastructure:** paid materials, work queues, builder assignments, shelter/storage/farm/utility catalog, generators and batteries, water pumps and purification, sewage, upkeep, repairs, salvage and persistent placement.
+
+**Beyond the perimeter:** ruins, relay discovery, staffed expeditions, travel and search stages, casualty risk, faction diplomacy and combat, convoys, regional market prices and resource returns.
+
+**Society and legacy:** policies, councils, legitimacy, law enforcement, industry, trade, multi-settlement logistics, federal representation, civilization recovery projects and a historical archive.
+
+#### Cascading consequences — a core design pattern
 
 ```text
-SETTLEMENT ARCHIVE
-════════════════════════════════════════
-
-YEAR 0  // THE FOUNDING
-YEAR 2  // THE LONG WINTER
-YEAR 5  // THE NORTH GATE FIRE
-YEAR 8  // FORMATION OF THE ASSEMBLY
-YEAR 12 // THE RIVER WAR
-YEAR 17 // THE RED FEVER
-YEAR 24 // THE SECOND SETTLEMENT FOUNDED
+GENERATOR SHORTFALL
+        |
+        +--> POWERED FACILITIES LOSE CAPACITY
+        |        +--> WATER TREATMENT / INDUSTRY DISRUPTED
+        |                    +--> SUPPLY & HEALTH PRESSURE
+        |
+        +--> WORKFORCE STRESS AND RESOURCE SCARCITY
+                         +--> MORALE / UNREST / GOVERNANCE RISK
 ```
 
-Important events become part of the world.
+This illustrates intended interactions between real simulation systems, **not** a promise that every visual animation or possible event transition is finished.
 
-Citizens who lived through them can remember them.
+## 05 // THE DPN COMMAND EXPERIENCE
 
-Children may grow up hearing about events they never personally witnessed.
+The PR #6 gameplay/UI redesign goes beyond decorative rectangles. The new compact telemetry rail, black-and-crimson HUD, settlement overview, clickable construction catalog, Workforce Command, Region, Govern, Industry, Factions, Nation and Guide connect to **existing state and actions**:
 
-The player's save becomes its own history.
+- **Build:** filter categories, see live material requirements, place a valid blueprint, rotate and cancel.
+- **Survivors:** inspect and change eligible workers, shifts and duty; view health/stress and real workforce distribution.
+- **Region:** inspect discovered locations, set expedition strategy and crew, dispatch/recall and see mission state.
+- **Industry:** view market goods and actual stocks; queue, reprioritize, cancel or pause supported production orders.
+- **Govern/Factions/Nation:** change actual laws and policies, inspect reputation/diplomacy, manage colonies, logistics and recovery contributions.
+- **Facilities:** inspect live building condition, submit repair work, require confirmation before salvage.
+- **Navigation:** shared layout geometry couples on-screen draw regions with mouse hit regions across different viewport sizes.
 
----
+**Evidence and controls:** [DPN interface specification](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/DPN_INTERFACE_SYSTEM.md) · [Command UI v2 source notes](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/DPN_COMMAND_UI_V2.md) · [PR #6 implementation history](https://github.com/DPN-Technology/The-Last-Settlement/pull/6).
 
-# VISUAL IDENTITY
+## 06 // INSTALL / PLAYTEST
 
-The game keeps the recognizable DPN DNA:
+### Published stable Windows build
 
-- Black command interfaces
-- Deep red warning accents
-- Network/terminal language
-- Digital system readouts
-- 1s and 0s
-- Lightning/electrical energy
-- Operational dashboards
+Get **[v1.0.5](https://github.com/DPN-Technology/The-Last-Settlement/releases/tag/v1.0.5)** and choose the per-user MSI or portable Windows x64 ZIP. The release includes SHA-256 checksums and a machine-readable update manifest. When using the portable ZIP, keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
 
-But **The Last Settlement has its own branch of that identity**:
+**This is the released 2D version**, not the newest 3D experience.
 
-- Rusted red and oxidized copper
-- Emergency broadcast styling
-- Damaged industrial panels
-- Reconstruction-era command systems
-- Faded warning labels
-- Broken-grid cartography
-- Old-world terminals being repurposed by survivors
-- Harsh utility lighting instead of polished corporate neon
+### Current 3D Windows preview
 
-Think less **clean cyber command center** and more:
+1. Visit [PR #6](https://github.com/DPN-Technology/The-Last-Settlement/pull/6), check its latest commit and current gate status.
+2. Go to the [Windows Build workflow](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml) and select a successful run built from that **same PR commit**.
+3. Download **`TheLastSettlement-Windows-Playtest-Direct`** (or its successor as named by the workflow).
+4. Extract and launch `TheLastSettlement.exe` with its `TheLastSettlement.pck`; verify the included SHA-256 checksums first.
+5. Test facilities, building placement, survivor routing and command panels. Use **F8** for real game captures and **F9** for a playtest diagnostic where enabled.
 
-> **DPN technology surviving at the end of the world.**
+**Please do not disable browser protection or Windows Defender** for an unsigned development binary. These builds are not automatically trusted/signed; validate source, artifact and hashes, and follow your PC's security policy.
 
----
-
-# REPOSITORY SECURITY + QUALITY GATES
-
-The repository is built to stay green while the simulation grows. The main CI gate now installs the official pinned Godot 4.3 engine, verifies its release checksum, and performs a headless project parse before the gate can pass.
-
-| Gate | Purpose |
-|---|---|
-| **DPN Settlement CI Gate** | Repository structure, security audit, checksum-verified Godot install and real engine parse/load validation |
-| **DPN Settlement CodeQL** | Static security analysis |
-| **DPN Settlement Supply Chain** | Dependency / workflow supply-chain checks |
-| **Code Quality** | Repository quality and maintainability checks |
-| **Windows Build** | Checksum-verified Godot 4.3 export, MSI + portable packages, release manifest, tagged release publishing |
-
-The development rule is the same as the simulation rule:
-
-> **Do not stack new systems on top of known failures. Fix red gates first.**
-
----
-
-# TECHNOLOGY
-
-| Layer | Current Choice |
-|---|---|
-| Engine | Godot 4.x |
-| Language | GDScript |
-| Platform | Windows x86_64 portable EXE / Linux source development |
-| Current Rendering | 2D overhead |
-| Planned Rendering | 2.5D isometric or full 3D after simulation maturity |
-| Architecture | Modular simulation systems |
-| Simulation Modules | Survivor, social, world, governance, economy, factions, civilization |
-| Validation | GitHub Actions + Godot engine parse + CodeQL + supply-chain gates |
-| Save Schema | Version 14 |
-| Data Direction | Save-versioned, deterministic-friendly simulation |
-
-The simulation architecture comes first.
-
-Visual complexity can increase dramatically later without throwing away the core systems.
-
----
-
-# RUN THE CURRENT BUILD
-
-## Windows Installer — Recommended
-
-The easiest Windows path is now the **MSI installer**. You do **not** need Godot installed.
-
-1. Open the repository's **Actions** tab.
-2. Select **DPN Settlement Windows Build**.
-3. Open the newest successful run.
-4. Download **TheLastSettlement-Windows-Installer**.
-5. Extract the artifact ZIP.
-6. Run **`TheLastSettlement-Setup-x64.msi`**.
-
-The installer is a per-user package, so it installs under your Windows profile instead of requiring a machine-wide Program Files install. It creates:
-
-- **Desktop shortcut**
-- **Start Menu → DPN Technology → The Last Settlement**
-- **Start Menu uninstall shortcut**
-
-The installer carries the branded The Last Settlement application icon and installs the native `TheLastSettlement.exe` together with its required `TheLastSettlement.pck`.
-
-## Windows Portable Build — No Install
-
-If you do not want to install the game:
-
-1. Download **TheLastSettlement-Windows-Portable-Final** from the newest successful Windows Build run.
-2. Extract `TheLastSettlement-Windows-x86_64.zip`.
-3. Keep `TheLastSettlement.exe` and `TheLastSettlement.pck` together.
-4. Double-click **`TheLastSettlement.exe`**.
-
-Both Windows deliverables now include an **artifact-specific SHA-256 manifest**, and the pipeline verifies those hashes before upload.
-
-## Windows Build Security
-
-The Windows pipeline:
-
-- Parses/loads the project with the pinned Godot 4.3 engine before export
-- Verifies the official Godot engine and export templates against release SHA-512 manifests
-- Exports a native Windows x86_64 GUI executable
-- Verifies the EXE is a Windows PE binary
-- Verifies EXE/PCK SHA-256 hashes
-- Builds the MSI with WiX
-- Uses stable MSI component GUIDs
-- Produces extraction-safe, self-verifying checksum manifests
-- Keeps all GitHub Actions pinned to full commit SHAs
-- Supports Authenticode signing of both EXE and MSI when DPN signing secrets are configured
-
-> **Signing status:** the signing pipeline is ready, but the current development artifacts are still unsigned because no DPN Windows code-signing certificate is configured in repository secrets. Windows SmartScreen may therefore show **Unknown publisher** until a certificate is added.
-
-The PCK intentionally remains separate from the EXE. This preserves the cleaner code-signing path and reduces the risk of antivirus false positives associated with embedded PCK exports.
-
-## In-Game Update Command
-
-Windows builds now check the stable DPN release channel automatically. If a newer compatible release exists, the bottom command bar reports the available version.
-
-Press **F10** to open Update Command.
-
-- **F10** — check/recheck the stable release channel
-- **F11** — download the release MSI
-- **F12** — save the current settlement and open the installer **only after SHA-256 verification succeeds**
-
-Updates are not installed silently. The game validates the release manifest, rejects downgrades, prevents save-schema downgrade targets, restricts installer URLs to the DPN GitHub release origin, verifies the downloaded MSI, and then requires an explicit F12 approval before Windows receives the installer.
-
-## Run From Source
-
-### Requirements
-
-- Godot **4.3+**
-- Windows or Linux
-- Git, if cloning from source
-
-### Start
+### Developer checkout
 
 ```bash
 git clone https://github.com/DPN-Technology/The-Last-Settlement.git
 cd The-Last-Settlement
+git switch feature/windows-playtest-loop
+python3 tools/install_cc0_assets.py
+python3 tools/install_cc0_materials.py
+python3 tools/install_reference_models.py
 ```
 
-Open `project.godot` in Godot and run the project.
+Open `project.godot` using **Godot 4.3**, allow asset import and run the game scene. The art-installation scripts may need internet during **build preparation**; exported games contain their assets offline. The linked [3D production guide](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/THREE_D_PRODUCTION.md) records model paths and known restrictions.
 
-No external art pack is required for the current prototype.
+**In-game help:** **F1** opens the Guide. **S** and **L** save/load, **Esc** dismisses panels, and the lower command dock allows navigation without learning every shortcut. Read the branch's [Windows playtesting guide](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/PLAYTESTING.md) for the full current binding list and test steps.
 
----
+## 07 // SECURITY, CI & RELEASE QUALITY
 
-# COMMAND INPUTS
+<div align="center">
 
-| Input | Action |
+[![CI](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/validate.yml)
+[![CodeQL](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/codeql.yml)
+[![Supply Chain](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml/badge.svg?branch=main)](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/supply-chain.yml)
+[![Windows Build](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml/badge.svg?branch=main)](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml)
+
+</div>
+
+| Gate | What it establishes (and what it doesn't) |
 |---|---|
-| **Left Click** | Inspect survivor or building |
-| **Esc** | Close inspector |
-| **Space** | Pause / resume |
-| **1** | Normal simulation speed |
-| **2** | Fast simulation |
-| **3** | Very fast simulation |
-| **Mouse Wheel** | Zoom |
-| **Middle Mouse Drag** | Pan map |
-| **S** | Save settlement |
-| **L** | Load settlement |
-| **T** | Toggle survivor shift / cycle federal representation charter in Civilization Command |
-| **P** | Cycle selected survivor job priority / freight-route priority in Civilization Command |
-| **B** | Toggle build mode / spend federal reserve on selected colony emergency |
-| **Q / E** | Cycle build type; **E** refocuses selected colony in Civilization Command |
-| **F** | Rotate wall/door blueprint / cycle freight-route cargo focus |
-| **R** | Queue repair on selected structure / toggle selected freight route |
-| **X** | Demolish/salvage selected structure |
-| **U** | Cycle utility overlay / cycle federal rights charter |
-| **M** | Toggle settlement / regional world map |
-| **G** | Dispatch expedition to selected discovered world location |
-| **V** | Toggle Civic Command / government panel |
-| **↑ / ↓** | Select law in Civic Command |
-| **Enter** | Change selected law / buy selected market item in Industry Command |
-| **K** | Toggle Industry + Economy Command |
-| **Backspace** | Sell selected market item in Industry Command |
-| **Y** | Repair primary vehicle / cycle federal contribution charter |
-| **H** | Cycle local / active caravan market in Industry Command |
-| **N** | Cycle production recipe in Industry Command / colony module in Civilization Command |
-| **C** | Queue selected production recipe / colony module |
-| **O** | Toggle Faction Command |
-| **↑ / ↓** | Cycle discovered factions in Faction Command |
-| **A** | Send aid to selected faction / emergency aid to selected colony |
-| **D** | Propose trade agreement / deploy highlighted survivor to selected colony |
-| **Z** | Offer truce to hostile faction |
-| **J** | Toggle Civilization Command |
-| **4 / 5 / 6** | Cycle Civilization autonomy / freight / security policy |
-| **7** | Cycle civilization recovery megaproject |
-| **8** | Contribute available resources to selected recovery megaproject |
-| **9** | Cycle eligible Last Haven founding/migration candidate |
-| **0** | Add/remove highlighted survivor from four-person founding roster |
-| **F10** | Open/close Update Command and check stable release channel |
-| **F11** | Download selected verified Windows update MSI |
-| **F12** | Save game and hand verified MSI to Windows installer |
-| **Left / Right** | Cycle settlements in Civilization Command |
-| **I** | Found a settlement at a selected secured world-map site |
+| **CI / Godot** | Source validation and parser/boot regression coverage; not finished graphics |
+| **Windows Build** | Export and packaging integrity; not a substitute for a human PC playtest |
+| **CodeQL / supply chain** | Static security and dependency/workflow controls; not a universal security guarantee |
+| **3D visual review** | Actual rendered images, smoke tests, quality metrics, screenshot hashes and traceable evidence |
+| **Tagged release process** | A published release with deliverables and hashes, not just merged source code |
+| **Update Command** | Stable-channel origin checks and verified installer handoff; no silent auto-install |
+
+The stable simulation uses **save schema v14**. Build scripts use checksummed Godot and asset preparation; the updater verifies approved release metadata and downloads. See [Security](SECURITY.md), [Gate contract](docs/SECURITY_GATES.md), [Update channel](docs/UPDATE_CHANNEL.md) and [Changelog](CHANGELOG.md).
+
+## 08 // WHAT COMES NEXT
+
+**Already delivered in source:** real Godot 3D foundation, rendered evidence, environmental detail passes, modular building meshes, imported CC0 assets, more functional command interfaces, survivor exterior navigation and Windows preview packaging.
+
+**Still to finish and validate:** high-fidelity authored structures and survivors, proper interiors/door transitions, deeper animation, actual PC frame-rate profiling, DPI readability, route/crowd behavior, UI refinement, and expanded civilization/endgame mechanics.
+
+| Review target | Acceptance standard |
+|---|---|
+| Art | Actual Windows frames visibly match the intended scale and fidelity |
+| Navigation | No walking through solid facilities; eventually complete interior routes |
+| UX | Mouse controls are readable, clickable and tied to real simulation outcomes |
+| Performance | Real profiling at common resolutions and larger settlements |
+| Release | Player approval, passing applicable gates and correctly labeled stable deliverables |
+
+Follow the [open issues](https://github.com/DPN-Technology/The-Last-Settlement/issues) and [3D PR](https://github.com/DPN-Technology/The-Last-Settlement/pull/6). Do not mistake a rendering smoke-test pass for a final visual acceptance decision.
+
+## 09 // CREDITS & DEVELOPMENT
+
+**Developed by [DPN Technology](https://github.com/DPN-Technology)** — Develop Pioneer Navigate.
+
+> *We Develop what doesn’t exist. We Pioneer what comes next. We Navigate the future.*
+
+Selected external **CC0** assets have separate, explicit credits and source records. CC0 status for individual models/textures **does not automatically license the whole game**. Review repository ownership/permission terms before distributing or reusing any game code or branding.
+
+<details><summary><strong>Open the engineering archive</strong></summary>
+
+- [3D production contract](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/THREE_D_PRODUCTION.md)
+- [Command interface](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/DPN_INTERFACE_SYSTEM.md)
+- [Current playtest checklist](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/PLAYTESTING.md)
+- [Exterior navigation and facility management](https://github.com/DPN-Technology/The-Last-Settlement/blob/feature/windows-playtest-loop/docs/EXTERIOR_NAVIGATION_PLAYTEST.md)
+- [Game design](docs/GAME_DESIGN.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
+- [PR #6](https://github.com/DPN-Technology/The-Last-Settlement/pull/6) · [Issue tracker](https://github.com/DPN-Technology/The-Last-Settlement/issues)
+
+</details>
 
 ---
 
-# PROJECT STRUCTURE
+<div align="center">
 
-```text
-The-Last-Settlement/
-│
-├── assets/
-│   └── readme/
-│       └── the-last-settlement-banner.svg
-│
-├── docs/
-│   ├── GAME_DESIGN.md
-│   ├── UPDATE_CHANNEL.md
-│   └── ROADMAP.md
-│
-├── simulation/
-│   ├── citizen_factory.gd
-│   ├── event_director.gd
-│   ├── social_simulation.gd
-│   ├── world_simulation.gd
-│   ├── governance_simulation.gd
-│   ├── economy_simulation.gd
-│   ├── faction_simulation.gd
-│   ├── civilization_simulation.gd
-│   ├── federal_governance_simulation.gd
-│   └── settlement_simulation.gd
-│
-├── src/
-│   ├── Main.tscn
-│   ├── main.gd
-│   └── update_manager.gd
-│
-├── tools/
-│   ├── release_manifest.py
-│   ├── security_audit.py
-│   └── validate_project.py
-│
-├── .github/
-│   └── workflows/
-│       ├── validate.yml
-│       ├── codeql.yml
-│       ├── supply-chain.yml
-│       └── windows-build.yml
-│
-├── CHANGELOG.md
-├── project.godot
-└── README.md
-```
+### THE OLD WORLD DIED. BUILD THE NEXT ONE.
 
----
+**DPN TECHNOLOGY // CIVILIZATION RECOVERY NETWORK**
 
-# DEVELOPMENT ROAD
-
-```text
-0.1  FOUNDATION
- │
- ├── 0.2  NEEDS + WORK
- │
- ├── 0.3  CONSTRUCTION
- │
- ├── 0.4  UTILITIES
- │
- ├── 0.5  RELATIONSHIPS + FAMILIES
- │
- ├── 0.6  WORLD + EXPEDITIONS
- │
- ├── 0.7  GOVERNMENT + SOCIETY
- │
- ├── 0.8  INDUSTRY + ECONOMY
- │
- ├── 0.9  FACTIONS + CONFLICT
- │
- └── 1.0  CIVILIZATION           ◄── CURRENT
-```
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the active development breakdown.
-
----
-
-# DPN DEVELOPMENT DIRECTIVE
-
-```text
-╔══════════════════════════════════════════════════════════════╗
-║              CIVILIZATION RECOVERY DIRECTIVE               ║
-╠══════════════════════════════════════════════════════════════╣
-║ DO NOT BUILD DISCONNECTED SYSTEMS.                          ║
-║ DO NOT HIDE CONSEQUENCES BEHIND ARBITRARY NUMBERS.          ║
-║ DO NOT TREAT CITIZENS AS DISPOSABLE TOKENS.                 ║
-║                                                              ║
-║ BUILD A WORLD THAT REMEMBERS.                               ║
-║ BUILD SYSTEMS THAT AFFECT OTHER SYSTEMS.                    ║
-║ BUILD PEOPLE THE PLAYER CARES ABOUT.                        ║
-║ BUILD THE NEXT CIVILIZATION.                                ║
-╚══════════════════════════════════════════════════════════════╝
-```
-
----
-
-<p align="center">
-  <strong>THE LAST SETTLEMENT</strong><br>
-  <strong>DEVELOPED UNDER DPN TECHNOLOGY</strong><br><br>
-  <code>DEVELOP. PIONEER. NAVIGATE.</code><br>
-  <code>SURVIVE. REBUILD. ENDURE.</code>
-</p>
+</div>
