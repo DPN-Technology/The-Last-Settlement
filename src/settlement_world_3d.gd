@@ -1016,14 +1016,20 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 			return found
 	return null
 
-func _animate_imported_survivor(person: Node3D, traveling: bool) -> void:
+func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=false, paused: bool=false) -> void:
 	var imported := person.get_node_or_null("ProductionArt")
 	if imported == null:
 		return
 	var player := _find_animation_player(imported)
 	if player == null:
 		return
-	var preferred := "walk" if traveling else "idle"
+	if not player.has_meta("settlement_unpaused_speed_scale"):
+		player.set_meta("settlement_unpaused_speed_scale",player.speed_scale)
+	if paused:
+		player.speed_scale=0.0
+		return
+	player.speed_scale=float(player.get_meta("settlement_unpaused_speed_scale"))
+	var preferred := "walk" if traveling else ("working" if working else "idle")
 	var fallback := ""
 	var chosen := ""
 	for clip in player.get_animation_list():
@@ -1035,12 +1041,13 @@ func _animate_imported_survivor(person: Node3D, traveling: bool) -> void:
 			break
 	if chosen.is_empty():
 		chosen = fallback
-	if not chosen.is_empty() and player.current_animation != chosen:
+	if not chosen.is_empty() and (player.current_animation != chosen or not player.is_playing()):
 		player.play(chosen, 0.2)
 
 func _animate_survivor(person: Node3D, traveling: bool, id: int, citizen: Dictionary, paused: bool) -> void:
 	if not person.has_node("ArmLeft"):
-		_animate_imported_survivor(person, traveling)
+		var working := not traveling and SettlementActivity3D.current_activity(citizen)!=""
+		_animate_imported_survivor(person,traveling,working,paused)
 		return
 	var stride := 0.0
 	if traveling:

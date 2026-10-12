@@ -2208,6 +2208,22 @@ func _smoke() -> void:
 		push_error("SMOKE: Animated glTF survivor cannot play movement clip")
 		quit(1)
 		return
+	world._animate_imported_survivor(npc,false,true)
+	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("working"):
+		push_error("SMOKE: Active survivor work does not select the authored Working animation")
+		quit(1)
+		return
+	var work_animation := animator.current_animation
+	world._animate_imported_survivor(npc,false,true,true)
+	if not animator.is_playing() or animator.current_animation!=work_animation or not is_zero_approx(animator.speed_scale):
+		push_error("SMOKE: Survivor work animation does not hold when the simulation is paused")
+		quit(1)
+		return
+	world._animate_imported_survivor(npc,true,false,false)
+	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("walk") or is_zero_approx(animator.speed_scale):
+		push_error("SMOKE: Resuming survivor movement does not restore the authored Walk animation")
+		quit(1)
+		return
 	# The initial settlement must contain actual modular architecture,
 	# with visible door openings instead of a single solid building cube.
 	for structure in world.structure_layer.get_children():
