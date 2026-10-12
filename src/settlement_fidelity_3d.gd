@@ -55,11 +55,11 @@ static func _multi(parent: Node3D, title: String, mesh: Mesh, mat: Material, amo
 				x=signf(x)*rng.randf_range(76.0,123.0)
 			else:
 				z=signf(z)*rng.randf_range(52.0,111.0)
-		var y: float=WastelandDetail.terrain_height(x,z,height_noise)
 		var yaw: float=rng.randf_range(0.0,TAU)
-		var basis := Basis(Vector3.UP,yaw)
-		basis=basis.scaled(Vector3(rng.randf_range(0.35,2.00),rng.randf_range(0.20,0.68),rng.randf_range(0.35,1.95)))
-		instances.set_instance_transform(index,Transform3D(basis,Vector3(x,y+0.10,z)))
+		var scale := Vector3(rng.randf_range(0.35,2.00),rng.randf_range(0.20,0.68),rng.randf_range(0.35,1.95))
+		var basis := WastelandDetail.terrain_basis(x,z,height_noise,yaw,scale)
+		var y: float=WastelandDetail.terrain_height(x,z,height_noise)+mesh.get_aabb().size.y*scale.y*0.35
+		instances.set_instance_transform(index,Transform3D(basis,Vector3(x,y,z)))
 
 static func terrain(parent: Node3D, mats: Dictionary) -> Node3D:
 	var layer := Node3D.new()

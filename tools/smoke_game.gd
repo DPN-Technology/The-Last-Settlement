@@ -1873,6 +1873,49 @@ func _smoke() -> void:
 		push_error("SMOKE: Terrain still contains square white confetti instead of stones")
 		quit(1)
 		return
+	var terrain_dressing_noise := FastNoiseLite.new()
+	terrain_dressing_noise.seed=114722
+	terrain_dressing_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	terrain_dressing_noise.frequency=0.015
+	terrain_dressing_noise.fractal_octaves=4
+	var terrain_scatter_layers: Array[MultiMeshInstance3D]=[sampled_rubble]
+	var collapsed_metal := world.terrain_layer.get_node_or_null("ScatteredCollapsedMetal") as MultiMeshInstance3D
+	if collapsed_metal==null or collapsed_metal.multimesh==null:
+		push_error("SMOKE: terrain-conforming metal scatter layer is missing")
+		quit(1)
+		return
+	terrain_scatter_layers.append(collapsed_metal)
+	var fidelity_scatter := world.terrain_layer.get_node_or_null("FidelityTerrainDressing") as Node3D
+	if fidelity_scatter!=null:
+		for child in fidelity_scatter.get_children():
+			var fidelity_layer := child as MultiMeshInstance3D
+			if fidelity_layer==null or fidelity_layer.multimesh==null:
+				continue
+			terrain_scatter_layers.append(fidelity_layer)
+	var reference_dressing := world.terrain_layer.get_node_or_null("ReferenceQualityWorldDressing") as Node3D
+	if reference_dressing!=null:
+		for child in reference_dressing.get_children():
+			if str(child.name) not in ["ClumpedSageAndDryBrush","BrokenSlateRockFaces","SmallRustedSheetFragments"]:
+				continue
+			var reference_layer := child as MultiMeshInstance3D
+			if reference_layer!=null and reference_layer.multimesh!=null:
+				terrain_scatter_layers.append(reference_layer)
+	for scatter_layer in terrain_scatter_layers:
+		var sample_stride := maxi(1,scatter_layer.multimesh.instance_count/23)
+		for index in range(0,scatter_layer.multimesh.instance_count,sample_stride):
+			var instance_transform := scatter_layer.multimesh.get_instance_transform(index)
+			var origin := instance_transform.origin
+			var expected_y: float=WastelandDetail.terrain_height(origin.x,origin.z,terrain_dressing_noise)
+			var expected_offset: float=scatter_layer.multimesh.mesh.get_aabb().size.y*instance_transform.basis.y.length()*0.35
+			if absf(origin.y-expected_y-expected_offset)>0.02:
+				push_error("SMOKE: environmental scatter is floating above the terrain heightfield")
+				quit(1)
+				return
+			var surface_normal := WastelandDetail.terrain_normal(origin.x,origin.z,terrain_dressing_noise)
+			if instance_transform.basis.y.normalized().dot(surface_normal)<0.98:
+				push_error("SMOKE: environmental scatter is not aligned to the local terrain slope")
+				quit(1)
+				return
 	var sample_image := GroundAppearance.bake_image()
 	var sample_brightness := GroundAppearance.sample_luminance(sample_image)
 	if sample_brightness < 0.07 or sample_brightness > 0.44:

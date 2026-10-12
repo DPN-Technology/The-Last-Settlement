@@ -70,8 +70,10 @@ static func _scatter(parent: Node3D, name: String, mesh: Mesh, material: Materia
 		var sz: float=rng.randf_range(0.36,1.55)
 		var sy: float=rng.randf_range(0.48,1.22)
 		var y: float=WastelandDetail.terrain_height(x,z,height_noise)
-		var basis := Basis(Vector3.UP,rng.randf_range(0.0,TAU)).scaled(Vector3(sx,sy,sz))
-		instances.set_instance_transform(i,Transform3D(basis,Vector3(x,y+0.12,z)))
+		var scale := Vector3(sx,sy,sz)
+		var basis := WastelandDetail.terrain_basis(x,z,height_noise,rng.randf_range(0.0,TAU),scale)
+		var ground_offset: float=mesh.get_aabb().size.y*sy*0.35
+		instances.set_instance_transform(i,Transform3D(basis,Vector3(x,y+ground_offset,z)))
 
 static func _timber_walkway(parent: Node3D, from: Vector3, to: Vector3, material: Material, seed: int) -> void:
 	# Each crossing is individual slatted reclaimed timber, not a solid block.

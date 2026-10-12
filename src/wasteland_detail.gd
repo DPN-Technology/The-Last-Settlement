@@ -38,6 +38,21 @@ static func terrain_height(x: float, z: float, noise: FastNoiseLite) -> float:
 	var edge_fade := 1.0-smoothstep(119.0,158.0,radius)
 	return (waves + rocky + 0.4) * falloff * edge_fade
 
+static func terrain_normal(x: float, z: float, noise: FastNoiseLite) -> Vector3:
+	var sample_step := 1.3
+	var gradient_x := (terrain_height(x+sample_step,z,noise)-terrain_height(x-sample_step,z,noise))/(sample_step*2.0)
+	var gradient_z := (terrain_height(x,z+sample_step,noise)-terrain_height(x,z-sample_step,noise))/(sample_step*2.0)
+	return Vector3(-gradient_x,1.0,-gradient_z).normalized()
+
+static func terrain_basis(x: float, z: float, noise: FastNoiseLite, yaw: float, scale: Vector3) -> Basis:
+	var normal := terrain_normal(x,z,noise)
+	var tangent := Vector3.RIGHT-normal*normal.dot(Vector3.RIGHT)
+	if tangent.length_squared()<0.0001:
+		tangent=Vector3.FORWARD-normal*normal.dot(Vector3.FORWARD)
+	tangent=tangent.normalized().rotated(normal,yaw)
+	var bitangent := tangent.cross(normal).normalized()
+	return Basis(tangent,normal,bitangent).scaled(scale)
+
 # Macro material variation follows sculpted elevation and slope. Set as
 # interpolated mesh vertex color (not noisy per-pixel quads) so the ridges
 # read as pale weathered stone and low drainage reads as darker sediment.
@@ -298,6 +313,11 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 	# decorative only; the center of the base is left free for gameplay.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 991427
+	var height_noise := FastNoiseLite.new()
+	height_noise.seed=114722
+	height_noise.noise_type=FastNoiseLite.TYPE_SIMPLEX
+	height_noise.frequency=0.015
+	height_noise.fractal_octaves=4
 	var gravel_mesh := SphereMesh.new()
 	gravel_mesh.radius = 0.5
 	gravel_mesh.height = 1.0
@@ -318,9 +338,10 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 		# Stay off hard-surfaced service roads and future build plots.
 		if absf(x) < 28.0 and absf(z) < 26.0:
 			x += 33.0 if x > 0.0 else -33.0
-		var obj_transform := Transform3D(Basis.IDENTITY, Vector3(x, 0.12, z))
-		obj_transform.basis = Basis(Vector3.UP, rng.randf_range(-PI, PI))
-		obj_transform.basis = obj_transform.basis.scaled(Vector3(rng.randf_range(0.30, 1.25), rng.randf_range(0.13, 0.29), rng.randf_range(0.34, 1.20)))
+		var scale := Vector3(rng.randf_range(0.30, 1.25), rng.randf_range(0.13, 0.29), rng.randf_range(0.34, 1.20))
+		var basis := terrain_basis(x,z,height_noise,rng.randf_range(-PI,PI),scale)
+		var gravel_offset: float=gravel_mesh.get_aabb().size.y*scale.y*0.35
+		var obj_transform := Transform3D(basis,Vector3(x,terrain_height(x,z,height_noise)+gravel_offset,z))
 		gravel.set_instance_transform(i, obj_transform)
 
 	var metal_mesh := BoxMesh.new()
@@ -339,8 +360,9 @@ static func build_terrain_dressing(parent: Node3D, mats: Dictionary) -> void:
 		var z := rng.randf_range(-55.0, 62.0)
 		if absf(x) < 28.0 and absf(z) < 26.0:
 			z += 30.0 if z > 0.0 else -30.0
-		var t := Transform3D(Basis(Vector3.UP, rng.randf_range(0.0, TAU)), Vector3(x, 0.12, z))
-		t.basis = t.basis.scaled(Vector3(rng.randf_range(0.6, 1.8), 1.0, rng.randf_range(0.6, 1.3)))
+		var scale := Vector3(rng.randf_range(0.6, 1.8), 1.0, rng.randf_range(0.6, 1.3))
+		var basis := terrain_basis(x,z,height_noise,rng.randf_range(0.0,TAU),scale)
+		var t := Transform3D(basis,Vector3(x,terrain_height(x,z,height_noise)+0.035,z))
 		metal.set_instance_transform(i, t)
 
 	# Remains of former settlement infrastructure, not a repeating flat field.
