@@ -170,7 +170,7 @@ jobs:
           persist-credentials: false
 
       - name: Download verified portable payload
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TheLastSettlement-Windows-x86_64
           path: incoming
@@ -341,19 +341,19 @@ jobs:
 
     steps:
       - name: Download final portable package
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TheLastSettlement-Windows-Portable-Final
           path: release
 
       - name: Download MSI installer
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TheLastSettlement-Windows-Installer
           path: release
 
       - name: Download update metadata
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: TheLastSettlement-Windows-Update-Metadata
           path: release
