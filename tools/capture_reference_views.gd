@@ -52,6 +52,22 @@ func _render_capture_suite() -> void:
 	game.settlement_world._position_camera()
 	for frame in range(8):
 		await process_frame
+	# A previous suite forced ALL INTERIORS and generated roofless reference
+	# screenshots even while the normal game had pitched roofing available.
+	# Fail CI if the overview ever silently regresses to roofless buildings.
+	var available_roofs: int = 0
+	var visible_roofs: int = 0
+	for structure in game.settlement_world.structure_layer.get_children():
+		for piece in structure.get_children():
+			if piece.has_meta("cutaway_roof"):
+				available_roofs += 1
+				if piece.visible:
+					visible_roofs += 1
+	if available_roofs == 0 or visible_roofs != available_roofs:
+		push_error("VISUAL QA: roofed exterior overview invalid (%d/%d visible)" % [visible_roofs, available_roofs])
+		quit(1)
+		return
+	print("VISUAL QA: exterior roof geometry visible (%d/%d)" % [visible_roofs, available_roofs])
 	if not await _save_frame(game,"01_Overview"):
 		quit(1)
 		return
