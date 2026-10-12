@@ -120,8 +120,18 @@ static func _camp_light(parent: Node3D, p: Vector3, mat: Dictionary) -> void:
 	post.name="WarmCampLighting_"+str(parent.get_child_count())
 	post.position=p
 	parent.add_child(post)
+	_box(post,"PoleBasePlate",Vector3(0,0.06,0),Vector3(0.46,0.12,0.46),mat["darkmetal"])
+	for side in [-1.0,1.0]:
+		var gusset := _box(post,"PoleMountingGusset",Vector3(side*0.20,3.82,0),Vector3(0.09,0.74,0.09),mat["steel"])
+		gusset.rotation.z=-side*0.48
+	_box(post,"PoleFeedConduit",Vector3(-0.10,2.10,0.09),Vector3(0.055,3.24,0.055),mat["darkmetal"])
+	_box(post,"PoleJunctionBox",Vector3(-0.10,1.00,0.10),Vector3(0.34,0.42,0.22),mat["rust"])
+	for side in [-1.0,1.0]:
+		_box(post,"JunctionCoverRib",Vector3(-0.10+side*0.08,1.00,0.22),Vector3(0.035,0.30,0.025),mat["steel"])
 	_box(post,"Stanchion",Vector3(0,2.05,0),Vector3(0.14,4.10,0.13),mat["rust"])
 	_box(post,"BentLightArm",Vector3(0.46,4.03,0),Vector3(0.93,0.11,0.12),mat["steel"])
+	var arm_brace := _box(post,"LampArmBrace",Vector3(0.25,3.80,0),Vector3(0.09,0.73,0.09),mat["steel"])
+	arm_brace.rotation.z=-0.72
 	_box(post,"LampWeatherCap",Vector3(0.87,3.86,0),Vector3(0.65,0.21,0.47),mat["darkmetal"])
 	_box(post,"WarmLanternGlass",Vector3(0.87,3.69,0),Vector3(0.46,0.11,0.32),mat["glow"])
 	var light := OmniLight3D.new()
@@ -183,7 +193,9 @@ static func build_world(parent: Node3D, mats: Dictionary) -> Node3D:
 		Vector3(26.0,0,16.0),Vector3(48.0,0,-15.0),
 		Vector3(56.0,0,18.0)
 	]:
-		_camp_light(root,light_pos,mats)
+		var grounded_light_pos: Vector3=light_pos
+		grounded_light_pos.y=_terrain_height(grounded_light_pos.x,grounded_light_pos.z)
+		_camp_light(root,grounded_light_pos,mats)
 	_salvage_camp(root,Vector3(-50,0,-25),mats)
 	_salvage_camp(root,Vector3(66,0,-34),mats)
 	return root

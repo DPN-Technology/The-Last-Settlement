@@ -1681,6 +1681,20 @@ func _smoke() -> void:
 				push_error("SMOKE: working camp light missing from physical scene")
 				quit(1)
 				return
+			for hardware_name in ["PoleBasePlate","PoleFeedConduit","PoleJunctionBox","LampArmBrace"]:
+				var hardware_found := false
+				for component in item.get_children():
+					if str(component.name).begins_with(hardware_name+"_"):
+						hardware_found=true
+						break
+				if not hardware_found:
+					push_error("SMOKE: camp light hardware missing: "+hardware_name)
+					quit(1)
+					return
+			if absf(item.position.y-SettlementReferenceEnvironment3D._terrain_height(item.position.x,item.position.z))>0.02:
+				push_error("SMOKE: exterior camp light is not grounded to terrain")
+				quit(1)
+				return
 		elif str(item.name).begins_with("SalvageCampCluster_"):
 			salvage_camps+=1
 	if boards<4 or warm_lamps<6 or salvage_camps<2:
