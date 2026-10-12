@@ -153,10 +153,17 @@ static func build_facility(structure: Node3D, kind: String, size: Vector2) -> vo
 
 static func build_world(parent: Node3D) -> void:
 	var yard := Node3D.new()
-	yard.name="RealCC0SettlementScans"
+	yard.name = "RealCC0SettlementScans"
 	parent.add_child(yard)
-	# Atmospheric, licensed real-world wreckage beyond player access roads.
-	add(yard,"car","AbandonedClothCoveredVehicle",Vector3(-54.0,0.03,25.0),4.55,-0.51)
-	add(yard,"car","PerimeterScavengedVehicle",Vector3(62.0,0.03,-38.0),4.38,0.96)
-	for x in [-44.0,-40.7,-37.4]:
-		add(yard,"barrier","DamagedPerimeterDivider",Vector3(x,0.05,-38.5),1.76,0.09)
+	# Keep authentic scanned assets within the playable camera's compositional
+	# ring instead of hiding the two hero wrecks beyond the visible horizon.
+	# The central navigation corridors (-24..24) are kept unobstructed.
+	add(yard, "car", "WestScavengedVehicle", Vector3(-35.0, 0.03, 20.0), 4.55, -0.51)
+	add(yard, "car", "EastCoveredVehicle", Vector3(37.0, 0.03, -24.0), 4.38, 0.96)
+	for x in [-34.0, -31.7, -29.4]:
+		add(yard, "barrier", "VisibleDamagedPerimeterDivider", Vector3(x, 0.05, -27.0), 1.76, 0.09)
+	# Scanned salvage yard equipment creates readable, photographic shapes
+	# at the edges of the settlement instead of more hand-built block props.
+	add(yard, "rack", "WestScavengeStorage", Vector3(-32.0, 0.08, 27.0), 1.50, -0.3)
+	add(yard, "portable_generator", "EastFieldPowerUnit", Vector3(33.0, 0.08, -29.0), 1.45, 0.4)
+	add(yard, "tool_cart", "EastFieldMaintenance", Vector3(35.3, 0.08, -29.3), 1.15, 0.2)
