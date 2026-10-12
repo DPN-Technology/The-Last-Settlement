@@ -202,6 +202,53 @@ func _smoke() -> void:
 	# The industrial art has to be physical 3D equipment, and its mechanism
 	# must only run when an active job and eligible worker exist.
 	var world_3d: SettlementWorld3D=instance.settlement_world
+	var conformed_road_sections := 0
+	var cracked_road_sections := 0
+	var centerline_mesh_found := false
+	var access_road_low := INF
+	var access_road_high := -INF
+	for road_piece in world_3d.terrain_layer.get_children():
+		if not road_piece.has_meta("terrain_conforming"):
+			continue
+		if not (road_piece is MeshInstance3D):
+			push_error("SMOKE: Terrain-conforming road geometry is not a real mesh")
+			quit(1)
+			return
+		var road_mesh: MeshInstance3D=road_piece as MeshInstance3D
+		if road_mesh.mesh==null or road_mesh.mesh.get_surface_count()!=1:
+			push_error("SMOKE: Terrain-conforming road mesh has no rendered surface")
+			quit(1)
+			return
+		var vertices: PackedVector3Array=road_mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var expected_lift := 0.075
+		if road_mesh.name=="ErodedGravelRoadShoulder":
+			expected_lift=0.025
+		elif road_mesh.name=="PhysicalRoadFissures":
+			expected_lift=0.081
+			cracked_road_sections+=1
+			if vertices.size()<20:
+				push_error("SMOKE: Physical asphalt fissures contain no actual geometry")
+				quit(1)
+				return
+		elif road_mesh.name=="WornCenterlineDashes":
+			expected_lift=0.101
+			centerline_mesh_found=true
+		var sample_stride := maxi(1,int(floor(float(vertices.size())/18.0)))
+		for vertex_index in range(0,vertices.size(),sample_stride):
+			var vertex := vertices[vertex_index]
+			var terrain_y := WastelandDetail.terrain_height(vertex.x,vertex.z,world_3d.terrain_height_noise)
+			if absf(vertex.y-terrain_y-expected_lift)>0.003:
+				push_error("SMOKE: Road/shoulder/crack geometry floats above or cuts through sculpted terrain")
+				quit(1)
+				return
+			if road_mesh.name=="TerrainConformingBrokenAsphalt":
+				access_road_low=minf(access_road_low,vertex.y)
+				access_road_high=maxf(access_road_high,vertex.y)
+		conformed_road_sections+=1
+	if conformed_road_sections<10 or cracked_road_sections!=3 or not centerline_mesh_found or access_road_high-access_road_low<0.5:
+		push_error("SMOKE: Broken access-road slice lacks terrain-following elevation, asphalt cracks, or worn lane marks")
+		quit(1)
+		return
 	if world_3d.industrial_yards.is_empty():
 		push_error("SMOKE: No physically modeled press-and-conveyor yard at the workshop")
 		quit(1)

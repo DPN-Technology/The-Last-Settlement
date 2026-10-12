@@ -86,6 +86,7 @@ var materials: Dictionary = {}
 var selected_key := ""
 var cutaway_views := 0
 var visual_time := 0.0
+var terrain_height_noise := FastNoiseLite.new()
 
 func _ready() -> void:
 	_create_materials()
@@ -202,6 +203,7 @@ func _create_materials() -> void:
 	_weathered("steel", Color("#4d5655"), 0.67, 0.46, 0.56)
 	_weathered("foundation", Color("#383a36"), 0.95, 0.0, 0.45)
 	_weathered("asphalt", Color("#2d3130"), 0.97, 0.0, 0.24)
+	_weathered("pavement", Color("#393832"), 0.98, 0.0, 0.42)
 	# Runtime photographic PBR replaces the older material shader when the
 	# license-checked 1K maps are included in the exported Windows package.
 	_use_photo_pbr("concrete", "rough_concrete", Color("#b3aca1"), 0.97, 0.03, 0.45)
@@ -338,6 +340,10 @@ func _sphere(parent: Node3D, pos: Vector3, radius: float, mat: Material) -> Mesh
 	return obj
 
 func _build_terrain() -> void:
+	terrain_height_noise.seed = 114722
+	terrain_height_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	terrain_height_noise.frequency = 0.015
+	terrain_height_noise.fractal_octaves = 4
 	# Render opaque ground before decorative roads. These underlays are a safety
 	# net if a GPU drops the procedural heightfield; never expose the sky below.
 	var fallback_outer := MeshInstance3D.new()
@@ -383,13 +389,11 @@ func _build_terrain() -> void:
 	horizon.material_override=horizon_material
 	terrain_layer.add_child(horizon)
 
-	# Graveled settlement access. Physical 3D roads and lane marking strips.
-	_road(Vector3(-87, 0, 5), Vector3(-9, 0, 5), 8.4)
+	# Broken asphalt access follows the sculpted ground instead of cutting
+	# through the hills or hovering above them.
+	_road(Vector3(-87, 0, 5), Vector3(-9, 0, 5), 8.4, true)
 	_road(Vector3(-9, 0, 5), Vector3(42, 0, 5), 5.0)
 	_road(Vector3(0, 0, -19), Vector3(0, 0, 30), 4.4)
-	for index in range(13):
-		var x := -82.0 + float(index) * 5.6
-		_box(terrain_layer, Vector3(x, 0.065, 5), Vector3(2.0, 0.012, 0.08), materials["stripe"])
 	
 	# Deterministic clutter: rock fields, scrub and broken roadside artifacts.
 	var rng := RandomNumberGenerator.new()
@@ -417,10 +421,131 @@ func _build_terrain() -> void:
 	SettlementReferenceEnvironment3D.build_world(terrain_layer,materials)
 	SettlementAuthenticModel3D.build_world(terrain_layer)
 
-func _road(a: Vector3, b: Vector3, width: float) -> void:
-	var delta := b - a
-	var segment := _box(terrain_layer, (a+b)*0.5 + Vector3(0, 0.045, 0), Vector3(delta.length(), 0.07, width), materials["asphalt"])
-	segment.rotation.y = -atan2(delta.z, delta.x)
+func _road_point(a: Vector3, b: Vector3, progress: float, lateral: float, width: float, lift: float) -> Vector3:
+	var center := a.lerp(b, progress)
+	var direction := Vector2(b.x-a.x, b.z-a.z).normalized()
+	var across := Vector3(-direction.y, 0.0, direction.x)
+	var point := center + across * lateral * width
+	point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + lift
+	return point
+
+func _road_ribbon(a: Vector3, b: Vector3, width: float, lift: float, longitudinal_steps: int, cross_steps: int) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rows: Array = []
+	for along in range(longitudinal_steps + 1):
+		var row: Array[Vector3] = []
+		var progress := float(along) / float(longitudinal_steps)
+		for across in range(cross_steps + 1):
+			var lateral := float(across) / float(cross_steps) - 0.5
+			var point := _road_point(a, b, progress, lateral, width, lift)
+			row.append(point)
+		rows.append(row)
+	for along in range(longitudinal_steps):
+		for across in range(cross_steps):
+			var uv_x0 := float(along) * 0.22
+			var uv_x1 := float(along + 1) * 0.22
+			var uv_y0 := float(across) / float(cross_steps)
+			var uv_y1 := float(across + 1) / float(cross_steps)
+			var p00: Vector3 = rows[along][across]
+			var p10: Vector3 = rows[along+1][across]
+			var p01: Vector3 = rows[along][across+1]
+			var p11: Vector3 = rows[along+1][across+1]
+			surface.set_uv(Vector2(uv_x0, uv_y0))
+			surface.add_vertex(p00)
+			surface.set_uv(Vector2(uv_x0, uv_y1))
+			surface.add_vertex(p01)
+			surface.set_uv(Vector2(uv_x1, uv_y0))
+			surface.add_vertex(p10)
+			surface.set_uv(Vector2(uv_x1, uv_y0))
+			surface.add_vertex(p10)
+			surface.set_uv(Vector2(uv_x0, uv_y1))
+			surface.add_vertex(p01)
+			surface.set_uv(Vector2(uv_x1, uv_y1))
+			surface.add_vertex(p11)
+	surface.index()
+	surface.generate_normals()
+	return surface.commit()
+
+func _road_surface_strip(surface: SurfaceTool, first: Vector3, second: Vector3, half_width: float) -> void:
+	var tangent := Vector2(second.x-first.x, second.z-first.z).normalized()
+	var across := Vector3(-tangent.y, 0.0, tangent.x) * half_width
+	var points: Array[Vector3] = [first-across, first+across, second-across, second+across]
+	for index in [0, 1, 2, 2, 1, 3]:
+		surface.add_vertex(points[index])
+
+func _road_cracks(a: Vector3, b: Vector3, width: float, count: int) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var direction := Vector2(b.x-a.x, b.z-a.z).normalized()
+	var forward := Vector3(direction.x, 0.0, direction.y)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(absf(a.x * 431.0 + a.z * 673.0 + b.x * 127.0 + b.z * 211.0))
+	for crack in range(count):
+		var base_progress := (float(crack) + 0.5) / float(count)
+		var previous := Vector3.ZERO
+		for step in range(9):
+			var lateral := -0.47 + float(step) * 0.1175
+			var progress := clampf(base_progress + rng.randf_range(-0.009, 0.009), 0.02, 0.98)
+			var point := _road_point(a, b, progress, lateral, width, 0.081)
+			point += forward * rng.randf_range(-0.045, 0.045)
+			point.y = WastelandDetail.terrain_height(point.x, point.z, terrain_height_noise) + 0.081
+			if step > 0:
+				_road_surface_strip(surface, previous, point, rng.randf_range(0.018, 0.032))
+			previous = point
+	surface.index()
+	surface.generate_normals()
+	return surface.commit()
+
+func _road_markings(a: Vector3, b: Vector3, width: float, dash_length: float, gap: float) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var length := Vector2(b.x-a.x, b.z-a.z).length()
+	var stride := dash_length + gap
+	var dash_count := int(floor(length / stride))
+	for dash in range(dash_count):
+		var start_distance := float(dash) * stride + (stride - dash_length) * 0.5
+		var end_distance := start_distance + dash_length
+		var start_progress := start_distance / length
+		var end_progress := end_distance / length
+		var p0 := _road_point(a, b, start_progress, -0.007, width, 0.101)
+		var p1 := _road_point(a, b, start_progress, 0.007, width, 0.101)
+		var p2 := _road_point(a, b, end_progress, -0.007, width, 0.101)
+		var p3 := _road_point(a, b, end_progress, 0.007, width, 0.101)
+		for point in [p0, p1, p2, p2, p1, p3]:
+			surface.add_vertex(point)
+	surface.index()
+	surface.generate_normals()
+	return surface.commit()
+
+func _road(a: Vector3, b: Vector3, width: float, center_line: bool = false) -> void:
+	var length := Vector2(b.x-a.x, b.z-a.z).length()
+	var steps := maxi(2, int(ceil(length / 1.4)))
+	var shoulder := MeshInstance3D.new()
+	shoulder.name = "ErodedGravelRoadShoulder"
+	shoulder.mesh = _road_ribbon(a, b, width + 1.1, 0.025, steps, 4)
+	shoulder.material_override = materials["soil"]
+	shoulder.set_meta("terrain_conforming", true)
+	terrain_layer.add_child(shoulder)
+	var road := MeshInstance3D.new()
+	road.name = "TerrainConformingBrokenAsphalt"
+	road.mesh = _road_ribbon(a, b, width, 0.075, steps, 6)
+	road.material_override = materials["pavement"]
+	road.set_meta("terrain_conforming", true)
+	terrain_layer.add_child(road)
+	var cracks := MeshInstance3D.new()
+	cracks.name = "PhysicalRoadFissures"
+	cracks.mesh = _road_cracks(a, b, width, maxi(2, int(floor(length / 12.0))))
+	cracks.material_override = materials["foundation"]
+	cracks.set_meta("terrain_conforming", true)
+	terrain_layer.add_child(cracks)
+	if center_line:
+		var markings := MeshInstance3D.new()
+		markings.name = "WornCenterlineDashes"
+		markings.mesh = _road_markings(a, b, width, 1.8, 3.8)
+		markings.material_override = materials["stripe"]
+		markings.set_meta("terrain_conforming", true)
+		terrain_layer.add_child(markings)
 
 func _tree(point: Vector3, scale: float) -> void:
 	# Real terrain height and seeded canopy variation avoid lollipop-like

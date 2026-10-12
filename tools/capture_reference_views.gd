@@ -91,5 +91,17 @@ func _render_capture_suite() -> void:
 		if not await _save_frame(game,"02_"+target):
 			quit(1)
 			return
-	print("VISUAL QA: 4 fully rendered camera positions saved with 3D+unchanged HUD")
+	game.selected_building={}
+	game.selected_citizen={}
+	game.settlement_world.focus=Vector3(-61.0,0.0,5.0)
+	game.settlement_world.camera_distance=34.0
+	game.settlement_world.pitch=deg_to_rad(52.0)
+	game.settlement_world.yaw=0.0
+	game.settlement_world._position_camera()
+	for frame in range(5):
+		await process_frame
+	if not await _save_frame(game,"03_AccessRoad"):
+		quit(1)
+		return
+	print("VISUAL QA: 5 fully rendered camera positions saved with 3D+unchanged HUD")
 	quit()

@@ -12,6 +12,14 @@ import struct
 import zlib
 
 TARGET = {"mean_luminance":76.4,"detail":25.6,"luma_spread":42.2,"structural_detail":32.8}
+HUD_CAPTURES = (
+    "01_Overview",
+    "02_housing",
+    "02_command",
+    "02_medical",
+    "03_AccessRoad",
+)
+
 # Built-in Python PNG decoder; dependency-free and safely bounds image sizes.
 def decode_png(path):
     data=Path(path).read_bytes()
@@ -70,13 +78,14 @@ def decode_png(path):
         old=row
     return w,h,channels,rows
 
-def measure(png):
+def measure(png, roi=(300/1600, 130/900, 1400/1600, 650/900)):
     width,height,ch,rows=decode_png(png)
-    # Explicit reference ROI definition scales with the captured screen.
-    scale_x=width/1600.0
-    scale_y=height/900.0
-    left,right=int(300*scale_x),int(1400*scale_x)
-    top,bottom=int(130*scale_y),int(650*scale_y)
+    if width < 1 or height < 1 or ch not in (3, 4):
+        raise ValueError(f"invalid screenshot dimensions or channels: {png}")
+    left,right=int(roi[0]*width),int(roi[2]*width)
+    top,bottom=int(roi[1]*height),int(roi[3]*height)
+    if left < 0 or top < 0 or right > width or bottom > height or left >= right or top >= bottom:
+        raise ValueError(f"measurement region does not fit screenshot: {png}")
     area=[]
     edges=[]
     structural=[]
@@ -118,11 +127,30 @@ def measure(png):
 
 def main():
     folder=Path("dist/visual")
-    outcomes={}
-    for path in sorted(folder.glob("*_HUD.png")):
-        outcomes[path.stem]=measure(path)
-    if len(outcomes)!=4:
-        raise SystemExit("Missing actual in-engine screenshots; refusing to judge art")
+    required_files=[
+        folder/f"{name}_HUD.png"
+        for name in HUD_CAPTURES
+    ] + [
+        folder/f"{name}_WORLD.png"
+        for name in HUD_CAPTURES
+    ]
+    missing=[path.name for path in required_files if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Missing actual Godot captures; refusing to judge art: "
+            + ", ".join(missing)
+        )
+    outcomes={
+        f"{name}_HUD":measure(folder/f"{name}_HUD.png")
+        for name in HUD_CAPTURES
+    }
+    # The access-road world-only image avoids counting HUD graphics as road
+    # detail. Keep the same kind of measurements, but do not treat these
+    # values as a visual-quality pass/fail threshold.
+    outcomes["03_AccessRoad_WORLD"]=measure(
+        folder/"03_AccessRoad_WORLD.png",
+        roi=(0.08,0.12,0.92,0.88),
+    )
     overview=outcomes["01_Overview_HUD"]
     overview["detail_fraction_of_target"]=round(overview["detail"]/TARGET["detail"],2)
     overview["brightness_fraction_of_target"]=round(overview["mean_luminance"]/TARGET["mean_luminance"],2)
@@ -132,7 +160,14 @@ def main():
         and 0.78<=overview["brightness_fraction_of_target"]<=1.20
         and overview["luma_spread"]>=TARGET["luma_spread"]*0.78
     )
-    record={"source":"actual Godot gl_compatibility rendered frames","reference":"user-provided cinematic concept", "goal":TARGET,"captures":outcomes,"note":"Numeric similarity is NOT visual approval; manually inspect PNGs."}
+    record={
+        "source":"actual Godot gl_compatibility rendered frames",
+        "reference":"player-provided 1600x900 reference-image measurements",
+        "goal":TARGET,
+        "captures":outcomes,
+        "access_road_world_roi":"central 84% width, central 76% height",
+        "note":"Metrics are guardrails, not visual approval; compare the actual PNGs to the supplied art direction.",
+    }
     (folder/"visual-review.json").write_text(json.dumps(record,indent=2)+"\n")
     print(json.dumps(record,indent=2))
     if not overview["reference_ready_metric_only"]:

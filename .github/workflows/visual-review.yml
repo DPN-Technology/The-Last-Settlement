@@ -3,7 +3,7 @@ name: DPN Settlement Real Render Visual Review
 on:
   pull_request:
     branches: [main]
-    paths: ["src/**", "assets/**", "simulation/**", "tools/capture_reference_views.gd", "tools/visual_fidelity_report.py", "tools/install_reference_models.py", ".github/workflows/visual-review.yml"]
+    paths: ["src/**", "assets/**", "simulation/**", "tools/smoke_game.gd", "tools/capture_reference_views.gd", "tools/visual_fidelity_report.py", "tools/install_cc0_assets.py", "tools/install_cc0_materials.py", "tools/install_reference_models.py", "docs/THREE_D_PRODUCTION.md", ".github/workflows/visual-review.yml"]
   workflow_dispatch:
 
 permissions:
@@ -46,7 +46,28 @@ jobs:
           python3 tools/install_cc0_assets.py
           python3 tools/install_cc0_materials.py
           python3 tools/install_reference_models.py
-          ".godot-visual/Godot_v4.3-stable_linux.x86_64" --headless --path . --import
+          GODOT=".godot-visual/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --import
+          test -s assets/3d/characters/survivor.glb
+          test -s assets/3d/photoreal/verified-manifest.json
+
+      - name: Exercise gameplay and 3D regression gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/visual
+          GODOT=".godot-visual/Godot_v4.3-stable_linux.x86_64"
+          set +e
+          timeout 180s "$GODOT" --headless --path . \
+            --script res://tools/smoke_game.gd 2>&1 | tee dist/visual/smoke-game.log
+          EXIT="${PIPESTATUS[0]}"
+          set -e
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|Parser Error|SMOKE:' dist/visual/smoke-game.log; then
+            echo "::error::Gameplay smoke test reported a script or regression failure."
+            exit 1
+          fi
+          test "$EXIT" -eq 0
+          grep -q 'PLAYTEST SMOKE PASS' dist/visual/smoke-game.log
 
       - name: Render the real game with software OpenGL
         shell: bash
@@ -69,7 +90,7 @@ jobs:
             exit 1
           fi
           test "$EXIT" -eq 0
-          for kind in 01_Overview 02_housing 02_command 02_medical; do
+          for kind in 01_Overview 02_housing 02_command 02_medical 03_AccessRoad; do
             test -s "dist/visual/${kind}_HUD.png"
             test -s "dist/visual/${kind}_WORLD.png"
           done
@@ -82,10 +103,35 @@ jobs:
           {
             echo '### The Last Settlement: Actual Godot Reference Comparison'
             echo 'Frames are from the running game, NOT an image generator.'
-            echo 'User HUD unchanged. Detail scores alone cannot approve art parity.'
-            echo "Commit: $GITHUB_SHA"
+            echo 'Headless gameplay smoke passed before rendering. User HUD unchanged.'
+            echo 'Detail scores are diagnostic only; inspect the PNGs before approving art parity.'
+            echo "Commit: $GITHUB_SHA  |  Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             cat dist/visual/quality-report.log
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record visual evidence provenance and checksums
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/visual
+          {
+            printf 'repository=%s\n' "$GITHUB_REPOSITORY"
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'workflow_run=%s\n' "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [ -x .godot-visual/Godot_v4.3-stable_linux.x86_64 ]; then
+              printf 'godot_version='
+              ".godot-visual/Godot_v4.3-stable_linux.x86_64" --version
+            else
+              printf 'godot_version=unavailable (engine setup failed)\n'
+            fi
+          } > dist/visual/evidence-provenance.txt
+          find dist/visual -maxdepth 1 -type f \
+            \( -name '*_HUD.png' -o -name '*_WORLD.png' -o -name 'visual-review.json' \) \
+            -print0 | sort -z | xargs -0 -r sha256sum > dist/visual/SHA256SUMS.txt
+          if [ -s dist/visual/SHA256SUMS.txt ]; then
+            cat dist/visual/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload rendered visual evidence
         if: always()
@@ -93,6 +139,6 @@ jobs:
         with:
           name: LastSettlement-Real-Rendered-Visual-Evidence
           path: dist/visual/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
           compression-level: 0
