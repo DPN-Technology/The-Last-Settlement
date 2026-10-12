@@ -40,16 +40,16 @@ static func _privacy_curtain_mesh(width: float, height: float, depth: float) -> 
 		for column in range(width_segments):
 			var u0 := float(column)/float(width_segments)
 			var u1 := float(column+1)/float(width_segments)
-			var points := [
+			var points: Array[Vector2] = [
 				Vector2(u0,v0),Vector2(u0,v1),Vector2(u1,v0),
 				Vector2(u1,v0),Vector2(u0,v1),Vector2(u1,v1)
 			]
-			for uv in points:
-				var fold := sin(uv.x*TAU*8.0)*depth
-				var droop := sin(uv.x*PI)*0.055*(1.0-uv.y)
+			for uv: Vector2 in points:
+				var fold: float=sin(uv.x*TAU*8.0)*depth
+				var droop: float=sin(uv.x*PI)*0.055*(1.0-uv.y)
 				var point := Vector3(fold,height*uv.y+droop,(uv.x-0.5)*width)
-				var lower_wear := lerpf(0.88,1.0,uv.y)
-				var fold_shade := 0.91+0.09*cos(uv.x*TAU*8.0)
+				var lower_wear: float=lerpf(0.88,1.0,uv.y)
+				var fold_shade: float=0.91+0.09*cos(uv.x*TAU*8.0)
 				surface.set_uv(Vector2(uv.x*3.2,uv.y*1.7))
 				surface.set_color(Color(lower_wear*fold_shade,lower_wear*fold_shade,lower_wear*fold_shade,1.0))
 				surface.add_vertex(point)
