@@ -17,6 +17,47 @@ static func box(parent: Node3D, name: String, at: Vector3, size: Vector3, mat: M
 	parent.add_child(obj)
 	return obj
 
+static func _side_wall_openings(group: Node3D, side: float, size: Vector2, height: float, base: float, wall_mat: Material, mats: Dictionary) -> void:
+	# Cut genuine apertures into the side wall. Formerly the wall was one giant
+	# solid cube with blue boxes glued to its outside, so it read as toy geometry.
+	var half_x: float = size.x * 0.5
+	var half_z: float = size.y * 0.5
+	var side_x: float = side * half_x
+	var opening_half: float = minf(0.59, size.y * 0.105)
+	if size.y < 4.8 or height < 2.7:
+		box(group,"SideWallSolid",Vector3(side_x,base+height*0.5,0),Vector3(0.27,height,size.y),wall_mat)
+		return
+	var window_y: float = base + height * 0.55
+	var opening_h: float = minf(1.10, height * 0.31)
+	var sill_y: float = window_y - opening_h * 0.5
+	var lintel_y: float = window_y + opening_h * 0.5
+	var centers: Array[float] = [-half_z * 0.38, half_z * 0.32]
+	var previous: float = -half_z
+	for i in range(centers.size()):
+		var middle: float = centers[i]
+		var start: float = middle - opening_half
+		var finish: float = middle + opening_half
+		# Continuous vertical piers carry the lintel between real windows.
+		var pier_span: float = start - previous
+		if pier_span > 0.04:
+			box(group,"SideStructuralPier",Vector3(side_x,base+height*0.5,(previous+start)*0.5),Vector3(0.27,height,pier_span),wall_mat)
+		var lower_h: float = sill_y - base
+		var upper_h: float = base + height - lintel_y
+		box(group,"SideWindowSpandrel",Vector3(side_x,base+lower_h*0.5,middle),Vector3(0.27,lower_h,opening_half*2.0),wall_mat)
+		box(group,"SideWindowLintel",Vector3(side_x,lintel_y+upper_h*0.5,middle),Vector3(0.27,upper_h,opening_half*2.0),wall_mat)
+		# Window glazing is actually INSIDE the wall rather than in front of it.
+		box(group,"RecessedWindowGlass",Vector3(side*(half_x-0.075),window_y,middle),Vector3(0.045,opening_h*0.89,opening_half*1.80),mats["glass"])
+		for edge in [-1.0,1.0]:
+			box(group,"WindowStoneJamb",Vector3(side*(half_x+0.16),window_y,middle+edge*opening_half),Vector3(0.12,opening_h+0.14,0.11),mats["concrete"])
+			box(group,"WindowSteelHeadSill",Vector3(side*(half_x+0.16),window_y+edge*opening_h*0.5,middle),Vector3(0.13,0.11,opening_half*2.0+0.20),mats["steel"])
+		box(group,"WindowDeepReveal",Vector3(side*(half_x+0.23),sill_y-0.13,middle),Vector3(0.37,0.12,opening_half*2.0+0.32),mats["foundation"])
+		box(group,"WindowDivider",Vector3(side*(half_x+0.20),window_y,middle),Vector3(0.09,opening_h*0.90,0.05),mats["darkmetal"])
+		previous = finish
+	var remaining: float = half_z - previous
+	if remaining > 0.04:
+		box(group,"SideStructuralPier",Vector3(side_x,base+height*0.5,(previous+half_z)*0.5),Vector3(0.27,height,remaining),wall_mat)
+
+
 static func facade(group: Node3D, kind: String, size: Vector2, height: float, wall_mat: Material, mats: Dictionary) -> void:
 	var x := size.x*0.5
 	var z := size.y*0.5
@@ -28,8 +69,8 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 	var trim: Material = mats["rooflight"]
 	# Distinct wall spans leave a physical ground-level access opening.
 	box(group,"RearWall",Vector3(0,height*0.5+base,z),Vector3(size.x,height,0.27),wall_mat)
-	box(group,"LeftWall",Vector3(-x,height*0.5+base,0),Vector3(0.27,height,size.y),wall_mat)
-	box(group,"RightWall",Vector3(x,height*0.5+base,0),Vector3(0.27,height,size.y),wall_mat)
+	_side_wall_openings(group,-1.0,size,height,base,wall_mat,mats)
+	_side_wall_openings(group,1.0,size,height,base,wall_mat,mats)
 	for side in [-1.0,1.0]:
 		box(group,"FrontWallSegment",Vector3(side*(door_width*0.5+remainder*0.5),height*0.5+base,-z),Vector3(remainder,height,0.27),wall_mat)
 		box(group,"EntryColumn",Vector3(side*(door_width*0.5+0.13),door_height*0.5+base,-z-0.14),Vector3(0.22,door_height,0.22),post)
@@ -49,10 +90,6 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 	for side in [-1.0,1.0]:
 		box(group,"FrontPlate",Vector3(side*(door_width*0.5+1.4),height*0.62,-z-0.19),Vector3(0.14,1.25,0.07),mats["rust"])
 		box(group,"GutterDownpipe",Vector3(side*(x-0.55),height*0.5,-z-0.25),Vector3(0.13,height,0.14),trim)
-		for pane in range(2):
-			var window_z := -z*0.38+float(pane)*z*0.70
-			box(group,"SideWindowFrame",Vector3(side*(x+0.16),height*0.55,window_z),Vector3(0.12,1.10,1.37),post)
-			box(group,"RecessedWindowGlass",Vector3(side*(x+0.225),height*0.55,window_z),Vector3(0.06,0.85,1.13),mats["glass"])
 	# Two-tone grounded lower cladding hides tile-like photo texture repetition.
 	for side in [-1.0,1.0]:
 		box(group,"LowerServiceWall",Vector3(side*(x+0.016),0.65,0),Vector3(0.05,0.70,size.y*0.88),mats["foundation"])
