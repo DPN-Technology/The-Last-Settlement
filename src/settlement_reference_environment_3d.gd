@@ -121,6 +121,11 @@ static func _camp_light(parent: Node3D, p: Vector3, mat: Dictionary) -> void:
 	post.position=p
 	parent.add_child(post)
 	_box(post,"PoleBasePlate",Vector3(0,0.06,0),Vector3(0.46,0.12,0.46),mat["darkmetal"])
+	_box(post,"PowerMastExtension",Vector3(0,5.64,0),Vector3(0.085,3.08,0.085),mat["steel"])
+	_box(post,"MastSleeveCollar",Vector3(0,4.24,0),Vector3(0.21,0.16,0.21),mat["darkmetal"])
+	_box(post,"ServiceCableCrossarm",Vector3(0,7.20,0),Vector3(0.86,0.12,0.15),mat["rust"])
+	for conductor_side in [-1.0,1.0]:
+		_cylinder(post,"PorcelainLineInsulator",Vector3(conductor_side*0.16,7.33,0),0.075,0.18,mat["glass"])
 	for side in [-1.0,1.0]:
 		var gusset := _box(post,"PoleMountingGusset",Vector3(side*0.20,3.82,0),Vector3(0.09,0.74,0.09),mat["steel"])
 		gusset.rotation.z=-side*0.48
@@ -142,6 +147,57 @@ static func _camp_light(parent: Node3D, p: Vector3, mat: Dictionary) -> void:
 	light.omni_range=9.0
 	light.shadow_enabled=false
 	post.add_child(light)
+
+static func _power_run_mesh(parent: Node3D, pole_positions: Array[Vector3], material: Material) -> MultiMeshInstance3D:
+	var spans: int=pole_positions.size()-1
+	var conductors_per_span := 2
+	var segments_per_conductor := 8
+	var wire := CylinderMesh.new()
+	wire.top_radius=0.022
+	wire.bottom_radius=0.022
+	wire.height=1.0
+	wire.radial_segments=6
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format=MultiMesh.TRANSFORM_3D
+	multimesh.mesh=wire
+	multimesh.instance_count=spans*conductors_per_span*segments_per_conductor
+	var run := MultiMeshInstance3D.new()
+	run.name="OverheadInsulatedPowerRuns"
+	run.multimesh=multimesh
+	run.material_override=material
+	run.set_meta("span_count",spans)
+	run.set_meta("conductors_per_span",conductors_per_span)
+	run.set_meta("segments_per_conductor",segments_per_conductor)
+	parent.add_child(run)
+	var instance_index := 0
+	for span_index in range(spans):
+		var from_pole: Vector3=pole_positions[span_index]
+		var to_pole: Vector3=pole_positions[span_index+1]
+		for conductor_side in [-1.0,1.0]:
+			var offset := Vector3(conductor_side*0.16,7.42,0)
+			var from_point := from_pole+offset
+			var to_point := to_pole+offset
+			for segment_index in range(segments_per_conductor):
+				var t0 := float(segment_index)/float(segments_per_conductor)
+				var t1 := float(segment_index+1)/float(segments_per_conductor)
+				var start := _sagging_wire_point(from_point,to_point,t0)
+				var finish := _sagging_wire_point(from_point,to_point,t1)
+				var direction := (finish-start).normalized()
+				var x_axis := Vector3.UP.cross(direction)
+				if x_axis.length_squared()<0.0001:
+					x_axis=Vector3.RIGHT.cross(direction)
+				x_axis=x_axis.normalized()
+				var z_axis := x_axis.cross(direction).normalized()
+				var basis := Basis(x_axis,direction,z_axis)
+				basis=basis.scaled(Vector3(1.0,finish.distance_to(start),1.0))
+				multimesh.set_instance_transform(instance_index,Transform3D(basis,(start+finish)*0.5))
+				instance_index+=1
+	return run
+
+static func _sagging_wire_point(from_point: Vector3, to_point: Vector3, t: float) -> Vector3:
+	var point := from_point.lerp(to_point,t)
+	point.y-=sin(t*PI)*0.72
+	return point
 
 static func _natural_scrub(parent: Node3D, mats: Dictionary) -> void:
 	# Clustered branches/shrubs in exterior scenic bands, with actual scale
@@ -187,15 +243,19 @@ static func build_world(parent: Node3D, mats: Dictionary) -> Node3D:
 	_timber_walkway(root,Vector3(8,0,-9),Vector3(22,0,-9),mats["wood"],1233)
 	_timber_walkway(root,Vector3(-4,0,19),Vector3(-4,0,27),mats["wood"],1234)
 	_timber_walkway(root,Vector3(28,0,13),Vector3(39,0,13),mats["wood"],1235)
-	for light_pos in [
+	var lamp_positions: Array[Vector3]=[
 		Vector3(-30.0,0,-14.0),Vector3(-20.0,0,12.0),
 		Vector3(-2.0,0,22.0),Vector3(16.0,0,-17.0),
 		Vector3(26.0,0,16.0),Vector3(48.0,0,-15.0),
 		Vector3(56.0,0,18.0)
-	]:
+	]
+	var grounded_lamp_positions: Array[Vector3]=[]
+	for light_pos in lamp_positions:
 		var grounded_light_pos: Vector3=light_pos
 		grounded_light_pos.y=_terrain_height(grounded_light_pos.x,grounded_light_pos.z)
 		_camp_light(root,grounded_light_pos,mats)
+		grounded_lamp_positions.append(grounded_light_pos)
+	_power_run_mesh(root,grounded_lamp_positions,mats["darkmetal"])
 	_salvage_camp(root,Vector3(-50,0,-25),mats)
 	_salvage_camp(root,Vector3(66,0,-34),mats)
 	return root

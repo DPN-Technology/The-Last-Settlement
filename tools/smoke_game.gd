@@ -1668,6 +1668,7 @@ func _smoke() -> void:
 	var boards := 0
 	var warm_lamps := 0
 	var salvage_camps := 0
+	var root_lamp_positions: Array[Vector3]=[]
 	for item in real_art.get_children():
 		if str(item.name).begins_with("ReclaimedTimberBoardwalk_"):
 			boards+=1
@@ -1681,7 +1682,7 @@ func _smoke() -> void:
 				push_error("SMOKE: working camp light missing from physical scene")
 				quit(1)
 				return
-			for hardware_name in ["PoleBasePlate","PoleFeedConduit","PoleJunctionBox","LampArmBrace"]:
+			for hardware_name in ["PoleBasePlate","PoleFeedConduit","PoleJunctionBox","LampArmBrace","PowerMastExtension","ServiceCableCrossarm"]:
 				var hardware_found := false
 				for component in item.get_children():
 					if str(component.name).begins_with(hardware_name+"_"):
@@ -1691,14 +1692,47 @@ func _smoke() -> void:
 					push_error("SMOKE: camp light hardware missing: "+hardware_name)
 					quit(1)
 					return
+			var line_insulators := 0
+			for component in item.get_children():
+				if str(component.name).begins_with("PorcelainLineInsulator_"):
+					line_insulators+=1
+			if line_insulators!=2:
+				push_error("SMOKE: camp power mast must have two insulated conductors")
+				quit(1)
+				return
 			if absf(item.position.y-SettlementReferenceEnvironment3D._terrain_height(item.position.x,item.position.z))>0.02:
 				push_error("SMOKE: exterior camp light is not grounded to terrain")
 				quit(1)
 				return
+			root_lamp_positions.append(item.position)
 		elif str(item.name).begins_with("SalvageCampCluster_"):
 			salvage_camps+=1
-	if boards<4 or warm_lamps<6 or salvage_camps<2:
+	if boards<4 or warm_lamps<7 or salvage_camps<2:
 		push_error("SMOKE: reference-targeted outdoor infrastructure not built")
+		quit(1)
+		return
+	var overhead_runs := real_art.get_node_or_null("OverheadInsulatedPowerRuns") as MultiMeshInstance3D
+	if overhead_runs==null or overhead_runs.multimesh==null or not (overhead_runs.multimesh.mesh is CylinderMesh):
+		push_error("SMOKE: overhead settlement power runs are missing")
+		quit(1)
+		return
+	var span_count := int(overhead_runs.get_meta("span_count",0))
+	var conductor_count := int(overhead_runs.get_meta("conductors_per_span",0))
+	var wire_segments := int(overhead_runs.get_meta("segments_per_conductor",0))
+	if span_count!=root_lamp_positions.size()-1 or conductor_count!=2 or wire_segments<6:
+		push_error("SMOKE: overhead power run topology is incomplete")
+		quit(1)
+		return
+	if overhead_runs.multimesh.instance_count!=span_count*conductor_count*wire_segments:
+		push_error("SMOKE: overhead power wire segments are missing")
+		quit(1)
+		return
+	var sag_segment_index := int(wire_segments*0.4375)
+	var sag_transform := overhead_runs.multimesh.get_instance_transform(sag_segment_index)
+	var sag_t := (float(sag_segment_index)+0.5)/float(wire_segments)
+	var linear_wire_height := lerpf(root_lamp_positions[0].y+7.42,root_lamp_positions[1].y+7.42,sag_t)
+	if linear_wire_height-sag_transform.origin.y<0.55:
+		push_error("SMOKE: overhead conductors do not have visible safety sag")
 		quit(1)
 		return
 	var decorated_facilities := 0
