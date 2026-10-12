@@ -2405,6 +2405,8 @@ func _smoke() -> void:
 			revealed+=1
 			var fixture_guards := 0
 			var ceiling_conduits := 0
+			var wall_service_runs := 0
+			var water_process_pipes := 0
 			for fixture in interior.get_children():
 				if bool(fixture.get_meta("interior_light_guard_batch",false)) and fixture is MultiMeshInstance3D:
 					var cage := fixture as MultiMeshInstance3D
@@ -2415,12 +2417,29 @@ func _smoke() -> void:
 					fixture_guards=int(cage.multimesh.instance_count)
 				elif bool(fixture.get_meta("interior_light_conduit",false)):
 					ceiling_conduits+=1
+				elif bool(fixture.get_meta("interior_wall_service_run",false)):
+					wall_service_runs+=1
+					if not (fixture.mesh is CylinderMesh):
+						push_error("SMOKE: Interior wall service run is not modeled pipe geometry")
+						quit(1)
+						return
+				elif bool(fixture.get_meta("interior_water_process_pipe",false)):
+					water_process_pipes+=1
 			if fixture_guards<10:
 				push_error("SMOKE: Revealed interior light cage has "+str(fixture_guards)+" bars; expected at least 10")
 				quit(1)
 				return
 			if ceiling_conduits!=2:
 				push_error("SMOKE: Revealed interior has "+str(ceiling_conduits)+" tagged light conduits; expected 2")
+				quit(1)
+				return
+			if wall_service_runs!=2:
+				push_error("SMOKE: Revealed interior has "+str(wall_service_runs)+" wall utility runs; expected 2")
+				quit(1)
+				return
+			var room_kind := str(structure.get_meta("building_type",""))
+			if room_kind in ["water","water_pump","purifier","water_tank","sewage"] and water_process_pipes<3:
+				push_error("SMOKE: Water facility interior is missing connected process piping")
 				quit(1)
 				return
 			for part in structure.get_children():

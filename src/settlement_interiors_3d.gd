@@ -136,6 +136,14 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 	box(room,"CentralAccessAisle",Vector3(0,0.298,-0.18),Vector3(1.52,0.014,size.y*0.77),mats["foundation"])
 	for side in [-1.0,1.0]:
 		box(room,"WallUtilityStrip",Vector3(side*(hx-0.26),0.42,0),Vector3(0.08,0.24,size.y*0.84),mats["rust"])
+		var conduit := cylinder(room,"ExposedWallServiceRun",Vector3(side*(hx-0.30),2.12,0),0.045,size.y*0.72,mats["pipe"])
+		conduit.rotation.x=PI*0.5
+		conduit.set_meta("interior_wall_service_run",true)
+		for clamp_index in range(4):
+			var clamp_z: float=-size.y*0.27+float(clamp_index)*size.y*0.18
+			box(room,"ServiceRunPipeClamp",Vector3(side*(hx-0.30),2.12,clamp_z),Vector3(0.14,0.13,0.065),mats["steel"])
+		cylinder(room,"ServiceRunWallDrop",Vector3(side*(hx-0.30),1.87,size.y*0.29),0.035,0.50,mats["darkmetal"])
+		box(room,"ServiceRunJunctionBox",Vector3(side*(hx-0.24),1.59,size.y*0.29),Vector3(0.22,0.27,0.14),mats["rust"])
 	match kind:
 		"housing":
 			for side in [-1.0,1.0]:
@@ -172,6 +180,15 @@ static func populate(group: Node3D, kind: String, size: Vector2, mats: Dictionar
 			for side in [-1.0,1.0]:
 				cylinder(room,"FilterVessel",Vector3(side*hx*0.58,1.30,size.y*0.13),0.85,2.08,mats["blue"])
 				box(room,"ValveAssembly",Vector3(side*hx*0.55,1.22,-size.y*0.22),Vector3(1.05,0.36,1.06),mats["steel"])
+			var water_header := cylinder(room,"WaterProcessHeader",Vector3(0,0.78,-size.y*0.22),0.065,size.x*0.82,mats["pipe"])
+			water_header.rotation.z=PI*0.5
+			water_header.set_meta("interior_water_process_pipe",true)
+			for side in [-1.0,1.0]:
+				var branch := cylinder(room,"WaterProcessBranch",Vector3(side*hx*0.58,0.84,-size.y*0.04),0.045,size.y*0.38,mats["steel"])
+				branch.rotation.x=PI*0.5
+				branch.set_meta("interior_water_process_pipe",true)
+				var valve_wheel := cylinder(room,"WaterProcessIsolationWheel",Vector3(side*hx*0.58,1.05,-size.y*0.22),0.14,0.045,mats["warning"])
+				valve_wheel.rotation.z=PI*0.5
 			_workbench(room,Vector3(0,0,size.y*0.30),mats)
 		_:
 			for side in [-1.0,1.0]:
