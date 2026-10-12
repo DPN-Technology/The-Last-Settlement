@@ -2413,7 +2413,7 @@ func _smoke() -> void:
 						quit(1)
 						return
 					fixture_guards=int(cage.multimesh.instance_count)
-				elif str(fixture.name)=="CeilingPowerConduit":
+				elif str(fixture.name).begins_with("CeilingPowerConduit"):
 					ceiling_conduits+=1
 			if fixture_guards<10 or ceiling_conduits!=2:
 				push_error("SMOKE: Revealed interior lacks caged practical lighting and wired ceiling fixtures")
