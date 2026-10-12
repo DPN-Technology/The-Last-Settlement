@@ -1707,6 +1707,77 @@ func _smoke() -> void:
 			root_lamp_positions.append(item.position)
 		elif str(item.name).begins_with("SalvageCampCluster_"):
 			salvage_camps+=1
+			var canopy := item.get_node_or_null("SaggingPatchedCanvasCanopy") as MeshInstance3D
+			if canopy==null or canopy.mesh==null or not (canopy.mesh is ArrayMesh):
+				push_error("SMOKE: salvage shelter does not have a modeled canvas canopy")
+				quit(1)
+				return
+			var canopy_surface := canopy.mesh.surface_get_arrays(0)
+			var canopy_vertices: PackedVector3Array=canopy_surface[Mesh.ARRAY_VERTEX]
+			var canopy_colors: PackedColorArray=canopy_surface[Mesh.ARRAY_COLOR]
+			if canopy_vertices.size()<200 or canopy_colors.size()!=canopy_vertices.size():
+				push_error("SMOKE: salvage shelter canopy lacks curved surface detail")
+				quit(1)
+				return
+			var darkest_canvas := 1.0
+			var lightest_canvas := 0.0
+			for canvas_color in canopy_colors:
+				var luminance: float=canvas_color.get_luminance()
+				darkest_canvas=minf(darkest_canvas,luminance)
+				lightest_canvas=maxf(lightest_canvas,luminance)
+			var canopy_material := canopy.material_override as StandardMaterial3D
+			if canopy_material==null or canopy_material.cull_mode!=BaseMaterial3D.CULL_DISABLED or lightest_canvas-darkest_canvas<0.08:
+				push_error("SMOKE: salvage canopy patchwork or two-sided fabric is missing")
+				quit(1)
+				return
+			for shelter_part in ["RainwaterCollectionGutter","RainwaterDownspout","RainCatchmentBarrel","BarrelFillElbow","RainBarrelInspectionPlate"]:
+				var shelter_part_found := false
+				for component in item.get_children():
+					if str(component.name).begins_with(shelter_part+"_"):
+						shelter_part_found=true
+						break
+				if not shelter_part_found:
+					push_error("SMOKE: salvage shelter rainwater system missing "+shelter_part)
+					quit(1)
+					return
+			var gutter_brackets := 0
+			var rain_barrel_bands := 0
+			var guyline_count := 0
+			var anchor_count := 0
+			for component in item.get_children():
+				if str(component.name).begins_with("RainCatchmentBarrel_"):
+					var barrel_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42)-item.position.y
+					if absf(component.position.y-0.68-barrel_ground_y)>0.02:
+						push_error("SMOKE: rain catchment barrel is floating above its pallet")
+						quit(1)
+						return
+				elif str(component.name).begins_with("RainBarrelReclaimedPallet_"):
+					var pallet_ground_y: float=WastelandDetail.terrain_height(item.position.x,item.position.z+2.42)-item.position.y
+					if absf(component.position.y-0.08-pallet_ground_y)>0.02:
+						push_error("SMOKE: rain barrel pallet is not grounded to terrain")
+						quit(1)
+						return
+				if str(component.name).begins_with("TautCanvasGuyline_"):
+					guyline_count+=1
+					if not (component.mesh is CylinderMesh):
+						push_error("SMOKE: shelter guyline is not physical geometry")
+						quit(1)
+						return
+				elif str(component.name).begins_with("GutterMountingStrap_"):
+					gutter_brackets+=1
+				elif str(component.name).begins_with("RainBarrelReinforcingBand_"):
+					rain_barrel_bands+=1
+				elif str(component.name).begins_with("CanvasGuylineGroundStake_"):
+					anchor_count+=1
+					var stake_ground_y: float=WastelandDetail.terrain_height(item.position.x+component.position.x,item.position.z+component.position.z)-item.position.y
+					if absf(component.position.y-0.15-stake_ground_y)>0.02:
+						push_error("SMOKE: shelter tie-down stake is floating above terrain")
+						quit(1)
+						return
+			if guyline_count!=4 or anchor_count!=4 or gutter_brackets!=5 or rain_barrel_bands!=3:
+				push_error("SMOKE: salvage shelter tie-down or rainwater system is incomplete")
+				quit(1)
+				return
 	if boards<4 or warm_lamps<7 or salvage_camps<2:
 		push_error("SMOKE: reference-targeted outdoor infrastructure not built")
 		quit(1)

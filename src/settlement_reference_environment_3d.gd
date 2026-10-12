@@ -31,6 +31,28 @@ static func _cylinder(parent: Node3D, name: String, p: Vector3, radius: float, h
 	parent.add_child(node)
 	return node
 
+static func _cylinder_between(parent: Node3D, name: String, from_point: Vector3, to_point: Vector3, radius: float, material: Material) -> MeshInstance3D:
+	var axis := to_point-from_point
+	var length := axis.length()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius=radius
+	mesh.bottom_radius=radius
+	mesh.height=length
+	mesh.radial_segments=6
+	var node := MeshInstance3D.new()
+	node.name=name+"_"+str(parent.get_child_count())
+	node.mesh=mesh
+	node.material_override=material
+	var direction := axis/length
+	var x_axis := Vector3.UP.cross(direction)
+	if x_axis.length_squared()<0.0001:
+		x_axis=Vector3.RIGHT.cross(direction)
+	x_axis=x_axis.normalized()
+	var z_axis := x_axis.cross(direction).normalized()
+	node.transform=Transform3D(Basis(x_axis,direction,z_axis),(from_point+to_point)*0.5)
+	parent.add_child(node)
+	return node
+
 static func _terrain_height(x: float,z: float) -> float:
 	var noise := FastNoiseLite.new()
 	noise.seed=114722
@@ -223,13 +245,88 @@ static func _salvage_camp(parent: Node3D, pos: Vector3, mats: Dictionary) -> voi
 	for side in [-1.0,1.0]:
 		_box(site,"ReclaimedSupport",Vector3(side*2.55,1.58,-1.75),Vector3(0.17,3.16,0.17),mats["rust"])
 		_box(site,"TentRoofPost",Vector3(side*2.55,1.34,1.72),Vector3(0.17,2.68,0.17),mats["steel"])
-		var wing := _box(site,"PatchworkCanvasAwning",Vector3(side*1.30,2.87,0),Vector3(2.82,0.11,4.5),mats["cloth"])
-		wing.rotation.z=-side*0.15
 		_cylinder(site,"DrumOfSupplies",Vector3(side*2.03,0.62,0.72),0.36,1.22,mats["blue"])
+	for side in [-1.0,1.0]:
+		_cylinder_between(site,"CanvasEaveRail",Vector3(side*2.55,3.08,-1.75),Vector3(side*2.55,2.68,1.72),0.055,mats["wood"])
+	_cylinder_between(site,"RearCanopyHeader",Vector3(-2.55,3.08,-1.75),Vector3(2.55,3.08,-1.75),0.055,mats["wood"])
+	_cylinder_between(site,"FrontCanopyHeader",Vector3(-2.55,2.68,1.72),Vector3(2.55,2.68,1.72),0.055,mats["wood"])
+	var tarp_tool := SurfaceTool.new()
+	tarp_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var tarp_columns := 12
+	var tarp_rows := 16
+	var wear_variant: float=1.0 if pos.x>0.0 else 0.0
+	for row in range(tarp_rows):
+		var tz0 := float(row)/float(tarp_rows)
+		var tz1 := float(row+1)/float(tarp_rows)
+		for column in range(tarp_columns):
+			var tx0 := float(column)/float(tarp_columns)
+			var tx1 := float(column+1)/float(tarp_columns)
+			var p00 := _canopy_point(tx0,tz0,wear_variant)
+			var p01 := _canopy_point(tx0,tz1,wear_variant)
+			var p10 := _canopy_point(tx1,tz0,wear_variant)
+			var p11 := _canopy_point(tx1,tz1,wear_variant)
+			for point in [p00,p01,p10,p10,p01,p11]:
+				tarp_tool.set_uv(Vector2(point.x/5.25+0.5,(point.z+2.25)/4.5))
+				tarp_tool.set_color(_canopy_color(point,wear_variant))
+				tarp_tool.add_vertex(point)
+	tarp_tool.index()
+	tarp_tool.generate_normals()
+	var tarp := MeshInstance3D.new()
+	tarp.name="SaggingPatchedCanvasCanopy"
+	tarp.mesh=tarp_tool.commit()
+	var tarp_material := (mats["cloth"] as StandardMaterial3D).duplicate() as StandardMaterial3D
+	tarp_material.cull_mode=BaseMaterial3D.CULL_DISABLED
+	tarp_material.vertex_color_use_as_albedo=true
+	tarp_material.uv1_triplanar=false
+	tarp_material.uv1_scale=Vector3(7.0,6.0,1.0)
+	tarp.material_override=tarp_material
+	site.add_child(tarp)
+	_box(site,"RainwaterCollectionGutter",Vector3(0,2.64,1.77),Vector3(5.08,0.09,0.12),mats["darkmetal"])
+	for bracket_index in range(5):
+		var bracket_x := -2.2+float(bracket_index)*1.1
+		_box(site,"GutterMountingStrap",Vector3(bracket_x,2.57,1.75),Vector3(0.055,0.14,0.16),mats["steel"])
+	_cylinder_between(site,"RainwaterDownspout",Vector3(0,2.60,1.77),Vector3(0,1.03,1.77),0.045,mats["darkmetal"])
+	var catchment_ground_y: float=WastelandDetail.terrain_height(site.position.x,site.position.z+2.42)-site.position.y
+	_box(site,"RainBarrelReclaimedPallet",Vector3(0,catchment_ground_y+0.08,2.42),Vector3(0.98,0.16,0.92),mats["wood"])
+	_cylinder(site,"RainCatchmentBarrel",Vector3(0,catchment_ground_y+0.68,2.42),0.39,1.20,mats["blue"])
+	for band_y in [0.25,0.62,0.99]:
+		_cylinder(site,"RainBarrelReinforcingBand",Vector3(0,catchment_ground_y+band_y,2.42),0.405,0.055,mats["darkmetal"])
+	_cylinder_between(site,"BarrelFillElbow",Vector3(0,1.03,1.77),Vector3(0,catchment_ground_y+1.12,2.08),0.04,mats["steel"])
+	_box(site,"RainBarrelInspectionPlate",Vector3(0,catchment_ground_y+0.72,2.82),Vector3(0.30,0.24,0.045),mats["rust"])
+	for side in [-1.0,1.0]:
+		for end in [-1.0,1.0]:
+			var stake_x := side*3.14
+			var stake_z := end*2.37
+			var stake_y: float=WastelandDetail.terrain_height(site.position.x+stake_x,site.position.z+stake_z)-site.position.y
+			var stake := _cylinder(site,"CanvasGuylineGroundStake",Vector3(stake_x,stake_y+0.15,stake_z),0.065,0.30,mats["darkmetal"])
+			stake.rotation.z=side*0.12
+			var top := Vector3(side*2.46,2.62 if end>0.0 else 2.96,end*1.61)
+			var anchor := Vector3(stake_x,stake_y+0.25,stake_z)
+			_cylinder_between(site,"TautCanvasGuyline",top,anchor,0.018,mats["darkmetal"])
 	for index in range(4):
 		_box(site,"StackedRecoveryCrate",Vector3(-1.35+float(index)*0.92,0.46,1.12),Vector3(0.78,0.78,0.77),mats["rust"] if index%2==0 else mats["steel"])
 	_box(site,"ServiceBench",Vector3(0,0.93,-1.2),Vector3(2.30,0.15,0.84),mats["wood"])
 	_camp_light(site,Vector3(1.95,0,-1.4),mats)
+
+static func _canopy_point(tx: float, tz: float, wear_variant: float) -> Vector3:
+	var x := (tx-0.5)*5.25
+	var z := (tz-0.5)*4.5
+	var y := lerpf(3.12,2.72,tz)
+	y-=absf(tx-0.5)*0.24
+	y-=sin(tz*PI)*lerpf(0.035,0.065,wear_variant)
+	y+=sin(tx*3.0*PI+tz*2.0*PI)*lerpf(0.014,0.024,wear_variant)
+	return Vector3(x,y,z)
+
+static func _canopy_color(point: Vector3, wear_variant: float) -> Color:
+	var tx := point.x/5.25+0.5
+	var tz := (point.z+2.25)/4.5
+	var patch_side: bool=(tx>0.61 and tx<0.80) if wear_variant<0.5 else (tx>0.20 and tx<0.39)
+	if patch_side and tz>0.40 and tz<0.72:
+		return Color("#746b52")
+	var patch_end: bool=(tx>0.17 and tx<0.35) if wear_variant<0.5 else (tx>0.65 and tx<0.83)
+	if patch_end and tz>0.70 and tz<0.88:
+		return Color("#8f8162")
+	return Color("#ad9c78")
 
 static func build_world(parent: Node3D, mats: Dictionary) -> Node3D:
 	var root := Node3D.new()
