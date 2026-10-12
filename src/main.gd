@@ -133,7 +133,8 @@ var citizen_paths: Dictionary = {}
 # Non-persistent occupant states: old saved games remain compatible.
 var interior_visits: Dictionary = {}
 # 0 = reveal selected, 1 = reveal every building, 2 = closed roof silhouettes.
-var roof_view_mode := 0
+# Exterior mode is the default so the first camera view is a real roofed town.
+var roof_view_mode := 2
 const ROOF_VIEW_LABELS := ["SELECTED","ALL INTERIORS","EXTERIORS"]
 var navigation_revision := ""
 
