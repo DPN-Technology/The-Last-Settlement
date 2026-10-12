@@ -51,7 +51,7 @@ static func terrain_basis(x: float, z: float, noise: FastNoiseLite, yaw: float, 
 		tangent=Vector3.FORWARD-normal*normal.dot(Vector3.FORWARD)
 	tangent=tangent.normalized().rotated(normal,yaw)
 	var bitangent := tangent.cross(normal).normalized()
-	return Basis(tangent,normal,bitangent).scaled(scale)
+	return Basis(tangent*scale.x,normal*scale.y,bitangent*scale.z)
 
 # Macro material variation follows sculpted elevation and slope. Set as
 # interpolated mesh vertex color (not noisy per-pixel quads) so the ridges

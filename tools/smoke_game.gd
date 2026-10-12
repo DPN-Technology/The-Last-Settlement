@@ -1908,12 +1908,13 @@ func _smoke() -> void:
 			var expected_y: float=WastelandDetail.terrain_height(origin.x,origin.z,terrain_dressing_noise)
 			var expected_offset: float=scatter_layer.multimesh.mesh.get_aabb().size.y*instance_transform.basis.y.length()*0.35
 			if absf(origin.y-expected_y-expected_offset)>0.02:
-				push_error("SMOKE: environmental scatter is floating above the terrain heightfield")
+				push_error("SMOKE: %s instance %d is floating above the terrain heightfield" % [scatter_layer.name,index])
 				quit(1)
 				return
 			var surface_normal := WastelandDetail.terrain_normal(origin.x,origin.z,terrain_dressing_noise)
-			if instance_transform.basis.y.normalized().dot(surface_normal)<0.98:
-				push_error("SMOKE: environmental scatter is not aligned to the local terrain slope")
+			var alignment := instance_transform.basis.y.normalized().dot(surface_normal)
+			if alignment<0.98:
+				push_error("SMOKE: %s instance %d terrain alignment is %.4f" % [scatter_layer.name,index,alignment])
 				quit(1)
 				return
 	var sample_image := GroundAppearance.bake_image()
