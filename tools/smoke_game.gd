@@ -2406,17 +2406,21 @@ func _smoke() -> void:
 			var fixture_guards := 0
 			var ceiling_conduits := 0
 			for fixture in interior.get_children():
-				if str(fixture.name)=="CagedInteriorLightGuards" and fixture is MultiMeshInstance3D:
+				if bool(fixture.get_meta("interior_light_guard_batch",false)) and fixture is MultiMeshInstance3D:
 					var cage := fixture as MultiMeshInstance3D
 					if cage.multimesh==null or cage.multimesh.mesh==null:
 						push_error("SMOKE: Interior light cage batch has no guard geometry")
 						quit(1)
 						return
 					fixture_guards=int(cage.multimesh.instance_count)
-				elif str(fixture.name).begins_with("CeilingPowerConduit"):
+				elif bool(fixture.get_meta("interior_light_conduit",false)):
 					ceiling_conduits+=1
-			if fixture_guards<10 or ceiling_conduits!=2:
-				push_error("SMOKE: Revealed interior lacks caged practical lighting and wired ceiling fixtures")
+			if fixture_guards<10:
+				push_error("SMOKE: Revealed interior light cage has "+str(fixture_guards)+" bars; expected at least 10")
+				quit(1)
+				return
+			if ceiling_conduits!=2:
+				push_error("SMOKE: Revealed interior has "+str(ceiling_conduits)+" tagged light conduits; expected 2")
 				quit(1)
 				return
 			for part in structure.get_children():

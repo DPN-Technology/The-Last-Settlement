@@ -79,7 +79,8 @@ static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictio
 		for guard_index in range(5):
 			var guard_x: float=-fixture_span*0.38+float(guard_index)*fixture_span*0.19
 			guard_transforms.append(Transform3D(Basis.IDENTITY,Vector3(guard_x,2.50,fixture_z)))
-		box(room,"CeilingPowerConduit",Vector3(0,2.76,fixture_z+0.24),Vector3(fixture_span*0.72,0.055,0.055),mats["pipe"])
+		var conduit := box(room,"CeilingPowerConduit",Vector3(0,2.76,fixture_z+0.24),Vector3(fixture_span*0.72,0.055,0.055),mats["pipe"])
+		conduit.set_meta("interior_light_conduit",true)
 		box(room,"LightJunctionBox",Vector3(-fixture_span*0.39,2.76,fixture_z+0.24),Vector3(0.18,0.10,0.10),mats["rust"])
 		box(room,"FixtureCableDrop",Vector3(-fixture_span*0.39,2.68,fixture_z+0.24),Vector3(0.04,0.10,0.04),mats["darkmetal"])
 	var guard_mesh := BoxMesh.new()
@@ -94,6 +95,7 @@ static func _stage_rooms(room: Node3D, kind: String, size: Vector2, mats: Dictio
 	guards.name="CagedInteriorLightGuards"
 	guards.multimesh=guard_instances
 	guards.material_override=mats["darkmetal"]
+	guards.set_meta("interior_light_guard_batch",true)
 	room.add_child(guards)
 	match kind:
 		"housing":
