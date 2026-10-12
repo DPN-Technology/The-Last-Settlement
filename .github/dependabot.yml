@@ -9,3 +9,10 @@ updates:
     labels:
       - "dependencies"
       - "security"
+    # CodeQL init and analyze must resolve to the same action version.
+    # Individual Dependabot PRs broke CI when one step used 4.38.3 and
+    # the other still used 4.38.2.
+    groups:
+      codeql-actions:
+        patterns:
+          - "github/codeql-action/*"
