@@ -45,6 +45,40 @@ The settlement starts with scarce materials and survivors who need food, water, 
 
 ## 02 // REAL 3D VISUAL EVIDENCE
 
+### Real game screenshots — rendered, preserved, and source-traceable
+
+> **Actual game frames, not concept art.** Captured by Godot 4.3 on the PR #6 development scene (October 12, 2026), then resized to 1280×720 JPEGs for GitHub. The original PNGs, pixel hashes and render logs remain linked below. These images reflect the **unmerged 3D playtest**, not the released 2D Windows version.
+
+<p align="center">
+  <a href="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/01_Overview_HUD.jpg"><img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/01_Overview_HUD.jpg" width="100%" alt="Actual 3D Godot Last Haven overview with shelters, command, clinic, workshop, crops and live DPN HUD"/></a>
+  <sub>FIG. 01 — Last Haven, actual 3D runtime overview with command HUD.</sub>
+</p>
+
+<table>
+<tr>
+<td width="50%"><a href="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_housing_HUD.jpg"><img width="100%" src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_housing_HUD.jpg" alt="Actual gameplay image of roofed Shelter A and facility inspector"/></a><br/><strong>FIG. 02 // SHELTER A</strong><br/>Pitched 3D housing roof and live building controls.</td>
+<td width="50%"><a href="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_command_HUD.jpg"><img width="100%" src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_command_HUD.jpg" alt="Actual gameplay image of the 3D command building and inspector"/></a><br/><strong>FIG. 03 // COMMAND</strong><br/>Modeled command facility and inspector.</td>
+</tr>
+<tr>
+<td><a href="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_medical_HUD.jpg"><img width="100%" src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_medical_HUD.jpg" alt="Actual gameplay image of the modeled 3D clinic"/></a><br/><strong>FIG. 04 // CLINIC</strong><br/>Medical facility with distinct modeled elements.</td>
+<td><a href="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/03_AccessRoad_HUD.jpg"><img width="100%" src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/03_AccessRoad_HUD.jpg" alt="Actual gameplay image of the 3D access road and wasteland terrain"/></a><br/><strong>FIG. 05 // ACCESS ROAD</strong><br/>Terrain scatter and approach road in the 3D world.</td>
+</tr>
+</table>
+
+<details>
+<summary><strong>World-only gallery — the 3D renders without the command overlay</strong></summary>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/01_Overview_WORLD.jpg" width="100%" alt="Real 3D rendered settlement overview without DPN HUD"/>
+  <img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_housing_WORLD.jpg" width="48%" alt="Real 3D housing world-only render"/>
+  <img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_command_WORLD.jpg" width="48%" alt="Real 3D command world-only render"/>
+  <img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/02_medical_WORLD.jpg" width="48%" alt="Real 3D medical world-only render"/>
+  <img src="https://raw.githubusercontent.com/DPN-Technology/The-Last-Settlement/main/assets/readme/captures/03_AccessRoad_WORLD.jpg" width="48%" alt="Real 3D wasteland access road world-only render"/>
+</p>
+</details>
+
+**[Screenshot source and SHA-256 verification files](https://github.com/DPN-Technology/The-Last-Settlement/tree/main/assets/readme/captures)** · **[Source artifact](https://github.com/DPN-Technology/The-Last-Settlement/actions/runs/38295997783)**
+
+
 The 3D playtest branch contains a reproducible visual test that **runs the actual Godot 4.3 scene** through GL Compatibility rendering. It captures a **1600×900** frame with the live HUD and a **separate world-only render** at each of five locations. These are real engine captures — **not concept images, stock photos or AI-generated scenery**.
 
 | Real captured view | What was visibly rendered | Files in the artifact |
