@@ -680,7 +680,7 @@ func sync(sim: SettlementSimulation, selected_building: Dictionary, selected_cit
 	if cached_layout != _layout_signature(sim):
 		cached_layout = _layout_signature(sim)
 		_rebuild_structures(sim)
-	_update_people(sim, selected_citizen)
+	_update_people(sim, selected_citizen, delta)
 	_update_roof_views(sim,selected_building,selected_citizen,roof_mode)
 	_animate_entry_doors(sim,delta)
 	_update_daylight(sim.hour)
@@ -933,7 +933,7 @@ func _build_farm(group: Node3D, size: Vector2) -> void:
 	SettlementDetailArt3D.create_crops(group,size,materials)
 	WastelandDetail.detail_farm(group,size,materials)
 
-func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> void:
+func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary, delta: float=1.0/60.0) -> void:
 	var alive_ids: Dictionary = {}
 	for citizen in sim.citizens:
 		# A survivor on a regional expedition must no longer be drawn inside
@@ -942,16 +942,21 @@ func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary) -> 
 			continue
 		var id := str(citizen["id"])
 		alive_ids[id] = true
+		var spawned := false
 		if not people.has(id):
 			people[id] = _make_survivor(citizen)
+			people[id].position = world_position(Vector2(citizen["position"]))
+			spawned = true
 		var person: Node3D = people[id]
 		var previous := person.position
 		var target := world_position(Vector2(citizen["position"]))
-		var traveling := previous.distance_to(target) > 0.02 and not sim.paused
+		var distance := previous.distance_to(target)
+		var traveling := not spawned and distance > 0.02 and not sim.paused
+		var movement_speed := distance / delta if traveling and delta > 0.0 else 0.0
 		person.position = target
 		if traveling:
 			person.rotation.y = atan2(person.position.x-previous.x,person.position.z-previous.z)
-		_animate_survivor(person, traveling, int(citizen["id"]), citizen, sim.paused)
+		_animate_survivor(person, traveling, int(citizen["id"]), citizen, sim.paused, movement_speed)
 		SettlementActivity3D.update(person,citizen,traveling,sim.paused,visual_time)
 		var ring: Node3D = person.get_node("Selection")
 		ring.visible = selected_citizen == citizen
@@ -1016,7 +1021,7 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 			return found
 	return null
 
-func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=false, paused: bool=false, id: int=0) -> void:
+func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=false, paused: bool=false, id: int=0, movement_speed: float=1.2) -> void:
 	var imported := person.get_node_or_null("ProductionArt")
 	if imported == null:
 		return
@@ -1028,9 +1033,10 @@ func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=f
 	if paused:
 		player.speed_scale=0.0
 		return
-	player.speed_scale=float(player.get_meta("settlement_unpaused_speed_scale"))
-	var preferred := "walk" if traveling else ("working" if working else "idle")
+	var original_speed := float(player.get_meta("settlement_unpaused_speed_scale"))
+	var preferred := ("run" if movement_speed >= 2.4 else "walk") if traveling else ("working" if working else "idle")
 	var fallback := ""
+	var walk_fallback := ""
 	var chosen := ""
 	for clip in player.get_animation_list():
 		var name := String(clip).to_lower()
@@ -1039,11 +1045,17 @@ func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=f
 		if preferred in name:
 			chosen = String(clip)
 			break
+		if traveling and walk_fallback.is_empty() and "walk" in name:
+			walk_fallback = String(clip)
+	if chosen.is_empty() and traveling and preferred == "run":
+		chosen = walk_fallback
 	if chosen.is_empty():
 		chosen = fallback
+	var cadence_reference := 3.2 if preferred == "run" and "run" in chosen.to_lower() else 1.2
+	player.speed_scale = original_speed * (clampf(movement_speed / cadence_reference, 0.65, 3.0) if traveling else 1.0)
 	if not chosen.is_empty() and (player.current_animation != chosen or not player.is_playing()):
 		var animation := player.get_animation(chosen)
-		if preferred in String(chosen).to_lower():
+		if (traveling and ("run" in chosen.to_lower() or "walk" in chosen.to_lower())) or (not traveling and preferred in chosen.to_lower()):
 			animation.loop_mode = Animation.LOOP_LINEAR
 		player.play(chosen, 0.2)
 		if animation.loop_mode != Animation.LOOP_NONE and animation.length > 0.0:
@@ -1051,10 +1063,10 @@ func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=f
 			var phase := fposmod(float(id) * 0.61803398875, 1.0)
 			player.seek(animation.length * phase, true)
 
-func _animate_survivor(person: Node3D, traveling: bool, id: int, citizen: Dictionary, paused: bool) -> void:
+func _animate_survivor(person: Node3D, traveling: bool, id: int, citizen: Dictionary, paused: bool, movement_speed: float=1.2) -> void:
 	if not person.has_node("ArmLeft"):
 		var working := not traveling and SettlementActivity3D.current_activity(citizen)!=""
-		_animate_imported_survivor(person,traveling,working,paused,id)
+		_animate_imported_survivor(person,traveling,working,paused,id,movement_speed)
 		return
 	var stride := 0.0
 	if traveling:

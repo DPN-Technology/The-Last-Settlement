@@ -2203,8 +2203,8 @@ func _smoke() -> void:
 		push_error("SMOKE: CC0 survivor has no walking/idle animation clips")
 		quit(1)
 		return
-	world._animate_imported_survivor(npc, true)
-	if not animator.is_playing():
+	world._animate_imported_survivor(npc, true, false, false, 0, 1.2)
+	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("walk"):
 		push_error("SMOKE: Animated glTF survivor cannot play movement clip")
 		quit(1)
 		return
@@ -2213,6 +2213,42 @@ func _smoke() -> void:
 		push_error("SMOKE: Authored survivor walk animation does not loop")
 		quit(1)
 		return
+	var walk_speed_scale := animator.speed_scale
+	world._animate_imported_survivor(npc, true, false, false, 0, 4.8)
+	if not String(animator.current_animation).to_lower().contains("run") or animator.speed_scale <= walk_speed_scale:
+		push_error("SMOKE: Fast survivor movement does not select and accelerate the authored Run animation")
+		quit(1)
+		return
+	var run_clip := animator.get_animation(animator.current_animation)
+	if run_clip.loop_mode != Animation.LOOP_LINEAR:
+		push_error("SMOKE: Authored survivor run animation does not loop")
+		quit(1)
+		return
+	var test_citizen: Dictionary = {}
+	for citizen in sim.citizens:
+		if str(citizen.get("id","")) == str(world.people.keys()[0]):
+			test_citizen = citizen
+			break
+	if test_citizen.is_empty():
+		push_error("SMOKE: Cannot find the simulation citizen for movement-cadence integration test")
+		quit(1)
+		return
+	var travel_original_position := Vector2(test_citizen["position"])
+	var was_paused := sim.paused
+	sim.paused = false
+	test_citizen["position"] = travel_original_position + Vector2(48.0,0.0)
+	world._update_people(sim,{},1.0)
+	if not String(animator.current_animation).to_lower().contains("run"):
+		push_error("SMOKE: Measured 3D citizen movement does not drive the authored Run clip")
+		test_citizen["position"] = travel_original_position
+		sim.paused = was_paused
+		quit(1)
+		return
+	test_citizen["position"] = travel_original_position
+	world._update_people(sim,{},1.0)
+	sim.paused = was_paused
+	world._animate_imported_survivor(npc, true, false, false, 0, 1.2)
+	print("PLAYTEST SMOKE PASS: survivor Walk/Run animation and cadence follow actual movement speed")
 	world._animate_imported_survivor(npc,false,true)
 	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("working"):
 		push_error("SMOKE: Active survivor work does not select the authored Working animation")

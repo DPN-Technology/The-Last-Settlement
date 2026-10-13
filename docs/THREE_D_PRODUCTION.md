@@ -21,7 +21,10 @@ A believable post-collapse settlement: weathered concrete, corroded sheet steel,
 
 - The Windows export and Godot CI import a **real CC0 rigged human**
   into `assets/3d/characters/survivor.glb` from an immutable upstream Git commit.
-  Animation playback selects compatible walk and idle clips where present.
+  Animation playback selects imported idle, work, walk and run clips where
+  present. Locomotion choice and playback cadence follow measured world-space
+  movement; looping is configured at runtime rather than assumed from the
+  glTF import defaults.
 - Photo-based Poly Haven **1K diffuse + normal** maps replace the procedural
   shader on the core building concrete, walls, roof, steel, and gravel.
 - All seven third-party items use locked Git blob or SHA-256 fingerprints.
