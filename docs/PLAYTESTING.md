@@ -393,6 +393,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Clinic and workshop roof pass:** The clinic has a low parapet with metal coping, five ventilation louvers and two exhaust stacks. The workshop sawtooth roof plant has three intake louvers and two capped exhaust stacks. Smoke checks verify these counts and the cutaway tags; inspect both facilities in exterior view and deliberate roof/interior inspection to confirm the roof details do not obscure interiors or crowd the silhouettes. These remain procedural transitional meshes, not finished authored roof assets.
 
+**Clinic and workshop wall pass:** The clinic now has two protected side-wall service risers with three visible clamps apiece. The workshop has six slender steel stiffeners and rusted foot plates aligned to solid wall piers between side windows. Smoke checks verify the exterior feature counts and that wall details remain visible when roofs are cut away. Inspect both sides at close zoom to confirm the risers and ribs do not obstruct windows, entrances or interior inspection; these are still procedural transitional details.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate

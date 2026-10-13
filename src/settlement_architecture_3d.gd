@@ -99,6 +99,11 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		var px := -x*0.67 + float(i)*(size.x*0.45)
 		box(group,"VentShutter",Vector3(px,0.69,z+0.26),Vector3(0.85,0.26,0.11),mats["darkmetal"])
 
+	if kind == "medical":
+		_clinic_service_drops(group,size,height,mats)
+	elif kind == "industry":
+		_workshop_wall_ribs(group,size,height,mats)
+
 	# Roof pieces are tagged individually and retain their original scene paths,
 	# so smoke tests and distinctive exterior silhouettes both continue working.
 	var roof_first := group.get_child_count()
@@ -111,6 +116,46 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		_flat_service_roof(group,size,height,kind,mats)
 	for index in range(roof_first,group.get_child_count()):
 		group.get_child(index).set_meta("cutaway_roof",true)
+
+static func _clinic_service_drops(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
+	# Protected service risers make the clinic read as maintained utility
+	# infrastructure without crossing its recessed side windows.
+	var half_x := size.x * 0.5
+	var half_z := size.y * 0.5
+	var pipe_height := maxf(1.4,height-0.48)
+	for side in [-1.0,1.0]:
+		var pipe_x: float = side * (half_x + 0.13)
+		var pipe_z: float = -half_z + 0.52
+		var pipe_mesh := CylinderMesh.new()
+		pipe_mesh.top_radius = 0.065
+		pipe_mesh.bottom_radius = 0.075
+		pipe_mesh.height = pipe_height
+		pipe_mesh.radial_segments = 10
+		var pipe := MeshInstance3D.new()
+		pipe.name = "ClinicProtectedServiceRiser_%d" % int(side)
+		pipe.mesh = pipe_mesh
+		pipe.position = Vector3(pipe_x,0.39+pipe_height*0.5,pipe_z)
+		pipe.material_override = mats["pipe"]
+		pipe.set_meta("clinic_service_pipe",true)
+		group.add_child(pipe)
+		for clamp_index in range(3):
+			var clamp_y := 0.72 + float(clamp_index) * (pipe_height - 0.48) / 2.0
+			var clamp := box(group,"ClinicServiceRiserClamp_%d_%d" % [int(side),clamp_index],Vector3(side*(half_x+0.08),clamp_y,pipe_z),Vector3(0.17,0.075,0.15),mats["steel"])
+			clamp.set_meta("clinic_service_pipe_clamp",true)
+
+static func _workshop_wall_ribs(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
+	# Slender external stiffeners follow the solid piers between side windows;
+	# their foot plates reinforce the walls without narrowing any opening.
+	var half_x := size.x * 0.5
+	var half_z := size.y * 0.5
+	var pier_positions: Array[float] = [-half_z*0.78,-half_z*0.03,half_z*0.82]
+	for side in [-1.0,1.0]:
+		for rib_index in range(pier_positions.size()):
+			var z_position := pier_positions[rib_index]
+			var rib := box(group,"WorkshopWallRib_%d_%d" % [int(side),rib_index],Vector3(side*(half_x+0.12),height*0.5+0.20,z_position),Vector3(0.13,maxf(1.8,height-0.24),0.18),mats["steel"])
+			rib.set_meta("workshop_wall_rib",true)
+			var foot := box(group,"WorkshopWallRibFoot_%d_%d" % [int(side),rib_index],Vector3(side*(half_x+0.14),0.49,z_position),Vector3(0.18,0.25,0.34),mats["rust"])
+			foot.set_meta("workshop_wall_rib_foot",true)
 
 static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	# Real gabled shelter silhouette: significantly steeper than the initial

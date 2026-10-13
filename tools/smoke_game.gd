@@ -2330,9 +2330,27 @@ func _smoke() -> void:
 	var clinic_roof_edges := 0
 	var clinic_vent_louvers := 0
 	var clinic_exhaust_stacks := 0
+	var clinic_service_pipes := 0
+	var clinic_pipe_clamps := 0
+	var workshop_wall_ribs := 0
 	var workshop_machine_louvers := 0
 	var workshop_exhaust_stacks := 0
 	for structure in world.structure_layer.get_children():
+		for wall_detail in structure.get_children():
+			if bool(wall_detail.get_meta("clinic_service_pipe",false)):
+				clinic_service_pipes+=1
+				if bool(wall_detail.get_meta("cutaway_roof",false)):
+					push_error("SMOKE: Clinic exterior service riser incorrectly disappears with the roof")
+					quit(1)
+					return
+			if bool(wall_detail.get_meta("clinic_service_pipe_clamp",false)):
+				clinic_pipe_clamps+=1
+			if bool(wall_detail.get_meta("workshop_wall_rib",false)):
+				workshop_wall_ribs+=1
+				if bool(wall_detail.get_meta("cutaway_roof",false)):
+					push_error("SMOKE: Workshop structural wall rib incorrectly disappears with the roof")
+					quit(1)
+					return
 		if structure.get_node_or_null("PitchedHousingRoof") != null:
 			house_found = true
 			if structure.get_node_or_null("ShelterGableEndWalls") == null:
@@ -2404,6 +2422,10 @@ func _smoke() -> void:
 		return
 	if workshop_machine_louvers!=3 or workshop_exhaust_stacks!=2:
 		push_error("SMOKE: Workshop roof plant is missing its three intake louvers or two exhaust stacks")
+		quit(1)
+		return
+	if clinic_service_pipes!=2 or clinic_pipe_clamps!=6 or workshop_wall_ribs!=6:
+		push_error("SMOKE: Clinic service risers or workshop wall stiffeners are missing")
 		quit(1)
 		return
 	var workwear := world.materials["workwear"] as StandardMaterial3D
