@@ -2285,6 +2285,17 @@ func _smoke() -> void:
 		push_error("SMOKE: Workwear must not glow as if it is a warning lamp")
 		quit(1)
 		return
+	var garment_a := SurvivorVisuals3D._make_garment("Farmer", 12)
+	var garment_b := SurvivorVisuals3D._make_garment("Farmer", 13)
+	if garment_a.shader.code.contains("FRAGCOORD") or not garment_a.shader.code.contains("garment_local_position"):
+		push_error("SMOKE: Survivor garment wear must be stable in garment-local space")
+		quit(1)
+		return
+	if is_equal_approx(float(garment_a.get_shader_parameter("wear_seed")),float(garment_b.get_shader_parameter("wear_seed"))):
+		push_error("SMOKE: Survivor garment wear does not vary by stable citizen ID")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: survivor fabric wear is locally anchored and individually varied")
 	# World graphics use real meshes; detail roofs remain reversible in cutaway.
 	var fidelity_terrain: Node3D=world.terrain_layer.get_node_or_null("FidelityTerrainDressing") as Node3D
 	if fidelity_terrain==null:

@@ -15,11 +15,12 @@ uniform vec4 pants_color : source_color = vec4(0.13, 0.16, 0.14, 1.0);
 uniform vec4 skin_color : source_color = vec4(0.54, 0.37, 0.27, 1.0);
 uniform vec4 straps_color : source_color = vec4(0.30, 0.27, 0.21, 1.0);
 uniform float boot_cutoff = 0.20;
+uniform float wear_seed = 0.0;
 varying float level;
-varying vec3 surface_normal;
+varying vec3 garment_local_position;
 void vertex() {
 	level = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
-	surface_normal = NORMAL;
+	garment_local_position = VERTEX * length(MODEL_MATRIX[0].xyz);
 }
 void fragment() {
 	float boots = smoothstep(boot_cutoff - 0.025, boot_cutoff + 0.025, level);
@@ -29,8 +30,10 @@ void fragment() {
 	cloth = mix(cloth, coat_color.rgb, jacket);
 	cloth = mix(cloth, skin_color.rgb, neck);
 	float stitches = sin(level * 67.0) * 0.009;
-	float grain = fract(sin(dot(FRAGCOORD.xy + vec2(level), vec2(14.17, 55.63))) * 43758.5);
-	float dirt = mix(0.76, 1.01, grain);
+	vec3 seeded_position = garment_local_position + vec3(wear_seed * 13.7, wear_seed * 7.1, wear_seed * 19.3);
+	float broad_wear = sin(dot(seeded_position, vec3(7.1, 13.7, 9.3)));
+	float fine_wear = sin(dot(seeded_position, vec3(47.3, 31.1, 59.7)));
+	float dirt = clamp(0.88 + broad_wear * 0.085 + fine_wear * 0.025, 0.74, 1.0);
 	vec3 albedo = cloth * (dirt + stitches);
 	ALBEDO = mix(albedo, straps_color.rgb, smoothstep(0.975, 0.988, level) * (1.0 - smoothstep(1.00, 1.04, level)) * 0.52);
 	ROUGHNESS = 0.93;
@@ -77,6 +80,7 @@ static func _make_garment(job: String, id: int) -> ShaderMaterial:
 	material.set_shader_parameter("pants_color", Color("#343b37") if job != "Medic" else Color("#555d58"))
 	material.set_shader_parameter("skin_color", skin)
 	material.set_shader_parameter("straps_color", Color("#544a38"))
+	material.set_shader_parameter("wear_seed", fposmod(float(id) * 0.61803398875, 1.0))
 	return material
 
 static func _shade_meshes(node: Node, garment: ShaderMaterial) -> int:
