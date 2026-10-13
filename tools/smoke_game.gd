@@ -2573,6 +2573,11 @@ func _smoke() -> void:
 	var identified: Dictionary={}
 	var clinic_curtains := 0
 	var clinic_oxygen_drops := 0
+	var clinic_task_fixtures := 0
+	var workshop_air_headers := 0
+	var workshop_air_drops := 0
+	var workshop_air_regulators := 0
+	var workshop_air_gauges := 0
 	for building in world.structure_layer.get_children():
 		if not building.has_meta("building_type"):
 			continue
@@ -2593,7 +2598,13 @@ func _smoke() -> void:
 			identified[kind]=true
 		if kind=="medical":
 			for detail in identity_root.get_children():
-				if bool(detail.get_meta("clinic_privacy_curtain",false)):
+				if bool(detail.get_meta("clinic_examination_task_lamp",false)):
+					clinic_task_fixtures+=1
+					if detail.has_meta("cutaway_roof"):
+						push_error("SMOKE: clinic treatment lighting is incorrectly tagged as an exterior roof")
+						quit(1)
+						return
+				elif bool(detail.get_meta("clinic_privacy_curtain",false)):
 					clinic_curtains+=1
 					var curtain_mesh := detail.mesh as ArrayMesh
 					if curtain_mesh==null or curtain_mesh.get_surface_count()==0 or detail.material_override==null:
@@ -2612,12 +2623,34 @@ func _smoke() -> void:
 						push_error("SMOKE: clinic oxygen delivery run is not modeled pipe geometry")
 						quit(1)
 						return
+		elif kind=="industry":
+			for detail in identity_root.get_children():
+				if bool(detail.get_meta("workshop_compressed_air_header",false)):
+					workshop_air_headers+=1
+					if not (detail.mesh is CylinderMesh):
+						push_error("SMOKE: workshop compressed-air header lacks pipe geometry")
+						quit(1)
+						return
+				elif bool(detail.get_meta("workshop_compressed_air_drop",false)):
+					workshop_air_drops+=1
+				elif bool(detail.get_meta("workshop_air_regulator",false)):
+					workshop_air_regulators+=1
+				elif bool(detail.get_meta("workshop_air_gauge",false)):
+					workshop_air_gauges+=1
 	if art_roots<6 or identified.size()<3:
 		push_error("SMOKE: shelter, clinic and command do not have full differentiated interiors")
 		quit(1)
 		return
 	if clinic_curtains!=2 or clinic_oxygen_drops!=2:
 		push_error("SMOKE: clinic patient bays lack paired privacy curtains or oxygen drops")
+		quit(1)
+		return
+	if clinic_task_fixtures!=8:
+		push_error("SMOKE: clinic treatment bays lack two complete, roof-independent examination lamps")
+		quit(1)
+		return
+	if workshop_air_headers!=1 or workshop_air_drops!=2 or workshop_air_regulators!=2 or workshop_air_gauges!=2:
+		push_error("SMOKE: workshop workstations lack a complete paired compressed-air supply layout")
 		quit(1)
 		return
 	# Facility inspector focus must actually move camera and switch out of

@@ -397,6 +397,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Repaired masonry pass:** Each clinic and workshop entrance flank now has a dark, irregular repair outline with a lighter faceted masonry infill and two visible fasteners. Smoke checks confirm the four repairs stay outside the central doorway and are not part of roof cutaway. Inspect from close zoom to verify the patches sit against the wall and do not distract from entrances or signage; these are procedural surface meshes, not photo-authored damage.
 
+**Clinic and workshop interior utility pass:** Each clinic treatment bay now has a wall-mounted articulated examination lamp, and the workshop gains an overhead compressed-air header feeding two workstation drops with regulators and gauges. Smoke checks validate each fitting and preserve the intentional roof-view controls. Use ROOMS to reveal the facilities and verify both clinical beds stay clear, the workshop air drops terminate at the work bays, and the center aisle remains open. These fittings are visual details; they do not alter job simulation or navigation.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate

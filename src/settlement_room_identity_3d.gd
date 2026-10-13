@@ -121,6 +121,14 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	box(parent,"ClinicTreatmentFloor",Vector3(0,0.322,0),Vector3(1.04,0.012,size.y*0.69),mats["foundation"])
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.59
+		var task_lamp := box(parent,"ClinicExaminationTaskLamp",Vector3(x,2.36,0.02),Vector3(0.56,0.11,0.44),mats["clinic"])
+		task_lamp.set_meta("clinic_examination_task_lamp",true)
+		var lamp_arm := cylinder(parent,"ClinicTaskLampDrop",Vector3(x,2.08,0.02),0.035,0.47,mats["steel"])
+		lamp_arm.set_meta("clinic_examination_task_lamp",true)
+		var lamp_reach := box(parent,"ClinicTaskLampReach",Vector3(x,2.42,(hz-0.29+0.02)*0.5),Vector3(0.07,0.07,maxf(0.20,hz-0.31)),mats["steel"])
+		lamp_reach.set_meta("clinic_examination_task_lamp",true)
+		var lamp_mount := box(parent,"ClinicTaskLampWallMount",Vector3(x,2.43,hz-0.29),Vector3(0.38,0.10,0.18),mats["darkmetal"])
+		lamp_mount.set_meta("clinic_examination_task_lamp",true)
 		box(parent,"BedsideTreatmentCart",Vector3(x,0.86,hz*0.47),Vector3(0.90,0.11,0.58),mats["steel"])
 		for leg_side in [-1.0,1.0]:
 			box(parent,"TriageCartLeg",Vector3(x+leg_side*0.34,0.45,hz*0.47),Vector3(0.07,0.76,0.38),mats["darkmetal"])
@@ -174,8 +182,18 @@ static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void
 	var hx := size.x*0.5
 	var hz := size.y*0.5
 	box(parent,"IndustrialWorkZone",Vector3(0,0.323,hz*0.18),Vector3(1.18,0.012,size.y*0.52),mats["foundation"])
+	var air_header := cylinder(parent,"WorkshopCompressedAirHeader",Vector3(0,2.40,hz*0.72),0.075,size.x*0.74,mats["pipe"])
+	air_header.rotation.z=PI*0.5
+	air_header.set_meta("workshop_compressed_air_header",true)
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.60
+		var air_drop := cylinder(parent,"WorkshopCompressedAirDrop",Vector3(x,1.95,hz*0.60),0.043,0.82,mats["steel"])
+		air_drop.rotation.x=PI*0.5
+		air_drop.set_meta("workshop_compressed_air_drop",true)
+		var regulator := box(parent,"WorkshopAirRegulator",Vector3(x,1.52,hz*0.48),Vector3(0.26,0.31,0.17),mats["darkmetal"])
+		regulator.set_meta("workshop_air_regulator",true)
+		var gauge := cylinder(parent,"WorkshopAirGauge",Vector3(x,1.59,hz*0.37),0.095,0.045,mats["rooflight"])
+		gauge.set_meta("workshop_air_gauge",true)
 		box(parent,"FabricationFrame",Vector3(x,1.45,hz*0.43),Vector3(1.45,1.90,1.06),mats["darkmetal"])
 		box(parent,"ToolBoard",Vector3(x,1.75,hz-0.26),Vector3(1.40,0.98,0.09),mats["rust"])
 		for tool in range(4):
