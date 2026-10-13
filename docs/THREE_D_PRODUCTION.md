@@ -11,6 +11,7 @@ A believable post-collapse settlement: weathered concrete, corroded sheet steel,
 - `src/settlement_world_3d.gd` runs a real `Node3D` world in an offscreen `SubViewport`, viewed through `Camera3D`.
 - Physical 3D ground, roads, buildings, farm rows, survivors, junk vehicles, vegetation, sunlight, sky, fog and shadow-casting geometry.
 - The pitched shelter roof has raised metal seams across both slopes and reinforced gable-rake fascia; all roof details remain grouped with the deliberate inspection cutaway.
+- Clinic roofs now have a low perimeter parapet and coping, a louvered ventilation pavilion and paired exhaust stacks. Workshop roof plant has intake louvers and paired capped exhausts above the existing sawtooth bays; these details stay within the roof footprint and participate in the roof cutaway.
 - The long access road now follows the actual heightfield, with eroded gravel shoulders, modeled asphalt fissures and worn raised lane dashes. The GL Compatibility visual-review capture includes a close road view; this is still procedural art, not a substitute for authored road assets.
 - Existing settlement/citizen positions are mapped to 3D meters without modifying save data.
 - Survivor travel uses eased facing toward measured movement direction; pause holds the current heading.

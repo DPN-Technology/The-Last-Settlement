@@ -376,8 +376,15 @@ func _smoke() -> void:
 		push_error("SMOKE: Off-duty worker still appears to use machinery tools")
 		quit(1)
 		return
-	if worker_mesh.get_node_or_null("SurvivorEquipment/RolledBedroll") == null or worker_mesh.get_node_or_null("SurvivorEquipment/SurvivorFieldCapCrown") == null or worker_mesh.get_node_or_null("SurvivorEquipment/FieldCanteen") == null:
-		push_error("SMOKE: Survivor lacks layered field kit, canteen, or role-readable headwear")
+	var missing_field_kit := PackedStringArray()
+	for equipment_path in ["SurvivorEquipment/RolledBedroll","SurvivorEquipment/SurvivorFieldCapCrown","SurvivorEquipment/FieldCanteen"]:
+		if worker_mesh.get_node_or_null(equipment_path)==null:
+			missing_field_kit.append(equipment_path)
+	if not missing_field_kit.is_empty():
+		var worker_children := PackedStringArray()
+		for child in worker_mesh.get_children():
+			worker_children.append(str(child.name))
+		push_error("SMOKE: Survivor %s lacks required field equipment: %s; children: %s" % [worker_id,", ".join(missing_field_kit),", ".join(worker_children)])
 		quit(1)
 		return
 	visual_worker["on_expedition"]=true
@@ -2320,6 +2327,11 @@ func _smoke() -> void:
 	var house_found := false
 	var clinic_found := false
 	var workshop_found := false
+	var clinic_roof_edges := 0
+	var clinic_vent_louvers := 0
+	var clinic_exhaust_stacks := 0
+	var workshop_machine_louvers := 0
+	var workshop_exhaust_stacks := 0
 	for structure in world.structure_layer.get_children():
 		if structure.get_node_or_null("PitchedHousingRoof") != null:
 			house_found = true
@@ -2348,10 +2360,50 @@ func _smoke() -> void:
 				return
 		if structure.get_node_or_null("ClinicRoof") != null:
 			clinic_found = true
+			for roof_detail in structure.get_children():
+				if bool(roof_detail.get_meta("clinic_roof_edge",false)):
+					clinic_roof_edges+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Clinic parapet or coping is not included in roof cutaway")
+						quit(1)
+						return
+				if bool(roof_detail.get_meta("clinic_vent_louver",false)):
+					clinic_vent_louvers+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Clinic ventilation louver is not included in roof cutaway")
+						quit(1)
+						return
+				if bool(roof_detail.get_meta("roof_exhaust_stack",false)) and String(roof_detail.name).begins_with("MedicalVentStack_"):
+					clinic_exhaust_stacks+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Clinic exhaust stack is not included in roof cutaway")
+						quit(1)
+						return
 		if structure.get_node_or_null("RaisedMachineRoom") != null:
 			workshop_found = true
+			for roof_detail in structure.get_children():
+				if bool(roof_detail.get_meta("industrial_roof_louver",false)):
+					workshop_machine_louvers+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Workshop machinery louver is not included in roof cutaway")
+						quit(1)
+						return
+				if bool(roof_detail.get_meta("roof_exhaust_stack",false)) and String(roof_detail.name).begins_with("IndustrialExhaustStack_"):
+					workshop_exhaust_stacks+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Workshop exhaust stack is not included in roof cutaway")
+						quit(1)
+						return
 	if not house_found or not clinic_found or not workshop_found:
 		push_error("SMOKE: Unique housing, medical or workshop roof geometry missing")
+		quit(1)
+		return
+	if clinic_roof_edges!=8 or clinic_vent_louvers!=5 or clinic_exhaust_stacks!=2:
+		push_error("SMOKE: Clinic roof is missing its eight parapet/coping edges, five ventilation louvers or two exhaust stacks")
+		quit(1)
+		return
+	if workshop_machine_louvers!=3 or workshop_exhaust_stacks!=2:
+		push_error("SMOKE: Workshop roof plant is missing its three intake louvers or two exhaust stacks")
 		quit(1)
 		return
 	var workwear := world.materials["workwear"] as StandardMaterial3D

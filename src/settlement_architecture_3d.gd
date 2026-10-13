@@ -183,8 +183,44 @@ static func _housing_dormer(group: Node3D, size: Vector2, height: float, mats: D
 
 static func _clinic_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	box(group,"ClinicRoof",Vector3(0,height+0.25,0),Vector3(size.x+0.5,0.33,size.y+0.5),mats["rooflight"])
+	var parapet_y := height + 0.50
+	var parapet_x := size.x * 0.5 + 0.15
+	var parapet_z := size.y * 0.5 + 0.15
+	for side in [-1.0, 1.0]:
+		var long_parapet := box(group,"ClinicRoofParapet_%d" % int(side),Vector3(0,parapet_y,side*parapet_z),Vector3(size.x+0.32,0.22,0.16),mats["foundation"])
+		long_parapet.set_meta("clinic_roof_edge",true)
+		var long_coping := box(group,"ClinicRoofCoping_%d" % int(side),Vector3(0,parapet_y+0.14,side*parapet_z),Vector3(size.x+0.32,0.07,0.19),mats["steel"])
+		long_coping.set_meta("clinic_roof_edge",true)
+		var end_parapet := box(group,"ClinicRoofParapetEnd_%d" % int(side),Vector3(side*parapet_x,parapet_y,0),Vector3(0.16,0.22,size.y+0.32),mats["foundation"])
+		end_parapet.set_meta("clinic_roof_edge",true)
+		var end_coping := box(group,"ClinicRoofCopingEnd_%d" % int(side),Vector3(side*parapet_x,parapet_y+0.14,0),Vector3(0.19,0.07,size.y+0.32),mats["steel"])
+		end_coping.set_meta("clinic_roof_edge",true)
 	box(group,"MedicalVentPavilion",Vector3(-size.x*0.25,height+1.05,size.y*0.17),Vector3(2.1,1.42,2.4),mats["clinic"])
 	box(group,"MedicalVentCap",Vector3(-size.x*0.25,height+1.85,size.y*0.17),Vector3(2.5,0.17,2.7),mats["roof"])
+	var pavilion_x := -size.x * 0.25
+	var pavilion_z := size.y * 0.17
+	for louver_index in range(5):
+		var louver := box(group,"MedicalVentLouver_%d" % louver_index,Vector3(pavilion_x,height+0.62+float(louver_index)*0.19,pavilion_z-1.24),Vector3(1.14,0.08,0.07),mats["steel"])
+		louver.set_meta("clinic_vent_louver",true)
+	for stack_index in range(2):
+		var stack_x := pavilion_x + (float(stack_index)-0.5)*1.0
+		_roof_stack(group,"MedicalVentStack_%d" % stack_index,Vector3(stack_x,height+2.11,pavilion_z),0.18,0.40,mats["darkmetal"])
+		var stack_cap := box(group,"MedicalVentStackCap_%d" % stack_index,Vector3(stack_x,height+2.34,pavilion_z),Vector3(0.48,0.08,0.48),mats["rust"])
+		stack_cap.set_meta("clinic_vent_stack_cap",true)
+
+static func _roof_stack(group: Node3D, name: String, at: Vector3, radius: float, height: float, material: Material) -> void:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius * 0.88
+	mesh.height = height
+	mesh.radial_segments = 12
+	var stack := MeshInstance3D.new()
+	stack.name = name
+	stack.mesh = mesh
+	stack.position = at
+	stack.material_override = material
+	stack.set_meta("roof_exhaust_stack",true)
+	group.add_child(stack)
 
 static func _industrial_sawtooth_roof(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	# Functional sawtooth architecture: angled roof planes and clerestory
@@ -209,10 +245,27 @@ static func _flat_service_roof(group: Node3D, size: Vector2, height: float, kind
 	box(group,"ServiceRoof",Vector3(0,height+0.26,0),Vector3(size.x+0.68,0.37,size.y+0.68),mats["roof"])
 	if kind in ["industry","storage"]:
 		_industrial_sawtooth_roof(group,size,height,mats)
-		# Existing machine housing remains as rooftop mechanical equipment.
-		var shack := box(group,"RaisedMachineRoom",Vector3(-size.x*0.21,height+0.96,-size.y*0.17),Vector3(size.x*0.29,1.26,size.y*0.42),mats["steel"])
-		shack.rotation.y = 0.035
-		box(group,"RaisedMachineCap",Vector3(-size.x*0.21,height+1.66,-size.y*0.17),Vector3(size.x*0.34,0.16,size.y*0.49),mats["rooflight"])
+		if kind == "industry":
+			var machine_x := -size.x * 0.21
+			var machine_z := -size.y * 0.17
+			var machine_width := size.x * 0.29
+			var machine_depth := size.y * 0.42
+			var shack := box(group,"RaisedMachineRoom",Vector3(machine_x,height+0.96,machine_z),Vector3(machine_width,1.26,machine_depth),mats["steel"])
+			shack.rotation.y = 0.035
+			var cap := box(group,"RaisedMachineCap",Vector3(machine_x,height+1.66,machine_z),Vector3(machine_width*1.17,0.16,machine_depth*1.17),mats["rooflight"])
+			cap.set_meta("industrial_roof_machine_cap",true)
+			for louver_index in range(3):
+				var louver := box(group,"IndustrialMachineLouver_%d" % louver_index,Vector3(machine_x,height+0.76+float(louver_index)*0.22,machine_z-machine_depth*0.5-0.035),Vector3(machine_width*0.62,0.09,0.08),mats["darkmetal"])
+				louver.set_meta("industrial_roof_louver",true)
+			for stack_index in range(2):
+				var stack_x := machine_x + (float(stack_index)-0.5)*machine_width*0.48
+				_roof_stack(group,"IndustrialExhaustStack_%d" % stack_index,Vector3(stack_x,height+1.99,machine_z),0.20,0.48,mats["darkmetal"])
+				var stack_cap := box(group,"IndustrialExhaustCap_%d" % stack_index,Vector3(stack_x,height+2.26,machine_z),Vector3(0.52,0.08,0.52),mats["rust"])
+				stack_cap.set_meta("industrial_roof_stack_cap",true)
+		else:
+			var shack := box(group,"RaisedMachineRoom",Vector3(-size.x*0.21,height+0.96,-size.y*0.17),Vector3(size.x*0.29,1.26,size.y*0.42),mats["steel"])
+			shack.rotation.y = 0.035
+			box(group,"RaisedMachineCap",Vector3(-size.x*0.21,height+1.66,-size.y*0.17),Vector3(size.x*0.34,0.16,size.y*0.49),mats["rooflight"])
 	elif kind in ["command","power","generator"]:
 		box(group,"ServiceRaisedPlatform",Vector3(size.x*0.32,height+0.61,size.y*0.20),Vector3(2.0,0.39,2.8),mats["steel"])
 	else:

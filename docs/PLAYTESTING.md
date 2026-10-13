@@ -391,6 +391,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Shelter roof silhouette pass:** The pitched housing roof now has raised sheet-metal seams spaced across both slopes and reinforced fascia along all four exposed gable rakes. These are actual exterior meshes grouped with the roof so they remain visible in normal settlement views and hide with the existing intentional roof cutaway. They do not change the shelter footprint, interior, doors or save data. Smoke checks assert all eight seams and four fascia edges are present and tagged for cutaway. Inspect at tactical overview and close zoom in the Windows GL Compatibility build; this procedural sheet-metal detailing remains transitional art, not a photoreal roof asset.
 
+**Clinic and workshop roof pass:** The clinic has a low parapet with metal coping, five ventilation louvers and two exhaust stacks. The workshop sawtooth roof plant has three intake louvers and two capped exhaust stacks. Smoke checks verify these counts and the cutaway tags; inspect both facilities in exterior view and deliberate roof/interior inspection to confirm the roof details do not obscure interiors or crowd the silhouettes. These remain procedural transitional meshes, not finished authored roof assets.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate
