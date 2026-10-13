@@ -2208,12 +2208,40 @@ func _smoke() -> void:
 		push_error("SMOKE: Animated glTF survivor cannot play movement clip")
 		quit(1)
 		return
+	var walk_clip := animator.get_animation(animator.current_animation)
+	if walk_clip.loop_mode != Animation.LOOP_LINEAR:
+		push_error("SMOKE: Authored survivor walk animation does not loop")
+		quit(1)
+		return
 	world._animate_imported_survivor(npc,false,true)
 	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("working"):
 		push_error("SMOKE: Active survivor work does not select the authored Working animation")
 		quit(1)
 		return
 	var work_animation := animator.current_animation
+	var work_clip := animator.get_animation(work_animation)
+	if work_clip.loop_mode != Animation.LOOP_LINEAR:
+		push_error("SMOKE: Authored survivor work animation does not loop")
+		quit(1)
+		return
+	world._animate_imported_survivor(npc,false,false,false,7)
+	var idle_clip := animator.get_animation(animator.current_animation)
+	if idle_clip.loop_mode != Animation.LOOP_LINEAR:
+		push_error("SMOKE: Authored survivor idle animation does not loop")
+		quit(1)
+		return
+	world._animate_imported_survivor(npc,false,true,false,7)
+	var first_work_phase := animator.current_animation_position
+	world._animate_imported_survivor(npc,false,false,false,8)
+	world._animate_imported_survivor(npc,false,true,false,8)
+	var second_work_phase := animator.current_animation_position
+	var phase_distance := absf(first_work_phase-second_work_phase)
+	phase_distance = minf(phase_distance,work_clip.length-phase_distance)
+	if phase_distance < work_clip.length*0.1:
+		push_error("SMOKE: Survivor work cycles remain synchronized across stable IDs")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: imported survivor work loops have stable per-person phase variation")
 	world._animate_imported_survivor(npc,false,true,true)
 	if not animator.is_playing() or animator.current_animation!=work_animation or not is_zero_approx(animator.speed_scale):
 		push_error("SMOKE: Survivor work animation does not hold when the simulation is paused")

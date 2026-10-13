@@ -1016,7 +1016,7 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 			return found
 	return null
 
-func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=false, paused: bool=false) -> void:
+func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=false, paused: bool=false, id: int=0) -> void:
 	var imported := person.get_node_or_null("ProductionArt")
 	if imported == null:
 		return
@@ -1042,12 +1042,19 @@ func _animate_imported_survivor(person: Node3D, traveling: bool, working: bool=f
 	if chosen.is_empty():
 		chosen = fallback
 	if not chosen.is_empty() and (player.current_animation != chosen or not player.is_playing()):
+		var animation := player.get_animation(chosen)
+		if preferred in String(chosen).to_lower():
+			animation.loop_mode = Animation.LOOP_LINEAR
 		player.play(chosen, 0.2)
+		if animation.loop_mode != Animation.LOOP_NONE and animation.length > 0.0:
+			# A golden-ratio step spreads neighboring survivor IDs around each loop.
+			var phase := fposmod(float(id) * 0.61803398875, 1.0)
+			player.seek(animation.length * phase, true)
 
 func _animate_survivor(person: Node3D, traveling: bool, id: int, citizen: Dictionary, paused: bool) -> void:
 	if not person.has_node("ArmLeft"):
 		var working := not traveling and SettlementActivity3D.current_activity(citizen)!=""
-		_animate_imported_survivor(person,traveling,working,paused)
+		_animate_imported_survivor(person,traveling,working,paused,id)
 		return
 	var stride := 0.0
 	if traveling:
