@@ -29,6 +29,19 @@ static func cylinder(parent: Node3D, name: String, p: Vector3, radius: float, h:
 	parent.add_child(obj)
 	return obj
 
+static func _surface_wear_material(color: Color, metallic: float) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color=color
+	material.roughness=0.84
+	material.metallic=metallic
+	return material
+
+static func _surface_wear_mark(parent: Node3D, name: String, pos: Vector3, size: Vector3, mat: Material, angle: float) -> MeshInstance3D:
+	var mark := box(parent,name,pos,size,mat)
+	mark.rotation.y=angle
+	mark.set_meta("furniture_surface_wear",true)
+	return mark
+
 static func _privacy_curtain_mesh(width: float, height: float, depth: float) -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -117,6 +130,8 @@ static func _housing(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
+	var cleaning_streak := _surface_wear_material(Color("#929b99"),0.34)
+	var tray_edge_scuff := _surface_wear_material(Color("#b0b5ad"),0.42)
 	# Distinct brighter treatment lane, occupied examination bays to its sides.
 	box(parent,"ClinicTreatmentFloor",Vector3(0,0.322,0),Vector3(1.04,0.012,size.y*0.69),mats["foundation"])
 	for side in [-1.0,1.0]:
@@ -145,6 +160,10 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 			instrument.rotation.z=PI*0.5
 		for edge in [-1.0,1.0]:
 			box(tray_contents,"TrayRetentionLip",Vector3(0,0.055,edge*0.23),Vector3(0.91,0.045,0.035),mats["darkmetal"])
+		var mirror: float=side
+		_surface_wear_mark(tray_contents,"TrayDisinfectantWipe_1",Vector3(-0.29*mirror,0.040,-0.19),Vector3(0.18,0.002,0.012),cleaning_streak,0.11*mirror)
+		_surface_wear_mark(tray_contents,"TrayDisinfectantWipe_2",Vector3(0.27*mirror,0.040,0.20),Vector3(0.13,0.002,0.010),cleaning_streak,-0.16*mirror)
+		_surface_wear_mark(tray_contents,"TrayEdgeBurnish",Vector3(-0.405*mirror,0.040,0.16),Vector3(0.055,0.002,0.018),tray_edge_scuff,0.08*mirror)
 		box(parent,"PatientObservationDisplay",Vector3(side*hx*0.81,1.95,-hz*0.50),Vector3(0.91,0.62,0.18),mats["darkmetal"])
 		box(parent,"VitalsScreen",Vector3(side*hx*0.81,1.97,-hz*0.61),Vector3(0.73,0.43,0.035),mats["glass"])
 		var screen_x: float=side*hx*0.33
@@ -193,6 +212,8 @@ static func _command(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hx := size.x*0.5
 	var hz := size.y*0.5
+	var bench_burnished_steel := _surface_wear_material(Color("#858981"),0.28)
+	var bench_oil_shadow := _surface_wear_material(Color("#514c41"),0.04)
 	box(parent,"IndustrialWorkZone",Vector3(0,0.323,hz*0.18),Vector3(1.18,0.012,size.y*0.52),mats["foundation"])
 	var air_header := cylinder(parent,"WorkshopCompressedAirHeader",Vector3(0,2.40,hz*0.72),0.075,size.x*0.74,mats["pipe"])
 	air_header.rotation.z=PI*0.5
@@ -235,6 +256,20 @@ static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void
 			var tool_x := 0.25+float(tool_index)*0.13
 			var hand_tool := cylinder(bench,"BenchHandTool_%d" % tool_index,Vector3(tool_x,1.225,-0.10),0.018,0.33,mats["rooflight"] if tool_index==0 else mats["steel"])
 			hand_tool.rotation.x=PI*0.5
+		var oil_shadow := MeshInstance3D.new()
+		oil_shadow.name="BenchOilPatina"
+		var oil_shadow_mesh := SphereMesh.new()
+		oil_shadow_mesh.radius=0.5
+		oil_shadow_mesh.height=0.08
+		oil_shadow.mesh=oil_shadow_mesh
+		oil_shadow.position=Vector3(0.10,1.156,0.36)
+		oil_shadow.scale=Vector3(0.23,0.10,0.14)
+		oil_shadow.material_override=bench_oil_shadow
+		oil_shadow.set_meta("furniture_surface_wear",true)
+		oil_shadow.set_meta("workshop_surface_wear",true)
+		bench.add_child(oil_shadow)
+		_surface_wear_mark(bench,"BenchGrindingScuff_1",Vector3(-0.18,1.1525,0.34),Vector3(0.26,0.003,0.012),bench_burnished_steel,0.19*side).set_meta("workshop_surface_wear",true)
+		_surface_wear_mark(bench,"BenchGrindingScuff_2",Vector3(-0.42,1.1525,-0.32),Vector3(0.10,0.003,0.014),bench_burnished_steel,-0.24*side).set_meta("workshop_surface_wear",true)
 		box(parent,"ToolBoard",Vector3(x,1.75,hz-0.26),Vector3(1.40,0.98,0.09),mats["rust"])
 		for tool in range(4):
 			box(parent,"HangingWorkshopTool",Vector3(x-0.49+float(tool)*0.32,1.68,hz-0.34),Vector3(0.08,0.46,0.045),mats["steel"])

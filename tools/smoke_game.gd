@@ -2576,6 +2576,7 @@ func _smoke() -> void:
 	var clinic_task_fixtures := 0
 	var clinic_treatment_surfaces := 0
 	var clinic_sterile_instruments := 0
+	var clinic_surface_wear := 0
 	var workshop_air_headers := 0
 	var workshop_air_drops := 0
 	var workshop_air_regulators := 0
@@ -2583,6 +2584,7 @@ func _smoke() -> void:
 	var workshop_fabrication_surfaces := 0
 	var workshop_bench_vices := 0
 	var workshop_bench_tools := 0
+	var workshop_surface_wear := 0
 	for building in world.structure_layer.get_children():
 		if not building.has_meta("building_type"):
 			continue
@@ -2604,7 +2606,23 @@ func _smoke() -> void:
 		var room_parts := identity_root.find_children("*","Node3D",true,false)
 		if kind=="medical":
 			for detail in room_parts:
-				if bool(detail.get_meta("clinic_examination_task_lamp",false)):
+				if bool(detail.get_meta("furniture_surface_wear",false)):
+					clinic_surface_wear+=1
+					var wear_mark := detail as MeshInstance3D
+					var tray_contents := detail.get_parent()
+					var tray := tray_contents.get_parent() as MeshInstance3D if tray_contents!=null else null
+					if wear_mark==null or wear_mark.mesh==null or tray==null or not (tray.mesh is BoxMesh):
+						push_error("SMOKE: clinic surface wear is detached from its treatment tray")
+						quit(1)
+						return
+					var tray_mesh := tray.mesh as BoxMesh
+					var mark_position := tray.to_local(wear_mark.global_position)
+					var clearance := mark_position.y-wear_mark.mesh.get_aabb().size.y*wear_mark.scale.y*0.5-tray_mesh.size.y*0.5
+					if clearance<0.0 or clearance>0.004 or absf(mark_position.x)>tray_mesh.size.x*0.5-0.03 or absf(mark_position.z)>tray_mesh.size.z*0.5-0.03:
+						push_error("SMOKE: clinic tray wear is not seated within the treatment surface")
+						quit(1)
+						return
+				elif bool(detail.get_meta("clinic_examination_task_lamp",false)):
 					clinic_task_fixtures+=1
 					if detail.has_meta("cutaway_roof"):
 						push_error("SMOKE: clinic treatment lighting is incorrectly tagged as an exterior roof")
@@ -2646,7 +2664,23 @@ func _smoke() -> void:
 					clinic_sterile_instruments+=1
 		elif kind=="industry":
 			for detail in room_parts:
-				if bool(detail.get_meta("workshop_compressed_air_header",false)):
+				if bool(detail.get_meta("furniture_surface_wear",false)):
+					workshop_surface_wear+=1
+					var wear_mark := detail as MeshInstance3D
+					var bench := detail.get_parent()
+					var work_surface := bench.get_node_or_null("FabricationWorkSurface") as MeshInstance3D if bench!=null else null
+					if wear_mark==null or wear_mark.mesh==null or work_surface==null or not (work_surface.mesh is BoxMesh):
+						push_error("SMOKE: workshop wear is detached from its fabrication surface")
+						quit(1)
+						return
+					var surface_mesh := work_surface.mesh as BoxMesh
+					var mark_position := work_surface.to_local(wear_mark.global_position)
+					var clearance := mark_position.y-wear_mark.mesh.get_aabb().size.y*wear_mark.scale.y*0.5-surface_mesh.size.y*0.5
+					if clearance<0.0 or clearance>0.004 or absf(mark_position.x)>surface_mesh.size.x*0.5-0.05 or absf(mark_position.z)>surface_mesh.size.z*0.5-0.05:
+						push_error("SMOKE: workshop wear is not seated within the work surface")
+						quit(1)
+						return
+				elif bool(detail.get_meta("workshop_compressed_air_header",false)):
 					workshop_air_headers+=1
 					var air_pipe := detail as MeshInstance3D
 					if air_pipe==null or not (air_pipe.mesh is CylinderMesh):
@@ -2691,12 +2725,20 @@ func _smoke() -> void:
 		push_error("SMOKE: clinic treatment surfaces lack paired instrument layouts")
 		quit(1)
 		return
+	if clinic_surface_wear!=6:
+		push_error("SMOKE: clinic treatment trays lack seated cleaning and edge-wear details")
+		quit(1)
+		return
 	if workshop_air_headers!=1 or workshop_air_drops!=2 or workshop_air_regulators!=2 or workshop_air_gauges!=2:
 		push_error("SMOKE: workshop workstations lack a complete paired compressed-air supply layout")
 		quit(1)
 		return
 	if workshop_fabrication_surfaces!=2 or workshop_bench_vices!=2 or workshop_bench_tools!=6:
 		push_error("SMOKE: workshop workstations lack paired detailed fabrication surfaces")
+		quit(1)
+		return
+	if workshop_surface_wear!=6:
+		push_error("SMOKE: workshop benches lack seated oil and grinding-wear details")
 		quit(1)
 		return
 	# Facility inspector focus must actually move camera and switch out of
