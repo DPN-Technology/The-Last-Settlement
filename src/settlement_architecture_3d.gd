@@ -101,8 +101,10 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 
 	if kind == "medical":
 		_clinic_service_drops(group,size,height,mats)
+		_facility_wall_repairs(group,"Clinic",size,mats)
 	elif kind == "industry":
 		_workshop_wall_ribs(group,size,height,mats)
+		_facility_wall_repairs(group,"Workshop",size,mats)
 
 	# Roof pieces are tagged individually and retain their original scene paths,
 	# so smoke tests and distinctive exterior silhouettes both continue working.
@@ -116,6 +118,46 @@ static func facade(group: Node3D, kind: String, size: Vector2, height: float, wa
 		_flat_service_roof(group,size,height,kind,mats)
 	for index in range(roof_first,group.get_child_count()):
 		group.get_child(index).set_meta("cutaway_roof",true)
+
+static func _facility_wall_repairs(group: Node3D, prefix: String, size: Vector2, mats: Dictionary) -> void:
+	# Faceted masonry patches are confined to the solid front-wall bays beside
+	# the entrance; they do not cover the door, side windows, or service gear.
+	var door_width := 1.8
+	var segment_width := maxf(0.5,(size.x-door_width)*0.5)
+	var half_z := size.y * 0.5
+	for side in [-1.0,1.0]:
+		var patch_center_x: float = side * (door_width*0.5+segment_width*0.55)
+		var center := Vector2(patch_center_x,1.62)
+		var suffix := str(int(side))
+		_faceted_wall_patch(group,prefix+"RepairStain_"+suffix,center,1.18,1.02,-half_z-0.144,mats["foundation"])
+		var repair := _faceted_wall_patch(group,prefix+"RepairedMasonry_"+suffix,center,0.91,0.75,-half_z-0.151,mats["concrete"])
+		repair.set_meta("facility_wall_repair",prefix.to_lower())
+		for fastener_side in [-1.0,1.0]:
+			var fastener := box(group,prefix+"RepairFastener_"+suffix,Vector3(patch_center_x+fastener_side*0.34,1.62,-half_z-0.166),Vector3(0.055,0.055,0.035),mats["rust"])
+			fastener.set_meta("facility_wall_repair_fastener",prefix.to_lower())
+
+static func _faceted_wall_patch(group: Node3D, name: String, center: Vector2, width: float, height: float, surface_z: float, material: Material) -> MeshInstance3D:
+	var outline := PackedVector2Array([
+		Vector2(-0.48,-0.39),Vector2(-0.50,0.27),Vector2(-0.31,0.49),
+		Vector2(0.34,0.46),Vector2(0.50,0.17),Vector2(0.43,-0.35),
+		Vector2(0.17,-0.50),Vector2(-0.34,-0.47)
+	])
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for triangle_index in range(1,outline.size()-1):
+		for outline_index in [0,triangle_index,triangle_index+1]:
+			var point := outline[outline_index]
+			var vertex := Vector3(center.x+point.x*width,center.y+point.y*height,surface_z)
+			surface.set_uv(Vector2(point.x+0.5,point.y+0.5))
+			surface.add_vertex(vertex)
+	surface.generate_normals()
+	var patch := MeshInstance3D.new()
+	patch.name = name
+	patch.mesh = surface.commit()
+	patch.material_override = material
+	patch.set_meta("faceted_wall_patch",true)
+	group.add_child(patch)
+	return patch
 
 static func _clinic_service_drops(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	# Protected service risers make the clinic read as maintained utility

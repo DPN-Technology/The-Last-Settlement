@@ -395,6 +395,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Clinic and workshop wall pass:** The clinic now has two protected side-wall service risers with three visible clamps apiece. The workshop has six slender steel stiffeners and rusted foot plates aligned to solid wall piers between side windows. Smoke checks verify the exterior feature counts and that wall details remain visible when roofs are cut away. Inspect both sides at close zoom to confirm the risers and ribs do not obstruct windows, entrances or interior inspection; these are still procedural transitional details.
 
+**Repaired masonry pass:** Each clinic and workshop entrance flank now has a dark, irregular repair outline with a lighter faceted masonry infill and two visible fasteners. Smoke checks confirm the four repairs stay outside the central doorway and are not part of roof cutaway. Inspect from close zoom to verify the patches sit against the wall and do not distract from entrances or signage; these are procedural surface meshes, not photo-authored damage.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate

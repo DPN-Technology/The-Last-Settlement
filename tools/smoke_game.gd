@@ -2333,10 +2333,25 @@ func _smoke() -> void:
 	var clinic_service_pipes := 0
 	var clinic_pipe_clamps := 0
 	var workshop_wall_ribs := 0
+	var clinic_wall_repairs := 0
+	var workshop_wall_repairs := 0
+	var wall_repair_fasteners := 0
 	var workshop_machine_louvers := 0
 	var workshop_exhaust_stacks := 0
 	for structure in world.structure_layer.get_children():
 		for wall_detail in structure.get_children():
+			if wall_detail.has_meta("faceted_wall_patch"):
+				var patch_mesh := wall_detail as MeshInstance3D
+				if patch_mesh == null or patch_mesh.mesh == null:
+					push_error("SMOKE: Facility wall repair patch has no mesh")
+					quit(1)
+					return
+				var patch_bounds := patch_mesh.get_aabb()
+				var entry_clearance := patch_bounds.position.x if patch_bounds.position.x > 0.0 else -(patch_bounds.position.x+patch_bounds.size.x)
+				if wall_detail.has_meta("cutaway_roof") or patch_bounds.position.z+patch_bounds.size.z >= 0.0 or entry_clearance <= 0.9:
+					push_error("SMOKE: Facility wall repair patch is missing, cut away, or intrudes on the central entry")
+					quit(1)
+					return
 			if bool(wall_detail.get_meta("clinic_service_pipe",false)):
 				clinic_service_pipes+=1
 				if bool(wall_detail.get_meta("cutaway_roof",false)):
@@ -2351,6 +2366,13 @@ func _smoke() -> void:
 					push_error("SMOKE: Workshop structural wall rib incorrectly disappears with the roof")
 					quit(1)
 					return
+			if wall_detail.has_meta("facility_wall_repair"):
+				if str(wall_detail.get_meta("facility_wall_repair","")) == "clinic":
+					clinic_wall_repairs+=1
+				elif str(wall_detail.get_meta("facility_wall_repair","")) == "workshop":
+					workshop_wall_repairs+=1
+			if wall_detail.has_meta("facility_wall_repair_fastener"):
+				wall_repair_fasteners+=1
 		if structure.get_node_or_null("PitchedHousingRoof") != null:
 			house_found = true
 			if structure.get_node_or_null("ShelterGableEndWalls") == null:
@@ -2426,6 +2448,10 @@ func _smoke() -> void:
 		return
 	if clinic_service_pipes!=2 or clinic_pipe_clamps!=6 or workshop_wall_ribs!=6:
 		push_error("SMOKE: Clinic service risers or workshop wall stiffeners are missing")
+		quit(1)
+		return
+	if clinic_wall_repairs!=2 or workshop_wall_repairs!=2 or wall_repair_fasteners!=8:
+		push_error("SMOKE: Clinic or workshop repaired wall panels are missing or incomplete")
 		quit(1)
 		return
 	var workwear := world.materials["workwear"] as StandardMaterial3D
