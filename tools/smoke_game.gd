@@ -2574,10 +2574,15 @@ func _smoke() -> void:
 	var clinic_curtains := 0
 	var clinic_oxygen_drops := 0
 	var clinic_task_fixtures := 0
+	var clinic_treatment_surfaces := 0
+	var clinic_sterile_instruments := 0
 	var workshop_air_headers := 0
 	var workshop_air_drops := 0
 	var workshop_air_regulators := 0
 	var workshop_air_gauges := 0
+	var workshop_fabrication_surfaces := 0
+	var workshop_bench_vices := 0
+	var workshop_bench_tools := 0
 	for building in world.structure_layer.get_children():
 		if not building.has_meta("building_type"):
 			continue
@@ -2596,8 +2601,9 @@ func _smoke() -> void:
 				quit(1)
 				return
 			identified[kind]=true
+		var room_parts := identity_root.find_children("*","Node3D",true,false)
 		if kind=="medical":
-			for detail in identity_root.get_children():
+			for detail in room_parts:
 				if bool(detail.get_meta("clinic_examination_task_lamp",false)):
 					clinic_task_fixtures+=1
 					if detail.has_meta("cutaway_roof"):
@@ -2619,15 +2625,31 @@ func _smoke() -> void:
 						return
 				elif bool(detail.get_meta("clinic_oxygen_delivery",false)):
 					clinic_oxygen_drops+=1
-					if not (detail.mesh is CylinderMesh):
+					var oxygen_pipe := detail as MeshInstance3D
+					if oxygen_pipe==null or not (oxygen_pipe.mesh is CylinderMesh):
 						push_error("SMOKE: clinic oxygen delivery run is not modeled pipe geometry")
 						quit(1)
 						return
+				elif bool(detail.get_meta("clinic_treatment_surface",false)):
+					clinic_treatment_surfaces+=1
+					var tray := detail as MeshInstance3D
+					if tray==null or tray.mesh==null:
+						push_error("SMOKE: clinic treatment station has no modeled sterile tray")
+						quit(1)
+						return
+					var tray_clearance := identity_root.to_local(tray.global_position)
+					if absf(tray_clearance.x)-tray.mesh.get_aabb().size.x*0.5<0.9:
+						push_error("SMOKE: clinic treatment surface intrudes on the clear center aisle")
+						quit(1)
+						return
+				elif str(detail.name).begins_with("SterileInstrument_"):
+					clinic_sterile_instruments+=1
 		elif kind=="industry":
-			for detail in identity_root.get_children():
+			for detail in room_parts:
 				if bool(detail.get_meta("workshop_compressed_air_header",false)):
 					workshop_air_headers+=1
-					if not (detail.mesh is CylinderMesh):
+					var air_pipe := detail as MeshInstance3D
+					if air_pipe==null or not (air_pipe.mesh is CylinderMesh):
 						push_error("SMOKE: workshop compressed-air header lacks pipe geometry")
 						quit(1)
 						return
@@ -2637,6 +2659,22 @@ func _smoke() -> void:
 					workshop_air_regulators+=1
 				elif bool(detail.get_meta("workshop_air_gauge",false)):
 					workshop_air_gauges+=1
+				elif bool(detail.get_meta("workshop_fabrication_surface",false)):
+					workshop_fabrication_surfaces+=1
+					var surface := detail as MeshInstance3D
+					if surface==null or surface.mesh==null:
+						push_error("SMOKE: workshop fabrication station has no modeled work surface")
+						quit(1)
+						return
+					var work_position := identity_root.to_local(surface.global_position)
+					if absf(work_position.x)-surface.mesh.get_aabb().size.x*0.5<0.9:
+						push_error("SMOKE: workshop work surface intrudes on the clear center aisle")
+						quit(1)
+						return
+				elif bool(detail.get_meta("workshop_bench_vise",false)):
+					workshop_bench_vices+=1
+				elif str(detail.name).begins_with("BenchHandTool_"):
+					workshop_bench_tools+=1
 	if art_roots<6 or identified.size()<3:
 		push_error("SMOKE: shelter, clinic and command do not have full differentiated interiors")
 		quit(1)
@@ -2649,8 +2687,16 @@ func _smoke() -> void:
 		push_error("SMOKE: clinic treatment bays lack two complete, roof-independent examination lamps")
 		quit(1)
 		return
+	if clinic_treatment_surfaces!=2 or clinic_sterile_instruments!=4:
+		push_error("SMOKE: clinic treatment surfaces lack paired instrument layouts")
+		quit(1)
+		return
 	if workshop_air_headers!=1 or workshop_air_drops!=2 or workshop_air_regulators!=2 or workshop_air_gauges!=2:
 		push_error("SMOKE: workshop workstations lack a complete paired compressed-air supply layout")
+		quit(1)
+		return
+	if workshop_fabrication_surfaces!=2 or workshop_bench_vices!=2 or workshop_bench_tools!=6:
+		push_error("SMOKE: workshop workstations lack paired detailed fabrication surfaces")
 		quit(1)
 		return
 	# Facility inspector focus must actually move camera and switch out of

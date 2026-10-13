@@ -399,6 +399,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Clinic and workshop interior utility pass:** Each clinic treatment bay now has a wall-mounted articulated examination lamp, and the workshop gains an overhead compressed-air header feeding two workstation drops with regulators and gauges. Smoke checks validate each fitting and preserve the intentional roof-view controls. Use ROOMS to reveal the facilities and verify both clinical beds stay clear, the workshop air drops terminate at the work bays, and the center aisle remains open. These fittings are visual details; they do not alter job simulation or navigation.
 
+**Treatment and fabrication work-surface pass:** Clinic sterile trays now hold wrapped supplies and paired steel instruments behind a raised divider. The workshop's solid equipment blocks are replaced with open steel-legged fabrication benches, each with a clamped workpiece in a vise and a separate organized hand-tool tray. The smoke test checks both stations, their detail counts and surface clearance from the central aisle. Reveal each room and confirm the new details stay with their stations without touching neighboring beds, machines or pipework.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate

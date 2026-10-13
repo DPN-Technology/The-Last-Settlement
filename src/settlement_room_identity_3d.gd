@@ -132,7 +132,19 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 		box(parent,"BedsideTreatmentCart",Vector3(x,0.86,hz*0.47),Vector3(0.90,0.11,0.58),mats["steel"])
 		for leg_side in [-1.0,1.0]:
 			box(parent,"TriageCartLeg",Vector3(x+leg_side*0.34,0.45,hz*0.47),Vector3(0.07,0.76,0.38),mats["darkmetal"])
-		box(parent,"SterileTray",Vector3(x,1.38,hz*0.47),Vector3(0.95,0.075,0.52),mats["steel"])
+		var sterile_tray := box(parent,"SterileTray",Vector3(x,1.38,hz*0.47),Vector3(0.95,0.075,0.52),mats["steel"])
+		sterile_tray.set_meta("clinic_treatment_surface",true)
+		var tray_contents := Node3D.new()
+		tray_contents.name="SterileTrayContents"
+		sterile_tray.add_child(tray_contents)
+		box(tray_contents,"SterileTrayDivider",Vector3(0,0.055,0),Vector3(0.025,0.035,0.43),mats["darkmetal"])
+		box(tray_contents,"InstrumentSterileWrap",Vector3(-0.23,0.075,0.12),Vector3(0.29,0.035,0.18),mats["clinic"])
+		for instrument_index in range(2):
+			var instrument_x: float=0.13+float(instrument_index)*0.20
+			var instrument := cylinder(tray_contents,"SterileInstrument_%d" % instrument_index,Vector3(instrument_x,0.088,-0.10),0.022,0.25,mats["steel"])
+			instrument.rotation.z=PI*0.5
+		for edge in [-1.0,1.0]:
+			box(tray_contents,"TrayRetentionLip",Vector3(0,0.055,edge*0.23),Vector3(0.91,0.045,0.035),mats["darkmetal"])
 		box(parent,"PatientObservationDisplay",Vector3(side*hx*0.81,1.95,-hz*0.50),Vector3(0.91,0.62,0.18),mats["darkmetal"])
 		box(parent,"VitalsScreen",Vector3(side*hx*0.81,1.97,-hz*0.61),Vector3(0.73,0.43,0.035),mats["glass"])
 		var screen_x: float=side*hx*0.33
@@ -187,14 +199,42 @@ static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void
 	air_header.set_meta("workshop_compressed_air_header",true)
 	for side in [-1.0,1.0]:
 		var x: float=side*hx*0.60
-		var air_drop := cylinder(parent,"WorkshopCompressedAirDrop",Vector3(x,1.95,hz*0.60),0.043,0.82,mats["steel"])
+		var air_drop := cylinder(parent,"WorkshopCompressedAirDrop",Vector3(x,1.95,hz*0.54),0.043,0.82,mats["steel"])
 		air_drop.rotation.x=PI*0.5
 		air_drop.set_meta("workshop_compressed_air_drop",true)
-		var regulator := box(parent,"WorkshopAirRegulator",Vector3(x,1.52,hz*0.48),Vector3(0.26,0.31,0.17),mats["darkmetal"])
+		var regulator := box(parent,"WorkshopAirRegulator",Vector3(x+side*0.86,1.52,hz*0.43),Vector3(0.26,0.31,0.17),mats["darkmetal"])
 		regulator.set_meta("workshop_air_regulator",true)
-		var gauge := cylinder(parent,"WorkshopAirGauge",Vector3(x,1.59,hz*0.37),0.095,0.045,mats["rooflight"])
+		var gauge := cylinder(parent,"WorkshopAirGauge",Vector3(x+side*0.86,1.59,hz*0.405),0.095,0.045,mats["rooflight"])
 		gauge.set_meta("workshop_air_gauge",true)
-		box(parent,"FabricationFrame",Vector3(x,1.45,hz*0.43),Vector3(1.45,1.90,1.06),mats["darkmetal"])
+		var bench := Node3D.new()
+		bench.name="FabricationFrame"
+		bench.position=Vector3(x,0,hz*0.43)
+		bench.set_meta("workshop_fabrication_workstation",true)
+		parent.add_child(bench)
+		var surface := box(bench,"FabricationWorkSurface",Vector3(0,1.08,0),Vector3(1.45,0.14,1.06),mats["steel"])
+		surface.set_meta("workshop_fabrication_surface",true)
+		for post_x in [-0.63,0.63]:
+			for post_z in [-0.43,0.43]:
+				box(bench,"FabricationBenchLeg",Vector3(post_x,0.69,post_z),Vector3(0.10,0.70,0.10),mats["darkmetal"])
+		for side_z in [-0.43,0.43]:
+			box(bench,"FabricationBenchLowerRail",Vector3(0,0.47,side_z),Vector3(1.20,0.09,0.09),mats["darkmetal"])
+		var vise := Node3D.new()
+		vise.name="BenchVise"
+		vise.position=Vector3(-0.40,1.17,0.06)
+		vise.set_meta("workshop_bench_vise",true)
+		bench.add_child(vise)
+		box(vise,"ViseBase",Vector3(0,0,0),Vector3(0.38,0.08,0.36),mats["darkmetal"])
+		box(vise,"ViseFixedJaw",Vector3(0,0.09,-0.11),Vector3(0.38,0.11,0.08),mats["steel"])
+		box(vise,"ViseMovingJaw",Vector3(0,0.09,0.12),Vector3(0.38,0.11,0.08),mats["steel"])
+		box(vise,"ViseWorkpiece",Vector3(0,0.20,0.015),Vector3(0.24,0.10,0.16),mats["rust"])
+		var vise_handle := cylinder(vise,"ViseHandle",Vector3(0,0.03,0.26),0.025,0.30,mats["rooflight"])
+		vise_handle.rotation.z=PI*0.5
+		var tool_tray := box(bench,"BenchToolTray",Vector3(0.39,1.18,-0.04),Vector3(0.40,0.045,0.50),mats["darkmetal"])
+		tool_tray.set_meta("workshop_bench_tool_tray",true)
+		for tool_index in range(3):
+			var tool_x := 0.25+float(tool_index)*0.13
+			var hand_tool := cylinder(bench,"BenchHandTool_%d" % tool_index,Vector3(tool_x,1.225,-0.10),0.018,0.33,mats["rooflight"] if tool_index==0 else mats["steel"])
+			hand_tool.rotation.x=PI*0.5
 		box(parent,"ToolBoard",Vector3(x,1.75,hz-0.26),Vector3(1.40,0.98,0.09),mats["rust"])
 		for tool in range(4):
 			box(parent,"HangingWorkshopTool",Vector3(x-0.49+float(tool)*0.32,1.68,hz-0.34),Vector3(0.08,0.46,0.045),mats["steel"])
