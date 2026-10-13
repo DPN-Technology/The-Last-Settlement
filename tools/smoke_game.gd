@@ -2236,19 +2236,38 @@ func _smoke() -> void:
 	var travel_original_position := Vector2(test_citizen["position"])
 	var was_paused := sim.paused
 	sim.paused = false
+	npc.rotation.y = 0.0
 	test_citizen["position"] = travel_original_position + Vector2(48.0,0.0)
-	world._update_people(sim,{},1.0)
+	world._update_people(sim,{},0.1)
 	if not String(animator.current_animation).to_lower().contains("run"):
 		push_error("SMOKE: Measured 3D citizen movement does not drive the authored Run clip")
 		test_citizen["position"] = travel_original_position
 		sim.paused = was_paused
 		quit(1)
 		return
+	if npc.rotation.y <= 0.0 or npc.rotation.y >= PI*0.5:
+		push_error("SMOKE: Survivor heading snaps instead of turning smoothly toward travel direction")
+		test_citizen["position"] = travel_original_position
+		sim.paused = was_paused
+		quit(1)
+		return
+	var turning_yaw := npc.rotation.y
+	sim.paused = true
+	test_citizen["position"] = travel_original_position + Vector2(48.0,48.0)
+	world._update_people(sim,{},0.1)
+	if not is_equal_approx(npc.rotation.y,turning_yaw):
+		push_error("SMOKE: Paused survivor heading continues to turn")
+		test_citizen["position"] = travel_original_position
+		sim.paused = was_paused
+		quit(1)
+		return
+	sim.paused = false
 	test_citizen["position"] = travel_original_position
 	world._update_people(sim,{},1.0)
 	sim.paused = was_paused
 	world._animate_imported_survivor(npc, true, false, false, 0, 1.2)
 	print("PLAYTEST SMOKE PASS: survivor Walk/Run animation and cadence follow actual movement speed")
+	print("PLAYTEST SMOKE PASS: survivor facing eases toward travel direction and holds during pause")
 	world._animate_imported_survivor(npc,false,true)
 	if not animator.is_playing() or not String(animator.current_animation).to_lower().contains("working"):
 		push_error("SMOKE: Active survivor work does not select the authored Working animation")

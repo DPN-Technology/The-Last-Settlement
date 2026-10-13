@@ -12,6 +12,7 @@ A believable post-collapse settlement: weathered concrete, corroded sheet steel,
 - Physical 3D ground, roads, buildings, farm rows, survivors, junk vehicles, vegetation, sunlight, sky, fog and shadow-casting geometry.
 - The long access road now follows the actual heightfield, with eroded gravel shoulders, modeled asphalt fissures and worn raised lane dashes. The GL Compatibility visual-review capture includes a close road view; this is still procedural art, not a substitute for authored road assets.
 - Existing settlement/citizen positions are mapped to 3D meters without modifying save data.
+- Survivor travel uses eased facing toward measured movement direction; pause holds the current heading.
 - Camera projection supports selecting the actual world at mouse coordinates; mouse buttons retain original construction interaction.
 - Structure meshes rebuild when layout/condition changes; survivor transforms sync continuously.
 - Existing game simulation and UI stay operational. The old `SettlementVisuals` 2D path is no longer used to render the world.

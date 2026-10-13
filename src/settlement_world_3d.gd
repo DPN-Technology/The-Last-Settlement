@@ -954,8 +954,9 @@ func _update_people(sim: SettlementSimulation, selected_citizen: Dictionary, del
 		var traveling := not spawned and distance > 0.02 and not sim.paused
 		var movement_speed := distance / delta if traveling and delta > 0.0 else 0.0
 		person.position = target
-		if traveling:
-			person.rotation.y = atan2(person.position.x-previous.x,person.position.z-previous.z)
+		if traveling and delta > 0.0:
+			var target_yaw := atan2(person.position.x-previous.x,person.position.z-previous.z)
+			person.rotation.y = lerp_angle(person.rotation.y,target_yaw,1.0-exp(-8.0*delta))
 		_animate_survivor(person, traveling, int(citizen["id"]), citizen, sim.paused, movement_speed)
 		SettlementActivity3D.update(person,citizen,traveling,sim.paused,visual_time)
 		var ring: Node3D = person.get_node("Selection")
