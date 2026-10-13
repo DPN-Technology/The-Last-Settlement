@@ -2327,6 +2327,25 @@ func _smoke() -> void:
 				push_error("SMOKE: Pitched roof is missing realistic filled end gables")
 				quit(1)
 				return
+			var rake_fascia_count := 0
+			var standing_seam_count := 0
+			for roof_detail in structure.get_children():
+				if bool(roof_detail.get_meta("housing_roof_fascia",false)):
+					rake_fascia_count+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Shelter gable fascia is not included in roof cutaway")
+						quit(1)
+						return
+				if String(roof_detail.name).begins_with("RoofStandingSeam_"):
+					standing_seam_count+=1
+					if not bool(roof_detail.get_meta("cutaway_roof",false)):
+						push_error("SMOKE: Shelter standing seam is not included in roof cutaway")
+						quit(1)
+						return
+			if rake_fascia_count!=4 or standing_seam_count!=8:
+				push_error("SMOKE: Shelter pitched roof is missing its four edge fascias or eight raised standing seams")
+				quit(1)
+				return
 		if structure.get_node_or_null("ClinicRoof") != null:
 			clinic_found = true
 		if structure.get_node_or_null("RaisedMachineRoom") != null:

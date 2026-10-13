@@ -389,6 +389,8 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Current limits:** This does not provide simulated machine collisions, realistic glTF machinery, full motion-captured work tasks, hand IK, factory interiors or authentic industrial audio. Headless smoke tests check the scene nodes, animation state, staffing, away-member visibility and command identification; they cannot certify how realistic the art looks on a Windows display. Keep PR #6 unmerged until player-approved.
 
+**Shelter roof silhouette pass:** The pitched housing roof now has raised sheet-metal seams spaced across both slopes and reinforced fascia along all four exposed gable rakes. These are actual exterior meshes grouped with the roof so they remain visible in normal settlement views and hide with the existing intentional roof cutaway. They do not change the shelter footprint, interior, doors or save data. Smoke checks assert all eight seams and four fascia edges are present and tagged for cutaway. Inspect at tactical overview and close zoom in the Windows GL Compatibility build; this procedural sheet-metal detailing remains transitional art, not a photoreal roof asset.
+
 ---
 
 # Industry Workshop Command — October 2026 candidate

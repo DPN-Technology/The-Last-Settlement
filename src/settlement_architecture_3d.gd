@@ -122,11 +122,20 @@ static func _pitched_shelter_roof(group: Node3D, size: Vector2, height: float, m
 	for side in [-1.0, 1.0]:
 		var panel := box(group, "PitchedHousingRoof", Vector3(side*half*0.5,height+0.32+ridge*0.5,0),Vector3(sloped_span,0.17,size.y+0.95),mats["roof"])
 		panel.rotation.z = -side*pitch
-		# Long corrosion-resistant ridge-to-eave seam near each side of roof.
-		var seam := box(group, "RoofStandingSeam", Vector3(side*half*0.47,height+0.39+ridge*0.53,0),Vector3(0.075,0.10,size.y+0.98),mats["steel"])
-		seam.rotation.z = -side*pitch
+		# Raised sheet-metal seams give each roof plane a readable scale.
+		for seam_index in range(4):
+			var seam_fraction := (float(seam_index) + 0.5) / 4.0
+			var seam_x: float = side * half * seam_fraction
+			var seam_y: float = height + 0.32 + ridge * (1.0 - seam_fraction) + 0.12
+			var seam := box(group, "RoofStandingSeam_%d_%d" % [int(side), seam_index], Vector3(seam_x,seam_y,0),Vector3(0.075,0.10,size.y+0.98),mats["steel"])
+			seam.rotation.z = -side*pitch
 		var gutter := box(group, "EaveRainGutter", Vector3(side*(half+0.23),height+0.19,0),Vector3(0.27,0.22,size.y+1.12),mats["rust"])
 		gutter.rotation.z = 0.0
+		# Reinforced rake fascia caps the exposed gable edges at both roof ends.
+		for end in [-1.0, 1.0]:
+			var fascia := box(group, "GableRakeFascia_%d_%d" % [int(side), int(end)], Vector3(side*half*0.5,height+0.32+ridge*0.5,end*(size.y*0.5+0.49)),Vector3(sloped_span,0.20,0.16),mats["rust"])
+			fascia.rotation.z = -side*pitch
+			fascia.set_meta("housing_roof_fascia",true)
 	# Fill the triangular exposed gables with physically lit, weathered walls.
 	# A roof only made from two floating planes did not look like an actual hut.
 	var gable := SurfaceTool.new()
