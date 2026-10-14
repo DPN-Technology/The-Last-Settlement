@@ -156,8 +156,10 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 		box(tray_contents,"InstrumentSterileWrap",Vector3(-0.23,0.075,0.12),Vector3(0.29,0.035,0.18),mats["clinic"])
 		for instrument_index in range(2):
 			var instrument_x: float=0.13+float(instrument_index)*0.20
-			var instrument := cylinder(tray_contents,"SterileInstrument_%d" % instrument_index,Vector3(instrument_x,0.088,-0.10),0.022,0.25,mats["steel"])
+			var instrument_jitter: float=side*(0.02 if instrument_index==0 else -0.015)
+			var instrument := cylinder(tray_contents,"SterileInstrument_%d" % instrument_index,Vector3(instrument_x+instrument_jitter,0.088,-0.10+instrument_jitter*1.5),0.022,0.25,mats["steel"])
 			instrument.rotation.z=PI*0.5
+			instrument.rotation.y=instrument_jitter*2.5
 		for edge in [-1.0,1.0]:
 			box(tray_contents,"TrayRetentionLip",Vector3(0,0.055,edge*0.23),Vector3(0.91,0.045,0.035),mats["darkmetal"])
 		var mirror: float=side
@@ -254,8 +256,9 @@ static func _industrial(parent: Node3D, size: Vector2, mats: Dictionary) -> void
 		tool_tray.set_meta("workshop_bench_tool_tray",true)
 		for tool_index in range(3):
 			var tool_x := 0.25+float(tool_index)*0.13
-			var hand_tool := cylinder(bench,"BenchHandTool_%d" % tool_index,Vector3(tool_x,1.225,-0.10),0.018,0.33,mats["rooflight"] if tool_index==0 else mats["steel"])
+			var hand_tool := cylinder(bench,"BenchHandTool_%d" % tool_index,Vector3(tool_x,1.225,-0.10+(float(tool_index)-1.0)*0.03),0.018,0.33,mats["rooflight"] if tool_index==0 else mats["steel"])
 			hand_tool.rotation.x=PI*0.5
+			hand_tool.rotation.z=(float(tool_index)-1.0)*0.07
 		var oil_shadow := MeshInstance3D.new()
 		oil_shadow.name="BenchOilPatina"
 		var oil_shadow_mesh := SphereMesh.new()

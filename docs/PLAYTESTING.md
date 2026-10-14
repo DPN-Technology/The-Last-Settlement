@@ -8,7 +8,7 @@ Art does not alter pathfinding, room occupancy or existing HUD.
 
 ---
 
-# GUARD TOWER OVERHAUL — ACTUAL WORLD MESHES
+# GUARD TOWER OVERHAUL â€” ACTUAL WORLD MESHES
 
 The previous guard towers in the actual screenshots were plain elevated
 platforms. The towers now carry an attached timber deck with individually
@@ -76,7 +76,7 @@ The gameplay 3D scene now contains an offline, baked triplanar **reclaimed timbe
 
 ---
 
-# REFERENCE FACILITY ART — PHYSICAL 3D DETAIL
+# REFERENCE FACILITY ART â€” PHYSICAL 3D DETAIL
 
 The GL-safe `SettlementProductionProps3D` module adds physical (not composited screenshot) scene geometry for recognizable facility objects. Reclaimed wooden crates are built with separate cores, reinforced edges, grained lids and bands; drums have curved radial meshes and raised lids/bungs; the camp has low sandbag barricades; the clinic has an exterior triage stretcher and oxygen cylinders; the generator has a metal chassis, slotted radiator fins and vertical exhaust pipe; water facilities have routed manifolds and valve heads; workshop has a framed workbench and laid-out salvage tools; command has a mounted telemetry box and real physical resupply. Objects are placed outside simulated doorway centers and live under `DetailedPhysicalEquipment`, no UI redesign or simulation edits. These are procedural low-/medium-poly meshes, not a photorealistic asset-pack replacement.
 
@@ -84,7 +84,7 @@ The GL-safe `SettlementProductionProps3D` module adds physical (not composited s
 
 ---
 
-# REFERENCE ART IMPLEMENTATION — NOT A CONCEPT IMAGE
+# REFERENCE ART IMPLEMENTATION â€” NOT A CONCEPT IMAGE
 
 User supplied current in-game visual and a cinematic settlement reference. **Do not alter the existing DPN HUD.** The 3D scene is the actual task: rugged, densely detailed terrain, warm morning lighting, canopy service areas, watchtowers, slatted walkways, working yellow lamps, functional-looking clutter and distinct cutaway buildings.
 
@@ -96,7 +96,7 @@ Smoke tests assert the **real mesh scene graph**, batch sizes, facility props, b
 
 ---
 
-# WINDOWS GRAPHICS CAPTURES — VISIBILITY REPAIR
+# WINDOWS GRAPHICS CAPTURES â€” VISIBILITY REPAIR
 
 Newest player screenshots show that the room-identity layer DID load, but contained huge opaque covering surfaces. Shelter's brown rug masked beds; Command had an oversized dark floor and overlapping racks; Clinic had a white opaque corridor masking medical equipment. Multiple overhead Label3D signs showed solid white rectangles instead of letters on the GL Compatibility renderer. Node-existence smoke tests were insufficient to detect this visual failure.
 
@@ -106,7 +106,7 @@ Newest player screenshots show that the room-identity layer DID load, but contai
 
 ---
 
-# BUILDING & ROOM VISUAL FIDELITY — OCTOBER 10 WINDOWS REVIEW
+# BUILDING & ROOM VISUAL FIDELITY â€” OCTOBER 10 WINDOWS REVIEW
 
 The latest user screenshots show a correctly functioning, open-roof 3D Shelter A, Command and Clinic but the rooms still look interchangeable: a bare floor, thin central dividers, generic consoles/beds and unreadable activity distinctions. Facility management also stays on the right while the user navigates away from the selected building, making its subject ambiguous.
 
@@ -124,7 +124,7 @@ The screenshots show testers traveling far into empty wasteland until Last Haven
 
 ---
 
-# TERRAIN BIOME CONTRAST AND OUTPOST ANCHORING — OCTOBER 10
+# TERRAIN BIOME CONTRAST AND OUTPOST ANCHORING â€” OCTOBER 10
 
 Screenshot review after removing the intersecting horizon plane shows that the terrain remains too monochromatic, with scattered salvage pads inconsistent with the hill heights. This pass adds interpolated per-vertex soil/stone colors derived from actual terrain slope, elevation and slow spatial sediment noise; the standard baked albedo/normal material multiplies these colors. It also anchors the three exterior salvage-station roots to the same procedural terrain height used by the mountains and scatter. Decorative site geometry still has no collision and does not change simulation saves.
 
@@ -136,7 +136,7 @@ Godot smoke tests now assert real per-vertex colors with non-trivial contrast, m
 
 New Windows screenshots confirm black void and UI notice overlap were greatly improved, but hills still show wide hard-edged patches and the map can appear to be endless uniform brown. Root cause in code: the previous "horizon fix" put a textured 1400m square PlaneMesh at y=-0.16 directly beneath the full heightfield. Procedural valleys sometimes dip below it, revealing the flat plane *on top* of the actual terrain from the camera. The horizon material was also mis-scaled by 175x in addition to its UVs, making it look visually uniform.
 
-**Correction:** replace the full underlay with an indexed four-strip ArrayMesh exterior ring from ±160 to ±700 with a deliberate 320×320 center opening. Texture UVs now match the inner landscape. The emergency lower fallback still covers ±1100 and stays at y=-13. Increase sculpted terrain grid from 100×100 to 144×144 and index shared vertices before generating normals for smoother hills. Smoke tests check that no continuation triangle can overlay interior terrain and that hill geometry is indexed. Normal player progress, buildings, interior roof logic, camera panning and 1x/4x/12x timings remain untouched.
+**Correction:** replace the full underlay with an indexed four-strip ArrayMesh exterior ring from Â±160 to Â±700 with a deliberate 320Ã—320 center opening. Texture UVs now match the inner landscape. The emergency lower fallback still covers Â±1100 and stays at y=-13. Increase sculpted terrain grid from 100Ã—100 to 144Ã—144 and index shared vertices before generating normals for smoother hills. Smoke tests check that no continuation triangle can overlay interior terrain and that hill geometry is indexed. Normal player progress, buildings, interior roof logic, camera panning and 1x/4x/12x timings remain untouched.
 
 **Windows acceptance:** at 07:03 clear weather, focus far hills east/west and approach abandoned outposts; sharp brown patchwork caused by the hidden floor should be absent and the horizon should still have no black triangles. Press Home to recenter Last Haven, test Tab roof modes, and retest GL Compatibility graphics capture. This still does not achieve the target cinematic art fidelity; high-quality authored terrain textures, terrain LOD and meshes are separate future work.
 
@@ -164,25 +164,25 @@ Beyond 3D instanced scatter, the ground now has a brighter multi-scale clay/lime
 
 ---
 
-# WORLD REALISM — PLAYABLE 3D GRAPHICS PASS
+# WORLD REALISM â€” PLAYABLE 3D GRAPHICS PASS
 
 This is an actual Godot implementation, not the generated visual target. A new art-direction module adds MultiMesh-instanced wasteland rocks (700), scrap (250), and dry scrub (480), plus environmental salvage stations; each supported facility receives corroded exterior armor, welded panel seams, entry protective details, supply pallets, service conduit and roof fittings. Furnished building interiors gain floor tile seams, short dividers, job-specific equipment and localized task lamps. Rooftop additions use the existing cutaway metadata and should disappear when buildings are opened. All new props are decorative and do not change simulation logic, path collision, speed control, saves, or HUD rendering.
 
-Acceptance on Windows: compare in-game screenshots—not the concept image—at the same 08:21 day/time, confirm new external world dressing and interior equipment are clearly present, select a shelter/clinic/workshop and cycle Tab for interior/roof visibility, and check frame time and material legibility. Art direction still requires dedicated glTF/PBR building kits, character animation and real obstacle navigation to match the concept's fidelity.
+Acceptance on Windows: compare in-game screenshotsâ€”not the concept imageâ€”at the same 08:21 day/time, confirm new external world dressing and interior equipment are clearly present, select a shelter/clinic/workshop and cycle Tab for interior/roof visibility, and check frame time and material legibility. Art direction still requires dedicated glTF/PBR building kits, character animation and real obstacle navigation to match the concept's fidelity.
 
 ---
 
-# PLAYTEST FEEDBACK — TIME CONTROL AND VISIBLE WORLD UPGRADE (OCTOBER 10)
+# PLAYTEST FEEDBACK â€” TIME CONTROL AND VISIBLE WORLD UPGRADE (OCTOBER 10)
 
 **Time bug confirmed:** the former world clock ran at 19.2 in-game minutes per real second on 1x. It is now calibrated at 1 game minute/second on 1x (24-minute day), 4 minutes/second on 4x, and 12 minutes/second on 12x. 1x survivor walking is reduced to about 1.2 meters/second. The Day-2 objective no longer silently forces 4x, keyboard and mouse speed presets share one handler, and exceptional >250ms stalled frames are capped to prevent unintended jumps. Headless gameplay smoke tests advance full simulation fixtures using 5fps and 20fps update intervals and verify pause stops time.
 
-**Screenshot-driven visual upgrade:** the player supplied new FULL and 3D screenshots that remained too similar to the prior prototype. This pass intentionally changes normal-zoom scene readability: closer default camera, higher physical daylight illumination in clear weather, reduced over-tiling on the rough concrete façade material, and a real 3D compound perimeter with supply depots, lamp posts and service aprons outside the existing traversable building layouts. This is geometry only—no path collisions, fake residents, changed inventory or save migration. Rooftop cutaway and safe UI rasterizer remain intact.
+**Screenshot-driven visual upgrade:** the player supplied new FULL and 3D screenshots that remained too similar to the prior prototype. This pass intentionally changes normal-zoom scene readability: closer default camera, higher physical daylight illumination in clear weather, reduced over-tiling on the rough concrete faÃ§ade material, and a real 3D compound perimeter with supply depots, lamp posts and service aprons outside the existing traversable building layouts. This is geometry onlyâ€”no path collisions, fake residents, changed inventory or save migration. Rooftop cutaway and safe UI rasterizer remain intact.
 
 **Windows acceptance:** at 08:21 in clear weather, capture fresh FULL/3D images. The camp boundary, roadside lighting posts, supply yards and less-speckled walls should be clearly visible. Verify F8 capture/Tab cutaways still work and no red streaks reappear. Stopwatch 60 real seconds at 1x: exactly one game hour should elapse (clock time is displayed as HH:MM). Check 4x and 12x against the advertised rates, pause and reset to 1x. The final high-fidelity models, true civilian activity animations and room physics remain future roadmap work.
 
 ---
 
-# WORLD READABILITY AND CAMERA FOLLOW — OCTOBER 10 PLAYTEST
+# WORLD READABILITY AND CAMERA FOLLOW â€” OCTOBER 10 PLAYTEST
 
 The screenshots show a working 3D roof cutaway but very dark mornings, repetitive rooms and hard-to-locate survivors. This focused pass brightens genuine clear-weather daylight (storms and darkness still apply), stages distinct color-coded working zones and shelves/equipment inside existing real rooms, and adds facility name signage and low-cost powered door lamps in the 3D world. The exterior models, normal collision routes, save format and safe red-line-free HUD renderer remain unchanged.
 
@@ -192,12 +192,12 @@ Windows visual acceptance still required: evaluate Day 1 08:35 in clear weather,
 
 ---
 
-# PLAYABLE 3D INTERIORS — ISSUE #8 FIRST FIDELITY SLICE
+# PLAYABLE 3D INTERIORS â€” ISSUE #8 FIRST FIDELITY SLICE
 
 This development build starts connecting building realism to actual survivor movement, not just decorative building models.
 
-- **Survivor route:** Outdoor obstacle-avoiding path → front steps → real door threshold → interior arrival → assigned indoor position. When a job or building target changes, the actor returns through the same threshold to outdoor routes instead of warping through walls. Access is derived from existing building footprints and resident IDs; existing campaign saves do not need migration.
-- **Physical doors:** Starting facility façades have a left-hinged 3D door leaf and a handle. The door swings open when a living, present citizen approaches and closes when the doorway clears. Exterior solid footprints continue to block normal pathfinding.
+- **Survivor route:** Outdoor obstacle-avoiding path â†’ front steps â†’ real door threshold â†’ interior arrival â†’ assigned indoor position. When a job or building target changes, the actor returns through the same threshold to outdoor routes instead of warping through walls. Access is derived from existing building footprints and resident IDs; existing campaign saves do not need migration.
+- **Physical doors:** Starting facility faÃ§ades have a left-hinged 3D door leaf and a handle. The door swings open when a living, present citizen approaches and closes when the doorway clears. Exterior solid footprints continue to block normal pathfinding.
 - **Furnished interiors:** Housing contains beds and lockers, medical clinics contain cots and monitoring equipment, industry contains workbenches and machinery, command contains tables and radio consoles; utilities contain service equipment. They are placed as real meshes at world coordinates beneath detachable roof pieces.
 - **Roof controls:** Select a building to expose its interior automatically. Press **Tab**, or use **INTERIORS [TAB]** in the building inspector, to cycle **Selected / All Interiors / Exteriors**. Roof pieces are hidden, not demolished, so switching back preserves the outdoor silhouette. Press F8 to capture actual gameplay evidence.
 - **Honest scope:** Indoor jobs and doorway movement exist, but physical furniture collision, multiple-door layouts, smart door queues, per-room construction, skeletal animation blending, and occlusion-aware roof fades remain future Issue #8 tasks. Imported custom glTF structures need authored roof/door node metadata to participate in cutaway/hinge animation.
@@ -208,17 +208,17 @@ This development build starts connecting building realism to actual survivor mov
 
 ---
 
-# DPN QUICK COMMAND — CTRL+P LIVE SYSTEM FINDER
+# DPN QUICK COMMAND â€” CTRL+P LIVE SYSTEM FINDER
 
 **New on PR #6:** Press **Ctrl+P** from gameplay to open the session-only DPN Quick Command. Search for a real management screen, workshop, incident console or specific recovery blueprint. Use Up/Down, Enter, Escape, mouse row selection or scroll wheel. The compact panel overlays the world; input never passes through to construction placement or camera movement until it closes. Click the close X or dimmed backdrop to dismiss without changing the underlying game.
 
-**Working destinations:** Settlement Command, Construction Planner, Region & Expeditions, Governance, Industry, Production Workshop, Workforce, Incident Command, Factions, Civilization Network, the Interactive Field Guide, and direct Farm / Water Purifier / Generator / Medical blueprints. These destinations call existing gameplay handlers—there is no simulated placeholder screen. Finding/filtering commands reads game data without changing resources or saves. Ctrl+P is disabled while the Incident Command modal is open, avoiding two stacked command modals.
+**Working destinations:** Settlement Command, Construction Planner, Region & Expeditions, Governance, Industry, Production Workshop, Workforce, Incident Command, Factions, Civilization Network, the Interactive Field Guide, and direct Farm / Water Purifier / Generator / Medical blueprints. These destinations call existing gameplay handlersâ€”there is no simulated placeholder screen. Finding/filtering commands reads game data without changing resources or saves. Ctrl+P is disabled while the Incident Command modal is open, avoiding two stacked command modals.
 
-**Playtest acceptance:** At 960×720, 1024×600, 1366×768 and native resolution, check the search area, scrollable results, highlighted row, keyboard search/backspace, Enter routing, close X, Escape and outside click. Search "workshop" and confirm the working production queue opens; search "medical" and confirm Build opens with the medical blueprint selected. A backdrop click must not place a blueprint. Verify incident console remains independent, Ctrl+P remains reversible, and no resource or treasury values change merely by searching or opening destinations.
+**Playtest acceptance:** At 960Ã—720, 1024Ã—600, 1366Ã—768 and native resolution, check the search area, scrollable results, highlighted row, keyboard search/backspace, Enter routing, close X, Escape and outside click. Search "workshop" and confirm the working production queue opens; search "medical" and confirm Build opens with the medical blueprint selected. A backdrop click must not place a blueprint. Verify incident console remains independent, Ctrl+P remains reversible, and no resource or treasury values change merely by searching or opening destinations.
 
 ---
 
-# DPN SETTLEMENT COMMAND CENTER — FOUR-PAGE TACTICAL BRIEFING
+# DPN SETTLEMENT COMMAND CENTER â€” FOUR-PAGE TACTICAL BRIEFING
 
 The upper-left DPN identity is now an entry point to a **functional four-page command center** (not the old narrow textual "Your Settlement" popup). This upgrade retains the existing player's real 3D world view and red/black DPN identity while replacing flat prose with actual simulation readings and useful navigation.
 
@@ -233,9 +233,9 @@ The upper-left DPN identity is now an entry point to a **functional four-page co
 
 **Navigation:** click the DPN lightning/identity area; switch among four tabs; inspect the four telemetry cards and scroll-free priority rows; click any intelligence row or the three contextual quick-action buttons to open its associated *real* management system. Original lower commands **OPEN BUILD**, **SHOW GOALS**, and **CLOSE** remain fully functional. Click outside or press Escape to dismiss without selecting terrain. All dashboard data is read-only, computed from the existing simulation; interacting with a linked action uses the underlying actual in-game control.
 
-The command center now uses a larger 682×624 maximum panel with responsive shrinking at smaller windows; all tab, metric, row and button placements come from `SettlementUILayout` to keep drawn controls and click hitboxes aligned. It does not alter save data, 3D assets, weather, or the fixed cached-raster HUD rendering path that solved the Windows red streaks.
+The command center now uses a larger 682Ã—624 maximum panel with responsive shrinking at smaller windows; all tab, metric, row and button placements come from `SettlementUILayout` to keep drawn controls and click hitboxes aligned. It does not alter save data, 3D assets, weather, or the fixed cached-raster HUD rendering path that solved the Windows red streaks.
 
-**Windows playtest:** at 1280×720, 1366×768 and native resolution, open all four tabs; ensure the last visible intelligence row does not touch the quick-action row or legacy footer. Click an Industry order row to open the real Workshop, and click a People action to open the real Workforce. Verify the CLOSE button, outside click and Escape work, and that merely changing tabs does not change resource totals or issue manufacturing commands.
+**Windows playtest:** at 1280Ã—720, 1366Ã—768 and native resolution, open all four tabs; ensure the last visible intelligence row does not touch the quick-action row or legacy footer. Click an Industry order row to open the real Workshop, and click a People action to open the real Workforce. Verify the CLOSE button, outside click and Escape work, and that merely changing tabs does not change resource totals or issue manufacturing commands.
 
 ---
 
@@ -245,7 +245,7 @@ The Governance page now shows the **current law, next proposed law, projected av
 
 ---
 
-# INCIDENT CHANNEL & COMMAND MENU INPUT FIX — ISSUE #10
+# INCIDENT CHANNEL & COMMAND MENU INPUT FIX â€” ISSUE #10
 
 The player confirmed that the persistent red-line issue #9 is **fixed** in the Windows build containing the cached DPN raster controls. Issue #9 is closed from that player confirmation. The new issue **#10** addresses the unresponsive, oversized Settlement Incident Channel and basic command-screen usability.
 
@@ -255,7 +255,7 @@ The player confirmed that the persistent red-line issue #9 is **fixed** in the W
 - Close it with the visible upper-right **X**, the bottom **CLOSE** action, **F2** again, **Escape**, or a click on the shaded space outside the command window. Clicks outside only dismiss the modal; they will *not* accidentally place buildings or activate covered toolbar controls.
 - Four working event filters: **ALL**, **ALERTS** (critical and warning), **OPERATIONS** (routine/positive), and **UNREAD**. Use the previous/next page arrows, Page Up/Page Down, or the mouse wheel to browse. Clicking an event selects its full briefing.
 - Real counts for distinct event groups, current alerts and unread records. Repeated identical messages (especially duplicate **LOAD COMPLETE** entries) are grouped with an occurrence count rather than filling the panel with identical rows. This presentation grouping does not mutate the actual save/history.
-- Click **ACKNOWLEDGE** to mark a selected incident as read for the current session, or **MARK ALL READ** to acknowledge all records in the active filter. History is not deleted. **OPEN SYSTEM** opens a *real* related gameplay screen only for events that clearly reference one (e.g. grid → Build, production → Industry, relay → Region, council → Govern, staff duty → Workforce). Unsupported events do not pretend to be actionable.
+- Click **ACKNOWLEDGE** to mark a selected incident as read for the current session, or **MARK ALL READ** to acknowledge all records in the active filter. History is not deleted. **OPEN SYSTEM** opens a *real* related gameplay screen only for events that clearly reference one (e.g. grid â†’ Build, production â†’ Industry, relay â†’ Region, council â†’ Govern, staff duty â†’ Workforce). Unsupported events do not pretend to be actionable.
 - A clearly visible **X** has also been added to Workforce, Build, Region, Govern, Industry, Workshop, Factions, Nation, Guide, Update and survivor/facility inspector screens. Close hit targets share the same responsive geometry as the drawn buttons.
 
 ## Windows acceptance
@@ -265,17 +265,17 @@ The player confirmed that the persistent red-line issue #9 is **fixed** in the W
 3. Generate multiple SAVE/LOAD events and verify repeated entries show an `xN` count. Change filter tabs and use pagination, select an entry and acknowledge it; the original simulation events must remain available.
 4. Select a real **PRODUCTION** or **GRID** incident, click **OPEN SYSTEM** and confirm Industry or Build opens. Records without a related game screen must not launch fabricated actions.
 5. Open Build, Region, Govern, Industry, Workshop, Factions, Nation, Workforce, Guide and a survivor inspector; verify each has a mouse-clickable upper-right X that closes the intended screen without touching simulation state.
-6. Test at 960×720, 1366×768 and 1920×1080, then use **F8** for direct screenshots of Incident Command and representative other menus.
+6. Test at 960Ã—720, 1366Ã—768 and 1920Ã—1080, then use **F8** for direct screenshots of Incident Command and representative other menus.
 
 **Scope limit:** These changes make the screens interactive, accessible and consistent, but do not yet turn every existing management page into a finished commercial-grade interface. Continue improving the remaining menu content and layout through tracked player feedback. Keep PR #6 unmerged until Windows playtesting is approved.
 
 ---
 
-# ACTIVE BLOCKER — ISSUE #9: RED DIAGONAL UI LINES (OCTOBER 10)
+# ACTIVE BLOCKER â€” ISSUE #9: RED DIAGONAL UI LINES (OCTOBER 10)
 
 **Not resolved.** The player supplied another direct F8 comparison (`last-settlement-1791653529-3D.png`, `last-settlement-1791653529-FULL.png`, and matching graphics report): the unadorned 3D pass is clean; the composite FULL pass retains diagonal red lines despite OpenGL Compatibility rendering and the all-filled-rectangle UI code from the previous attempt.
 
-**New isolate-by-pass tool — Ctrl+F12.** Launch the latest PR #6 Windows EXE, leave the settlement displayed, then press **Ctrl+F12 once**. The game captures six screenshots consecutively in `playtest-screenshots` and opens that directory; there is no need to toggle settings and photograph the monitor six times. These are generated from different real CanvasItem draw passes, not simulated mockups:
+**New isolate-by-pass tool â€” Ctrl+F12.** Launch the latest PR #6 Windows EXE, leave the settlement displayed, then press **Ctrl+F12 once**. The game captures six screenshots consecutively in `playtest-screenshots` and opens that directory; there is no need to toggle settings and photograph the monitor six times. These are generated from different real CanvasItem draw passes, not simulated mockups:
 
 1. `0-FULL.png`: normal player HUD, panels, 3D world and widgets
 2. `1-WORLD_COMPOSITE.png`: draws ONLY the dedicated 3D SubViewport texture via the top-level CanvasItem
@@ -290,7 +290,7 @@ The accompanying `PASS-REPORT.txt` records the actual renderer, OS, filenames an
 
 ---
 
-# RED STREAKS — PLAYER F8 CAPTURES PROVED UI-ONLY (OCTOBER 10)
+# RED STREAKS â€” PLAYER F8 CAPTURES PROVED UI-ONLY (OCTOBER 10)
 
 The player supplied **paired original F8 screenshots** from the same frame. The long diagonal crimson streaks are present in `-FULL.png` but **absent** from `-3D.png`. This is direct evidence that the artifact is introduced by the Godot CanvasItem UI/compositing layer, not world materials, terrain, 3D lighting or GPU-rendered 3D models. Earlier theories that blamed monitor photography are superseded by these actual saved PNGs.
 
@@ -310,11 +310,11 @@ The player supplied **paired original F8 screenshots** from the same frame. The 
 
 **F8 now produces 3 files in the opened screenshots folder**, all using a shared timestamp:
 
-- `last-settlement-<timestamp>-FULL.png` — direct rendered gameplay (3D plus HUD).
-- `last-settlement-<timestamp>-3D.png` — underlying 3D world frame, without HUD.
-- `last-settlement-<timestamp>-GRAPHICS.txt` — actual runtime renderer, OS, image dimensions.
+- `last-settlement-<timestamp>-FULL.png` â€” direct rendered gameplay (3D plus HUD).
+- `last-settlement-<timestamp>-3D.png` â€” underlying 3D world frame, without HUD.
+- `last-settlement-<timestamp>-GRAPHICS.txt` â€” actual runtime renderer, OS, image dimensions.
 
-If streaks appear in BOTH images, investigate 3D renderer/shader/graphics path. If only FULL, investigate UI compositor. If neither but they appear on the physical monitor, it is not a streak drawn into Godot's screenshot; check Windows display path/cable/monitor/driver or moiré from phone photography. This distinction is essential to avoid repeatedly changing unrelated gameplay code. Attach the PNGs (not photos) if the issue persists; neither an automated headless gate nor code inspection can certify a user's specific monitor.
+If streaks appear in BOTH images, investigate 3D renderer/shader/graphics path. If only FULL, investigate UI compositor. If neither but they appear on the physical monitor, it is not a streak drawn into Godot's screenshot; check Windows display path/cable/monitor/driver or moirÃ© from phone photography. This distinction is essential to avoid repeatedly changing unrelated gameplay code. Attach the PNGs (not photos) if the issue persists; neither an automated headless gate nor code inspection can certify a user's specific monitor.
 
 **CI regression protection:** smoke requires OpenGL preview default and rejects reintroduced native raw canvas line/polyline calls in three major rendering files. The stable `main` release remains unchanged; the visual fix is in the open Windows playtest PR until approved.
 
@@ -338,7 +338,7 @@ This PR build responds to the latest player screenshots showing a plain circular
 
 ## Red diagonal streak diagnosis
 
-The user photos show diagonal red/white lines crossing the 3D map, opaque UI panels and Windows window furniture. A search of this game's UI and world renderers found no full-screen diagonal-stripe rendering command. The effects may come from the monitor, camera/moiré, GPU display output, or some unlocated rendering issue. We do **not** claim they were fixed in code without a direct frame capture.
+The user photos show diagonal red/white lines crossing the 3D map, opaque UI panels and Windows window furniture. A search of this game's UI and world renderers found no full-screen diagonal-stripe rendering command. The effects may come from the monitor, camera/moirÃ©, GPU display output, or some unlocated rendering issue. We do **not** claim they were fixed in code without a direct frame capture.
 
 1. Launch this **new** Windows playtest and press **F8**. The game will open its `playtest-screenshots` folder; attach that original PNG. Do not photograph the display for this specific test.
 2. If the streaks are visible in the PNG, they are present in the captured graphics pipeline and require further game/GPU diagnosis.
@@ -349,21 +349,21 @@ The user photos show diagonal red/white lines crossing the 3D map, opaque UI pan
 
 ---
 
-# October 9 player screenshot feedback — UI readability & density pass
+# October 9 player screenshot feedback â€” UI readability & density pass
 
-Eight photographed Windows playtest screenshots identified the specific problems this patch addresses: HUD labels small at 1280×720, cramped bottom dock / speed row, miniature build/region list entries, wide nearly-empty Nation and Factions panels, and weak hierarchy between commands and live values.
+Eight photographed Windows playtest screenshots identified the specific problems this patch addresses: HUD labels small at 1280Ã—720, cramped bottom dock / speed row, miniature build/region list entries, wide nearly-empty Nation and Factions panels, and weak hierarchy between commands and live values.
 
 **Implemented fixes:** the dock remains shallow (62 logical pixels) while the nine navigation buttons gain larger click targets and readable labels; speed controls remain distinct above navigation. Top resources emphasize larger numbers instead of tiny values. Build and Region lists have taller rows, stronger type and more legible prices/risks. Nation Overview adds three actual telemetry cards (**discovered sites**, **cleared colony sites**, **active field teams**) and, if vertical space permits, a live event feed. Factions without radio contacts now shows live site/team/relay cards when room permits. These are drawn only when they fit above the action footer. Decorative binary stays inside the dock instead of over the playing field.
 
-**NEW: F7 UI SCALE.** Press F7 to cycle interface sizes 100%, 115%, and 130%. The game refuses a setting that would leave fewer than 960×600 *logical* pixels and resets to 100% in a too-small window. This uses Godot's window content scaling, so drawn hit targets and mouse interaction should remain aligned. The setting is currently for the current session only, not written to the save file.
+**NEW: F7 UI SCALE.** Press F7 to cycle interface sizes 100%, 115%, and 130%. The game refuses a setting that would leave fewer than 960Ã—600 *logical* pixels and resets to 100% in a too-small window. This uses Godot's window content scaling, so drawn hit targets and mouse interaction should remain aligned. The setting is currently for the current session only, not written to the save file.
 
-**Player test:** use F7 at your desired Windows resolution and compare overall legibility, then open Build, Region, Nation, Factions, Industry, Governance, Workforce and an inspected survivor. Specifically confirm the four speed controls don't overlap the nine dock tabs; Nation and Factions never cover their bottom action buttons; text remains inside cards; and the simulation remains responsive to clicks. Use **F8** to capture direct game screenshots rather than photographing the monitor. Long diagonal light streaks in the supplied photos were not found in the DPN UI renderer and may be a camera/display moiré artifact; a direct F8 screenshot will confirm that rather than prompting a speculative 3D graphics fix.
+**Player test:** use F7 at your desired Windows resolution and compare overall legibility, then open Build, Region, Nation, Factions, Industry, Governance, Workforce and an inspected survivor. Specifically confirm the four speed controls don't overlap the nine dock tabs; Nation and Factions never cover their bottom action buttons; text remains inside cards; and the simulation remains responsive to clicks. Use **F8** to capture direct game screenshots rather than photographing the monitor. Long diagonal light streaks in the supplied photos were not found in the DPN UI renderer and may be a camera/display moirÃ© artifact; a direct F8 screenshot will confirm that rather than prompting a speculative 3D graphics fix.
 
 This is a targeted improvement, not a claimed complete high-end commercial UI redesign. Typography and responsive compositing still require real Windows visual acceptance before merging PR #6.
 
 ---
 
-# Dust Fronts & Settlement Emergency Orders — Windows playtest
+# Dust Fronts & Settlement Emergency Orders â€” Windows playtest
 
 This developer preview adds a dynamic **dust-storm weather front** to the actual Godot simulation. A first front can begin after approximately two simulation days; subsequent fronts recur with a varied interval, duration and severity. The game shows the active weather in the thin HUD data rail, surfaces an urgent **STORM: TAKE COVER** warning, and adds a weather briefing with estimated time remaining in the Overview screen. It uses no real-world forecast service.
 
@@ -371,13 +371,13 @@ This developer preview adds a dynamic **dust-storm weather front** to the actual
 
 The 3D world now contains a GPU-instanced airborne-dust field, warmer obscured skyline, longer-distance dust haze and reduced storm daylight. The visual volume follows the playable camera rather than instantiating hundreds of individual mesh nodes. The weather front and order persist through a compatible v14 save; loading older saves defaults safely to clear weather.
 
-**Manual Windows acceptance:** accelerate simulation to 12× to reach an actual dust front; verify HUD warning, dust particles and changed horizon and power/water readings. Click the alert to shelter outdoor crews; inspect real survivor actions and confirm outdoor work output halts while indoor shifts continue. Resume field work and observe that exposure, production and the alert react accordingly. Save in a storm, reload, and confirm the same severity and policy remain. Let the front pass and confirm weather visuals clear, shelter releases automatically, and normal production returns. Test with the camera orbiting at 960×720 and 1920×1080; use F8 to capture unaltered screenshots.
+**Manual Windows acceptance:** accelerate simulation to 12Ã— to reach an actual dust front; verify HUD warning, dust particles and changed horizon and power/water readings. Click the alert to shelter outdoor crews; inspect real survivor actions and confirm outdoor work output halts while indoor shifts continue. Resume field work and observe that exposure, production and the alert react accordingly. Save in a storm, reload, and confirm the same severity and policy remain. Let the front pass and confirm weather visuals clear, shelter releases automatically, and normal production returns. Test with the camera orbiting at 960Ã—720 and 1920Ã—1080; use F8 to capture unaltered screenshots.
 
 **Current limits:** This implements storm lighting, airborne grit and concrete gameplay decisions, not cinematic volumetric VFX, realistic wind audio, rain/snow, handcrafted weather textures, or full-body cover animations. Visual quality needs manual Windows playtesting even when the headless build passes. PR #6 stays unmerged until accepted.
 
 ---
 
-# 3D Settlement Worksite Pass — PR #6 candidate
+# 3D Settlement Worksite Pass â€” PR #6 candidate
 
 The next Windows preview adds a **physical press-and-conveyor yard** outside the industrial workshop rather than a decorative HUD representation. The modeled environment includes a hydraulic stamping press, traveling die head, roller conveyor carrying a metal blank, operator safety rails, an electrical cabinet, storage pallets, service conduit and status lighting. The assembly remains to the right of the workshop's central doorway, preserving the existing exterior navigation approach. It is procedural transitional game art; licensed, realistic mechanical models and collisions have not yet been shipped.
 
@@ -385,7 +385,7 @@ The next Windows preview adds a **physical press-and-conveyor yard** outside the
 
 Survivors now carry context-sensitive 3D work equipment while their current action matches actual work: construction wrench, farming hoe, first-aid kit, security radio, carried supplies or cooking pan. On-duty tasks gain a restrained stationary work gesture with the procedural character rig. Imported walk, idle and work clips are looped at runtime and start at a stable per-person phase so the crowd does not move in lockstep. Imported locomotion switches to the authored Run clip at high movement speed and adjusts animation cadence to measured 3D movement, reducing foot sliding under accelerated simulation. Survivor facing now eases toward each travel direction and holds when paused, avoiding instant pivots. New arrivals appear at their actual settlement positions rather than briefly walking in from world origin. Uniform weathering now uses garment-local coordinates and stable citizen-specific variation rather than screen-pixel noise, preventing the fabric grain from shimmering with camera movement. Work props disappear when the survivor is moving to another location, sleeping or off duty. **People deployed on expeditions disappear from the Last Haven scene** until they return; they can no longer be simultaneously away on the regional map and physically present at home. The command building has a world-space **DPN / LAST HAVEN** identification plaque above the entrance.
 
-**Windows visual acceptance:** Open Industry, choose Fuel Blend or Machine Parts and allow a production batch to begin. Pan to the outdoor workshop yard, observe the press cycling and the carrier moving. Pause Workshop Control and verify both freeze; resume and verify movement returns. Reassign the only Engineer/Builder or turn their duty off to check the machine stays idle when there is no available industrial worker. Inspect Farmer, Medic, Guard and Builder activity props while working, traveling and off duty. Launch an expedition to ensure members disappear from the settlement and return once home. Capture actual unaltered Windows F8 screenshots at 1280×720, 1920×1080 and fullscreen to evaluate silhouettes, proportions, readability, possible clipping and machine/character placement.
+**Windows visual acceptance:** Open Industry, choose Fuel Blend or Machine Parts and allow a production batch to begin. Pan to the outdoor workshop yard, observe the press cycling and the carrier moving. Pause Workshop Control and verify both freeze; resume and verify movement returns. Reassign the only Engineer/Builder or turn their duty off to check the machine stays idle when there is no available industrial worker. Inspect Farmer, Medic, Guard and Builder activity props while working, traveling and off duty. Launch an expedition to ensure members disappear from the settlement and return once home. Capture actual unaltered Windows F8 screenshots at 1280Ã—720, 1920Ã—1080 and fullscreen to evaluate silhouettes, proportions, readability, possible clipping and machine/character placement.
 
 **Current limits:** This does not provide simulated machine collisions, realistic glTF machinery, full motion-captured work tasks, hand IK, factory interiors or authentic industrial audio. Headless smoke tests check the scene nodes, animation state, staffing, away-member visibility and command identification; they cannot certify how realistic the art looks on a Windows display. Keep PR #6 unmerged until player-approved.
 
@@ -399,11 +399,11 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 **Clinic and workshop interior utility pass:** Each clinic treatment bay now has a wall-mounted articulated examination lamp, and the workshop gains an overhead compressed-air header feeding two workstation drops with regulators and gauges. Smoke checks validate each fitting and preserve the intentional roof-view controls. Use ROOMS to reveal the facilities and verify both clinical beds stay clear, the workshop air drops terminate at the work bays, and the center aisle remains open. These fittings are visual details; they do not alter job simulation or navigation.
 
-**Treatment and fabrication work-surface pass:** Clinic sterile trays now hold wrapped supplies and paired steel instruments behind a raised divider, with restrained wipe streaks and burnished edges. The workshop's solid equipment blocks are replaced with open steel-legged fabrication benches, each with a clamped workpiece in a vise, an organized hand-tool tray, localized oil patina and grinding scuffs. The smoke test checks both stations, detail counts, mark placement on the surfaces and clearance from the central aisle. Reveal each room at close zoom and confirm the wear reads as subtle accumulated use rather than dirt or floating geometry; verify nothing touches neighboring beds, machines or pipework.
+**Treatment and fabrication work-surface pass:** Clinic sterile trays now hold wrapped supplies and paired steel instruments behind a raised divider, with restrained wipe streaks and burnished edges. The workshop's solid equipment blocks are replaced with open steel-legged fabrication benches, each with a clamped workpiece in a vise, an organized hand-tool tray, localized oil patina and grinding scuffs. The smoke test checks both stations, detail counts, mark placement on the surfaces and clearance from the central aisle. Reveal each room at close zoom and confirm the wear reads as subtle accumulated use rather than dirt or floating geometry; Instruments and hand tools carry small deterministic offsets and yaw so stations do not read as identical copies, while staying within their trays. Verify nothing touches neighboring beds, machines or pipework.
 
 ---
 
-# Industry Workshop Command — October 2026 candidate
+# Industry Workshop Command â€” October 2026 candidate
 
 This pull-request build contains a **real production management screen**, not just a graphical preview. Open **Industry (K)**, then click **Open Workshop Control / Manage Orders** in the middle of the trade screen. The new right-side interface leaves the 3D settlement visible.
 
@@ -411,7 +411,7 @@ The workshop displays the current shift's eligible Builders and Engineers, runni
 
 **PAUSE / RESUME** stops or restarts the workshop simulation, not the whole settlement clock. It persists in compatible existing save files. Labor availability now checks real shift hours, the on-duty flag, adult status, custody, health and current presence; reassigning an Engineer in Workforce or pausing their duty can leave production short of labor. Resuming labor allows production to continue normally.
 
-**Windows acceptance checks:** queue one Fuel Blend and five Machine Parts; move a pending order, cancel one, and verify the queue changes without stock deduction. Allow one order to become WORKING and confirm it cannot be cancelled; pause production, advance time at 4×, confirm its progress stays fixed; resume and verify actual progress. Send Engineers away on an expedition or set them off duty and confirm production reflects fewer eligible workers. Save while paused, load, and confirm the hold remains. Verify recipe and action buttons at 960×720, 1024×600 and fullscreen, capture F8 screenshots, and report any cut-off areas.
+**Windows acceptance checks:** queue one Fuel Blend and five Machine Parts; move a pending order, cancel one, and verify the queue changes without stock deduction. Allow one order to become WORKING and confirm it cannot be cancelled; pause production, advance time at 4Ã—, confirm its progress stays fixed; resume and verify actual progress. Send Engineers away on an expedition or set them off duty and confirm production reflects fewer eligible workers. Save while paused, load, and confirm the hold remains. Verify recipe and action buttons at 960Ã—720, 1024Ã—600 and fullscreen, capture F8 screenshots, and report any cut-off areas.
 
 **Limitations:** The screen reuses existing crafting recipes and simulation; this does not add modeled factory interiors, new machines, assembly animations or a full supply-chain logistics network. The automated smoke covers transaction validity and geometry but not visual quality on the player's Windows machine. Keep the PR unmerged until that playtest is approved.
 
@@ -421,15 +421,15 @@ The workshop displays the current shift's eligible Builders and Engineers, runni
 
 When a mission is **Outbound** or **Searching**, the right-side active-expedition list now includes a clickable **RECALL TEAM** control. This immediately changes that expedition to **Returning**. An outbound team turns back from the distance it actually traveled (the map marker follows its shortened route). A team already searching must make the full trip home. Incomplete missions do not award phantom loot or refund provisions. Recalling a returning or finished mission is rejected. Arrival clears each surviving member's offsite assignment so they can resume work in Last Haven.
 
-**Windows test:** dispatch a team and run 1× until it is one-third of the way out. Click Recall Team. Confirm its marker reverses from that location, not from the remote site; check the status changes to Returning and the control becomes disabled. Let the team arrive and confirm Workforce includes the returned personnel. Capture F8 before and after.
+**Windows test:** dispatch a team and run 1Ã— until it is one-third of the way out. Click Recall Team. Confirm its marker reverses from that location, not from the remote site; check the status changes to Returning and the control becomes disabled. Let the team arrive and confirm Workforce includes the returned personnel. Capture F8 before and after.
 
 ---
 
-# Region Mission Planner — PR #6 playtest
+# Region Mission Planner â€” PR #6 playtest
 
 **This preview changes gameplay, not merely the layout of the map.**
 
-Open **Region (M)**, choose a discovered salvage site on the map or the site list, then configure **team size (1–4)** with − TEAM / + TEAM and choose a route with the **TACTIC** button. The site card previews who will actually go, required prepared meals / clean water / optional medicine, estimated one-way travel duration, search time and encounter hazard. The dispatch button uses the exact same validation shown in the preview; when a team is unavailable, another expedition is already at the site, or supplies are insufficient, a human-readable reason appears. Rejected missions **never debit supplies**.
+Open **Region (M)**, choose a discovered salvage site on the map or the site list, then configure **team size (1â€“4)** with âˆ’ TEAM / + TEAM and choose a route with the **TACTIC** button. The site card previews who will actually go, required prepared meals / clean water / optional medicine, estimated one-way travel duration, search time and encounter hazard. The dispatch button uses the exact same validation shown in the preview; when a team is unavailable, another expedition is already at the site, or supplies are insufficient, a human-readable reason appears. Rejected missions **never debit supplies**.
 
 The three tactics affect simulated travel, encounter risk and recovery time:
 - **Balanced:** conventional speed, risk and salvage.
@@ -442,7 +442,7 @@ A mission only takes eligible present adults who are healthy enough to travel; S
 
 ---
 
-# Workforce Command and Live Timeline — PR #6 playtest
+# Workforce Command and Live Timeline â€” PR #6 playtest
 
 **This is a development-branch feature, not part of the installed stable v1.0.5 build.**
 
@@ -450,7 +450,7 @@ The **PEOPLE** metric in the top HUD, or **F6**, opens a new Workforce Command o
 
 The thin bottom information rail now contains **PAUSE/RESUME, 1x, 4x and 12x** mouse controls above the nine command stations. Clicking a speed resumes play at that selected rate. Keyboard Space, 1, 2 and 3 still work. Clicking a **CHECK FOOD**, **CHECK WATER**, or **POWER SHORTFALL** alert in the top-right HUD opens a real farm, purifier, or generator blueprint, respectively.
 
-**Windows checks:** Open Workforce from PEOPLE and F6; select the last survivor on page 2, reassign them to a new job and confirm the displayed role updates; verify work behavior changes with time running. Click PAUSE, then 4x, and verify the simulation resumes at 4x. Trigger a food/water shortage with an existing save and click its warning to reach an actual building placement. Confirm no input passes through the personnel panel to the 3D world and the modal remains fully on screen at both 960×720 and 1366×768. Capture F8 screenshots and use F9 for a local diagnostic report. The headless CI smoke validates state, hit targets, and transactions but cannot replace Windows visual acceptance.
+**Windows checks:** Open Workforce from PEOPLE and F6; select the last survivor on page 2, reassign them to a new job and confirm the displayed role updates; verify work behavior changes with time running. Click PAUSE, then 4x, and verify the simulation resumes at 4x. Trigger a food/water shortage with an existing save and click its warning to reach an actual building placement. Confirm no input passes through the personnel panel to the 3D world and the modal remains fully on screen at both 960Ã—720 and 1366Ã—768. Capture F8 screenshots and use F9 for a local diagnostic report. The headless CI smoke validates state, hit targets, and transactions but cannot replace Windows visual acceptance.
 
 ---
 
@@ -458,7 +458,7 @@ The thin bottom information rail now contains **PAUSE/RESUME, 1x, 4x and 12x** m
 
 **The Last Settlement** is the game's title. **Last Haven** is the name of the settlement you're controlling. The earlier words "Recovery Network" and "Site-01" were internal project labels, not useful gameplay instructions, so they are gone from the player-facing header.
 
-Click **Last Haven • Overview ›** in the top-left corner to open a concise, interactive briefing. The briefing explains what to do next, how many opening objectives are completed, available building materials, construction progress, current electricity generation and demand, battery charge, and sanitation. Everything comes from the current live simulation, not hard-coded fictional numbers.
+Click **Last Haven â€¢ Overview â€º** in the top-left corner to open a concise, interactive briefing. The briefing explains what to do next, how many opening objectives are completed, available building materials, construction progress, current electricity generation and demand, battery charge, and sanitation. Everything comes from the current live simulation, not hard-coded fictional numbers.
 
 Use **Open Build** to start construction, **Show Goals** to open field directives, or **Close** / **Esc** to go back to the settlement. Clicking outside the briefing closes it without accidentally giving an order in the 3D world.
 
@@ -476,7 +476,7 @@ Below the resource indicators, the compact status line now spells out **Day / Ti
 - A selected survivor has a thin ground-level ring, rather than an opaque glowing yellow disc.
 - **Visual QA:** open each of the nine bottom screens at your normal resolution and fullscreen. Check that the resource row and the inspector controls are visible and clickable; use **F8** to capture unmodified game screenshots. The CI smoke test validates basic geometry/input, but it cannot establish monitor-specific legibility.
 
-# The Last Settlement — Windows Playtest Loop
+# The Last Settlement â€” Windows Playtest Loop
 
 This guide separates **stable releases** from **work-in-progress test builds**. Install Godot only if you want to work with source code; Windows ZIPs run without Godot.
 
@@ -501,7 +501,7 @@ Stable updates use the game's **F10** Update Command. Development artifacts are 
 
 ## 2. Test a new change *before* it is merged
 
-1. Open [Actions → DPN Settlement Windows Build](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml).
+1. Open [Actions â†’ DPN Settlement Windows Build](https://github.com/DPN-Technology/The-Last-Settlement/actions/workflows/windows-build.yml).
 2. Select a successful run associated with the feature pull request you want to test. The run must finish its **Windows x86_64 Portable Build** job successfully.
 3. In **Artifacts**, download `TheLastSettlement-Windows-x86_64`.
 4. Extract the downloaded GitHub artifact archive; it contains `TheLastSettlement-Windows-x86_64.zip`. Extract that inner ZIP to a **new folder**.
@@ -516,19 +516,19 @@ Use a successful `main` Windows Build run. The `TheLastSettlement-Windows-Portab
 
 ## 4. In-game playtest workflow
 
-- **F1** — optional field guide (not forced at startup)
-- **Space** — pause/resume; **1/2/3** — simulation speed
-- **Right or middle mouse drag** — pan the real 3D camera; **Alt + right drag** — 3D orbit; **mouse wheel** — 3D perspective zoom; **Home** — center Last Haven
-- **Clickable bottom toolbar** — build, map, governance, economy, factions, civilization, save, load and guide
-- **F2** — expand/collapse the settlement incident feed
-- **F3** — open/collapse the mission board; it starts as a small tab to keep the world visible
-- **F4** — toggle immersive fullscreen
-- **F8** — capture a PNG screenshot of the actual game to the local playtest-screenshots folder
-- **B**, then **Q/E** and mouse click — place a structure
-- **M** — world map; **V / K / O / J** — governance, economy, factions and civilization screens
-- **S / L** — save/load
-- **F9** — write a game-only diagnostic report in your Godot user data folder, then open the report folder in Windows Explorer
-- **F10** — stable-release update channel, *not* preview updates
+- **F1** â€” optional field guide (not forced at startup)
+- **Space** â€” pause/resume; **1/2/3** â€” simulation speed
+- **Right or middle mouse drag** â€” pan the real 3D camera; **Alt + right drag** â€” 3D orbit; **mouse wheel** â€” 3D perspective zoom; **Home** â€” center Last Haven
+- **Clickable bottom toolbar** â€” build, map, governance, economy, factions, civilization, save, load and guide
+- **F2** â€” expand/collapse the settlement incident feed
+- **F3** â€” open/collapse the mission board; it starts as a small tab to keep the world visible
+- **F4** â€” toggle immersive fullscreen
+- **F8** â€” capture a PNG screenshot of the actual game to the local playtest-screenshots folder
+- **B**, then **Q/E** and mouse click â€” place a structure
+- **M** â€” world map; **V / K / O / J** â€” governance, economy, factions and civilization screens
+- **S / L** â€” save/load
+- **F9** â€” write a game-only diagnostic report in your Godot user data folder, then open the report folder in Windows Explorer
+- **F10** â€” stable-release update channel, *not* preview updates
 
 The F9 JSON report includes the game version, save schema, in-game day, survivor counts, resources and recent incidents. It intentionally excludes machine identifiers and full save data.
 
