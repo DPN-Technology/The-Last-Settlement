@@ -2,6 +2,15 @@ class_name SettlementSimulation
 extends RefCounted
 
 const SAVE_VERSION := 14
+# Normal 1x game clock: one in-game minute per real second (24-minute day).
+# 4x and 12x scale this exact base rather than changing the underlying rate.
+const GAME_MINUTES_PER_REAL_SECOND := 1.0
+const MAX_FRAME_DELTA := 0.25
+
+static func clock_hours(real_delta: float, multiplier: float) -> float:
+	# Clamp exceptional stall frames so a frozen window cannot jump days.
+	return clampf(real_delta,0.0,MAX_FRAME_DELTA)*clampf(multiplier,1.0,12.0)*GAME_MINUTES_PER_REAL_SECOND/60.0
+
 
 var rng := RandomNumberGenerator.new()
 var citizens: Array[Dictionary] = []
@@ -56,12 +65,37 @@ var utility_failures := {
 var event_director := EventDirector.new()
 var social_simulation := SocialSimulation.new()
 var world_simulation := WorldSimulation.new()
+var weather_simulation := WeatherSimulation.new()
 var governance_simulation := GovernanceSimulation.new()
 var economy_simulation := EconomySimulation.new()
 var faction_simulation := FactionSimulation.new()
 var civilization_simulation := CivilizationSimulation.new()
 var federal_governance_simulation := FederalGovernanceSimulation.new()
 var settlement_name := "LAST HAVEN // SITE-01"
+# Optional v14 save field: older saves load with every directive unfinished.
+var field_objectives := {
+	"inspected": false,
+	"blueprint": false,
+	"expedition": false,
+	"survived": false
+}
+
+func complete_field_objective(objective: String) -> void:
+	if not field_objectives.has(objective) or bool(field_objectives[objective]):
+		return
+	field_objectives[objective] = true
+	var titles := {
+		"inspected": "Know Your People",
+		"blueprint": "Rebuild the Camp",
+		"expedition": "Beyond the Walls",
+		"survived": "First Night"
+	}
+	add_event("DIRECTIVE COMPLETE", str(titles.get(objective, "Field Command")) + " completed.", "good")
+
+func check_field_objectives() -> void:
+	if day >= 2:
+		complete_field_objective("survived")
+
 
 func _init() -> void:
 	rng.randomize()
@@ -118,6 +152,9 @@ func get_build_catalog() -> Array[Dictionary]:
 		{"type":"floor","name":"Floor","size":Vector2(40,40),"cost":3.0,"work":14.0,"capacity":0},
 		{"type":"door","name":"Door","size":Vector2(40,12),"cost":5.0,"work":18.0,"capacity":0},
 		{"type":"housing","name":"Shelter Module","size":Vector2(120,80),"cost":24.0,"work":85.0,"capacity":6},
+		{"type":"farm","name":"Crop Field","size":Vector2(190,100),"cost":22.0,"work":90.0,"capacity":6},
+		{"type":"medical","name":"Clinic Module","size":Vector2(140,90),"cost":35.0,"work":105.0,"capacity":4},
+		{"type":"industry","name":"Workshop Bay","size":Vector2(160,95),"cost":38.0,"work":115.0,"capacity":6},
 		{"type":"storage","name":"Storage Module","size":Vector2(120,80),"cost":20.0,"work":70.0,"capacity":10},
 		{"type":"generator","name":"Generator","size":Vector2(120,90),"cost":34.0,"work":110.0,"capacity":3},
 		{"type":"battery","name":"Battery Bank","size":Vector2(100,70),"cost":26.0,"work":75.0,"capacity":2},
@@ -163,6 +200,7 @@ func place_blueprint(build_type: String, world_position: Vector2, rotated: bool 
 		"assigned_builder": 0
 	})
 	next_blueprint_id += 1
+	complete_field_objective("blueprint")
 	add_event("BLUEPRINT PLACED", "%s queued for construction." % definition["name"], "intel")
 	return true
 
@@ -248,7 +286,9 @@ func detect_rooms() -> int:
 func update(delta: float) -> void:
 	if paused:
 		return
-	var sim_hours := delta * speed * 0.32
+	var sim_hours := clock_hours(delta,speed)
+	if sim_hours<=0.0:
+		return
 	total_hours += sim_hours
 	hour += sim_hours
 	while hour >= 24.0:
@@ -256,6 +296,7 @@ func update(delta: float) -> void:
 		day += 1
 		add_event("NEW DAY", "Day %d begins." % day, "intel")
 
+	weather_simulation.update(self,sim_hours)
 	var alive := get_alive_citizens()
 	var population := alive.size()
 	resources["power"] = clampf(resources["power"] + _power_delta(population) * sim_hours, 0.0, 100.0)
@@ -349,7 +390,7 @@ func _update_utilities(sim_hours: float) -> void:
 			"storage": demand += 1.0
 
 	var fuel_factor := economy_simulation.consume_generator_fuel(self, sim_hours, generator_count)
-	generated *= fuel_factor
+	generated *= fuel_factor * weather_simulation.power_factor()
 	if fuel_factor < 0.2 and generator_count > 0:
 		utility_state["power_online"] = false
 	utility_state["battery_capacity"] = maxf(100.0, battery_capacity)
@@ -386,7 +427,7 @@ func _update_utilities(sim_hours: float) -> void:
 	var extracted := pump_capacity * power_factor * sim_hours
 	utility_state["raw_water"] = minf(300.0, float(utility_state["raw_water"]) + extracted)
 	var raw_available := float(utility_state["raw_water"])
-	var clean_rate := minf(purifier_capacity * power_factor, raw_available / maxf(sim_hours, 0.001))
+	var clean_rate := minf(purifier_capacity * power_factor * weather_simulation.water_factor(), raw_available / maxf(sim_hours, 0.001))
 	var cleaned := clean_rate * sim_hours
 	utility_state["raw_water"] = maxf(0.0, raw_available - cleaned)
 	stockpiles["command"]["water"] = minf(420.0, float(stockpiles["command"].get("water",0.0)) + cleaned)
@@ -497,6 +538,16 @@ func _choose_action(c: Dictionary) -> void:
 		return
 	if not is_selected_work_enabled(c):
 		_set_action(c, "Off Duty", "housing")
+		return
+	# An issued shelter order changes real work assignments and prevents
+	# outside construction/hauling/farming progress while the storm persists.
+	if weather_simulation.should_shelter(c):
+		if int(c.get("target_blueprint_id",0))>0:
+			var blueprint := get_blueprint_by_id(int(c["target_blueprint_id"]))
+			if not blueprint.is_empty() and int(blueprint.get("assigned_builder",0))==int(c["id"]):
+				blueprint["assigned_builder"]=0
+			c["target_blueprint_id"]=0
+		_set_action(c,"Shelter: Dust Storm","housing")
 		return
 
 	if c["job"] == "Builder":
@@ -823,6 +874,10 @@ func toggle_selected_work(c: Dictionary) -> void:
 	var current := int(c["work_priority"].get(job, 3))
 	if current > 0:
 		c["work_priority"][job] = 0
+		if job=="Builder":
+			for blueprint in blueprints:
+				if int(blueprint.get("assigned_builder",0))==int(c.get("id",0)):
+					blueprint["assigned_builder"]=0
 		c["target_blueprint_id"] = 0
 		c["target"] = Vector2.ZERO
 		_set_action(c, "Off Duty", "housing")
@@ -831,6 +886,35 @@ func toggle_selected_work(c: Dictionary) -> void:
 		c["work_priority"][job] = 3
 		add_event("DUTY RESTORED", "%s returned to %s duty." % [c["name"], job], "good")
 
+# Job assignments are a simulation transaction, not cosmetic labels.  A
+# reassigned Builder releases unfinished projects before returning to a role.
+func assign_citizen_job(c: Dictionary, new_job: String) -> bool:
+	if c.is_empty() or not CitizenFactory.JOBS.has(new_job):
+		return false
+	var known := get_citizen_by_id(int(c.get("id",-1)))
+	if known.is_empty() or not bool(known.get("alive",false)):
+		return false
+	if int(known.get("age",0))<18 or str(known.get("job",""))=="Child":
+		return false
+	if bool(known.get("on_expedition",false)) or str(known.get("home_settlement","LAST_HAVEN"))!="LAST_HAVEN":
+		return false
+	if str(known["job"])==new_job:
+		return false
+	var old_job := str(known["job"])
+	if old_job=="Builder":
+		for blueprint in blueprints:
+			if int(blueprint.get("assigned_builder",0))==int(known["id"]):
+				blueprint["assigned_builder"]=0
+	known["job"]=new_job
+	known["target_blueprint_id"]=0
+	known["target"]=Vector2.ZERO
+	known["target_building"]=""
+	known["current_action"]="Idle"
+	# Explicit reassignment activates the newly chosen assignment.
+	known["work_priority"][new_job]=maxi(1,int(known["work_priority"].get(new_job,3)))
+	add_event("WORKFORCE REASSIGNED", "%s moved from %s to %s duty." % [str(known["name"]),old_job,new_job], "intel")
+	return true
+
 func save_game(path: String = "user://settlement_save.json") -> bool:
 	var data := {
 		"version": SAVE_VERSION,
@@ -838,6 +922,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"hour": hour,
 		"total_hours": total_hours,
 		"settlement_name": settlement_name,
+		"field_objectives": field_objectives,
 		"resources": resources,
 		"stockpiles": stockpiles,
 		"work_orders": work_orders,
@@ -850,6 +935,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 		"completed_rooms": completed_rooms,
 		"utility_state": utility_state,
 		"utility_failures": utility_failures,
+		"weather": {"condition":weather_simulation.condition,"intensity":weather_simulation.intensity,"front_ends_at":weather_simulation.front_ends_at,"next_front_at":weather_simulation.next_front_at,"shelter_in_place":weather_simulation.shelter_in_place},
 		"world_locations": _serialize_vector_dicts(world_simulation.locations),
 		"expeditions": world_simulation.expeditions,
 		"discovered_location_ids": world_simulation.discovered_location_ids,
@@ -874,6 +960,7 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"market_index": economy_simulation.market_index,
 			"industry_stock": economy_simulation.industry_stock,
 			"production_queue": economy_simulation.production_queue,
+			"production_paused": economy_simulation.production_paused,
 			"next_batch_id": economy_simulation.next_batch_id,
 			"price_update_hour": economy_simulation.price_update_hour,
 			"trade_log": economy_simulation.trade_log,
@@ -948,9 +1035,12 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	hour = float(data.get("hour", 7.0))
 	total_hours = float(data.get("total_hours", 0.0))
 	settlement_name = str(data.get("settlement_name", settlement_name))
+	var loaded_objectives: Dictionary = data.get("field_objectives", {})
+	for objective in field_objectives.keys():
+		field_objectives[objective] = bool(loaded_objectives.get(objective, false))
 	resources = data.get("resources", resources)
 	stockpiles = data.get("stockpiles", stockpiles)
-	work_orders = data.get("work_orders", work_orders)
+	work_orders = _restore_dict_array(data.get("work_orders", work_orders))
 	blueprints = _restore_vector_dicts(data.get("blueprints", []))
 	buildings = _restore_vector_dicts(data.get("buildings", []))
 	citizens = _restore_vector_dicts(data.get("citizens", []))
@@ -960,21 +1050,29 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 	completed_rooms = int(data.get("completed_rooms", detect_rooms()))
 	utility_state = data.get("utility_state", utility_state)
 	utility_failures = data.get("utility_failures", utility_failures)
+	var saved_weather: Dictionary=data.get("weather",{})
+	weather_simulation.condition=str(saved_weather.get("condition",WeatherSimulation.CLEAR))
+	if weather_simulation.condition not in [WeatherSimulation.CLEAR,WeatherSimulation.DUST_STORM]:
+		weather_simulation.condition=WeatherSimulation.CLEAR
+	weather_simulation.intensity=clampf(float(saved_weather.get("intensity",0.0)),0.0,1.0) if weather_simulation.condition==WeatherSimulation.DUST_STORM else 0.0
+	weather_simulation.front_ends_at=maxf(0.0,float(saved_weather.get("front_ends_at",0.0)))
+	weather_simulation.next_front_at=maxf(total_hours+1.0,float(saved_weather.get("next_front_at",total_hours+46.0)))
+	weather_simulation.shelter_in_place=bool(saved_weather.get("shelter_in_place",false)) if weather_simulation.condition==WeatherSimulation.DUST_STORM else false
 	world_simulation.locations = _restore_vector_dicts(data.get("world_locations", world_simulation.locations))
-	world_simulation.expeditions = data.get("expeditions", world_simulation.expeditions)
-	world_simulation.discovered_location_ids = data.get("discovered_location_ids", world_simulation.discovered_location_ids)
+	world_simulation.expeditions = _restore_dict_array(data.get("expeditions", world_simulation.expeditions))
+	world_simulation.discovered_location_ids = _restore_int_array(data.get("discovered_location_ids", world_simulation.discovered_location_ids))
 	world_simulation.next_expedition_id = int(data.get("next_expedition_id", world_simulation.next_expedition_id))
 	var governance: Dictionary = data.get("governance", {})
 	if not governance.is_empty():
 		governance_simulation.government_type = str(governance.get("government_type", governance_simulation.government_type))
 		governance_simulation.laws = governance.get("laws", governance_simulation.laws)
 		governance_simulation.leader_id = int(governance.get("leader_id", governance_simulation.leader_id))
-		governance_simulation.council_ids = governance.get("council_ids", governance_simulation.council_ids)
+		governance_simulation.council_ids = _restore_int_array(governance.get("council_ids", governance_simulation.council_ids))
 		governance_simulation.factions = governance.get("factions", governance_simulation.factions)
 		governance_simulation.unrest = float(governance.get("unrest", governance_simulation.unrest))
 		governance_simulation.legitimacy = float(governance.get("legitimacy", governance_simulation.legitimacy))
 		governance_simulation.crime_pressure = float(governance.get("crime_pressure", governance_simulation.crime_pressure))
-		governance_simulation.active_cases = governance.get("active_cases", governance_simulation.active_cases)
+		governance_simulation.active_cases = _restore_dict_array(governance.get("active_cases", governance_simulation.active_cases))
 		governance_simulation.next_case_id = int(governance.get("next_case_id", governance_simulation.next_case_id))
 		governance_simulation.next_election_hour = float(governance.get("next_election_hour", governance_simulation.next_election_hour))
 		governance_simulation.last_protest_hour = float(governance.get("last_protest_hour", governance_simulation.last_protest_hour))
@@ -984,10 +1082,11 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.credits = float(economy.get("credits", economy_simulation.credits))
 		economy_simulation.market_index = economy.get("market_index", economy_simulation.market_index)
 		economy_simulation.industry_stock = economy.get("industry_stock", economy_simulation.industry_stock)
-		economy_simulation.production_queue = economy.get("production_queue", economy_simulation.production_queue)
+		economy_simulation.production_queue = _restore_dict_array(economy.get("production_queue", economy_simulation.production_queue))
+		economy_simulation.production_paused = bool(economy.get("production_paused",false))
 		economy_simulation.next_batch_id = int(economy.get("next_batch_id", economy_simulation.next_batch_id))
 		economy_simulation.price_update_hour = float(economy.get("price_update_hour", economy_simulation.price_update_hour))
-		economy_simulation.trade_log = economy.get("trade_log", economy_simulation.trade_log)
+		economy_simulation.trade_log = _restore_dict_array(economy.get("trade_log", economy_simulation.trade_log))
 		economy_simulation.vehicles = economy.get("vehicles", economy_simulation.vehicles)
 		economy_simulation.trade_pressure = economy.get("trade_pressure", economy_simulation.trade_pressure)
 		economy_simulation.warehouse_capacity = float(economy.get("warehouse_capacity", economy_simulation.warehouse_capacity))
@@ -999,20 +1098,20 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		economy_simulation.next_warehouse_check_hour = float(economy.get("next_warehouse_check_hour", economy_simulation.next_warehouse_check_hour))
 		economy_simulation.repair_kits = float(economy.get("repair_kits", economy_simulation.repair_kits))
 		economy_simulation.regional_markets = economy.get("regional_markets", economy_simulation.regional_markets)
-		economy_simulation.trade_caravans = economy.get("trade_caravans", economy_simulation.trade_caravans)
+		economy_simulation.trade_caravans = _restore_dict_array(economy.get("trade_caravans", economy_simulation.trade_caravans))
 		economy_simulation.next_caravan_id = int(economy.get("next_caravan_id", economy_simulation.next_caravan_id))
 	var faction_state: Dictionary = data.get("factions", {})
 	if not faction_state.is_empty():
 		faction_simulation.factions = faction_state.get("factions", faction_simulation.factions)
 		faction_simulation.next_strategic_hour = float(faction_state.get("next_strategic_hour", faction_simulation.next_strategic_hour))
 		faction_simulation.active_raid = faction_state.get("active_raid", faction_simulation.active_raid)
-		faction_simulation.raid_log = faction_state.get("raid_log", faction_simulation.raid_log)
+		faction_simulation.raid_log = _restore_dict_array(faction_state.get("raid_log", faction_simulation.raid_log))
 		faction_simulation.last_espionage_hour = float(faction_state.get("last_espionage_hour", faction_simulation.last_espionage_hour))
 	var civilization_state: Dictionary = data.get("civilization", {})
 	if not civilization_state.is_empty():
 		civilization_simulation.settlements = civilization_state.get("settlements", civilization_simulation.settlements)
-		civilization_simulation.logistics_routes = civilization_state.get("logistics_routes", civilization_simulation.logistics_routes)
-		civilization_simulation.history_archive = civilization_state.get("history_archive", civilization_simulation.history_archive)
+		civilization_simulation.logistics_routes = _restore_dict_array(civilization_state.get("logistics_routes", civilization_simulation.logistics_routes))
+		civilization_simulation.history_archive = _restore_dict_array(civilization_state.get("history_archive", civilization_simulation.history_archive))
 		civilization_simulation.recovery_score = float(civilization_state.get("recovery_score", civilization_simulation.recovery_score))
 		civilization_simulation.civilization_stability = float(civilization_state.get("civilization_stability", civilization_simulation.civilization_stability))
 		civilization_simulation.next_settlement_id = int(civilization_state.get("next_settlement_id", civilization_simulation.next_settlement_id))
@@ -1020,8 +1119,8 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		civilization_simulation.next_logistics_hour = float(civilization_state.get("next_logistics_hour", civilization_simulation.next_logistics_hour))
 		civilization_simulation.next_colony_event_hour = float(civilization_state.get("next_colony_event_hour", civilization_simulation.next_colony_event_hour))
 		civilization_simulation.civilization_policies = civilization_state.get("civilization_policies", civilization_simulation.civilization_policies)
-		civilization_simulation.emergency_log = civilization_state.get("emergency_log", civilization_simulation.emergency_log)
-		civilization_simulation.colony_projects = civilization_state.get("colony_projects", civilization_simulation.colony_projects)
+		civilization_simulation.emergency_log = _restore_dict_array(civilization_state.get("emergency_log", civilization_simulation.emergency_log))
+		civilization_simulation.colony_projects = _restore_dict_array(civilization_state.get("colony_projects", civilization_simulation.colony_projects))
 		civilization_simulation.next_colony_project_id = int(civilization_state.get("next_colony_project_id", civilization_simulation.next_colony_project_id))
 		civilization_simulation.recovery_projects = civilization_state.get("recovery_projects", civilization_simulation.recovery_projects)
 		civilization_simulation.founding_roster = civilization_state.get("founding_roster", civilization_simulation.founding_roster)
@@ -1036,10 +1135,29 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		federal_governance_simulation.network_cohesion = float(federal_state.get("network_cohesion", federal_governance_simulation.network_cohesion))
 		federal_governance_simulation.federal_treasury = float(federal_state.get("federal_treasury", federal_governance_simulation.federal_treasury))
 		federal_governance_simulation.next_council_hour = float(federal_state.get("next_council_hour", federal_governance_simulation.next_council_hour))
-		federal_governance_simulation.council_history = federal_state.get("council_history", federal_governance_simulation.council_history)
+		federal_governance_simulation.council_history = _restore_dict_array(federal_state.get("council_history", federal_governance_simulation.council_history))
 		federal_governance_simulation.last_dispute_hour = float(federal_state.get("last_dispute_hour", federal_governance_simulation.last_dispute_hour))
 	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
 	return true
+
+# JSON.parse_string returns untyped Arrays; Godot refuses assigning these to
+# typed Array[Dictionary] / Array[int] properties without copying each element.
+# Preserve save schema 14: this is a loader fix, not a file format change.
+func _restore_dict_array(items: Variant) -> Array[Dictionary]:
+	var restored: Array[Dictionary] = []
+	if items is Array:
+		for item in items:
+			if item is Dictionary:
+				restored.append(item)
+	return restored
+
+func _restore_int_array(items: Variant) -> Array[int]:
+	var restored: Array[int] = []
+	if items is Array:
+		for item in items:
+			if item is int or item is float:
+				restored.append(int(item))
+	return restored
 
 func _serialize_vector_dicts(items: Array) -> Array:
 	var output: Array = []
