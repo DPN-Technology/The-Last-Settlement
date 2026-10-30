@@ -2500,6 +2500,64 @@ func _smoke() -> void:
 		push_error("SMOKE: upgraded building exterior or interior visuals missing")
 		quit(1)
 		return
+	var reference_roofs := 0
+	for structure in world.structure_layer.get_children():
+		var facade := structure.get_node_or_null("ReferenceExteriorDetail") as Node3D
+		if facade==null:
+			continue
+		var kind := str(structure.get_meta("building_type",""))
+		if kind=="housing":
+			continue
+		var reference_roof := structure.get_node_or_null("ReferenceRoofDetail") as Node3D
+		if reference_roof==null or not bool(reference_roof.get_meta("cutaway_roof",false)):
+			push_error("SMOKE: Reference rooftop dressing is not grouped for cutaway")
+			quit(1)
+			return
+		var repair_sheets := 0
+		var vent_housings := 0
+		var air_handlers := 0
+		for detail in reference_roof.get_children():
+			if String(detail.name).begins_with("OverlappedReclaimedRoofSheet"):
+				repair_sheets+=1
+			elif String(detail.name).begins_with("RoofVentHousing"):
+				vent_housings+=1
+			elif String(detail.name).begins_with("RoofAirHandling"):
+				air_handlers+=1
+		if repair_sheets!=4 or (kind in ["industry","generator","power"] and vent_housings!=3) or (kind=="medical" and air_handlers!=1):
+			push_error("SMOKE: Reference roof sheets or plant were removed instead of grouped")
+			quit(1)
+			return
+		var selected_facility: Dictionary={}
+		for building in sim.buildings:
+			if SettlementNavigation.building_key(building)==str(structure.get_meta("building_key","")):
+				selected_facility=building
+				break
+		if selected_facility.is_empty():
+			push_error("SMOKE: Reference roof has no matching simulation facility")
+			quit(1)
+			return
+		for mode in [0,1,2]:
+			world._update_roof_views(sim,selected_facility,{},mode)
+			for detail in reference_roof.get_children():
+				if detail.is_visible_in_tree()!=(mode==2):
+					push_error("SMOKE: Reference roof sheet or plant visibility disagrees with roof mode")
+					quit(1)
+					return
+			if not facade.is_visible_in_tree():
+				push_error("SMOKE: Roof cutaway hid persistent reference facade dressing")
+				quit(1)
+				return
+		world._update_roof_views(sim,{}, {},0)
+		if not reference_roof.is_visible_in_tree():
+			push_error("SMOKE: Unselected reference roof hidden in Selected mode")
+			quit(1)
+			return
+		reference_roofs+=1
+	if reference_roofs<4:
+		push_error("SMOKE: Too few reference roofs exercised by cutaway regression")
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: nested reference roof sheets and plant follow Selected/All/Exterior cutaway")
 	world._update_roof_views(sim,{}, {},1)
 	for structure in world.structure_layer.get_children():
 		var new_roof: Node3D=structure.get_node_or_null("FidelityRoofDetail") as Node3D

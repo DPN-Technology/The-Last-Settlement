@@ -438,8 +438,6 @@ static func _service_prop(parent: Node3D, mats: Dictionary, size: Vector2, kind:
 		conduit.rotation.z=0.01
 
 static func _industrial_roof_detail(parent: Node3D, size: Vector2, mats: Dictionary, kind: String) -> void:
-	# Compact silhouette detail. The core building owns the roof/cutaway; these
-	# additions remain under its roofline and do not affect selection or routes.
 	var hx: float = size.x * 0.5
 	var hz: float = size.y * 0.5
 	if kind in ["industry", "generator", "power", "workshop"]:
@@ -572,10 +570,17 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 	group.add_child(scene)
 	_service_prop(scene,mats,size,kind)
 	_facade_readability(scene,size,mats,kind)
-	_industrial_roof_detail(scene,size,mats,kind)
 	_lived_in_facility_detail(scene,size,mats,kind)
-	_reclaimed_roof_patchwork(scene,size,mats,kind,body_height)
 	_exterior_weathering(scene,size,mats,kind)
+	if kind!="housing":
+		# The visibility controller switches direct children of the structure.
+		# Keep roof meshes separate from persistent wall/entrance dressing.
+		var roof := Node3D.new()
+		roof.name="ReferenceRoofDetail"
+		roof.set_meta("cutaway_roof",true)
+		group.add_child(roof)
+		_industrial_roof_detail(roof,size,mats,kind)
+		_reclaimed_roof_patchwork(roof,size,mats,kind,body_height)
 	var hz: float=size.y*0.5
 	# Thin entrance stoop; clearly indicates the entry without hiding the door.
 	_box(scene,"EntryStoop",Vector3(0,0.14,-hz-0.99),Vector3(2.85,0.22,1.15),mats["concrete"])
