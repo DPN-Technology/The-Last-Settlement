@@ -122,6 +122,17 @@ jobs:
           fi
           test "$GODOT_EXIT" -eq 0
 
+      - name: Verify save file error handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT=".godot-ci/Godot_v4.3-stable_linux.x86_64"
+          "$GODOT" --headless --path . --script res://tools/test_save_io.gd 2>&1 | tee save-io.log
+          if grep -Eiq 'SCRIPT ERROR|Parse Error|Failed to load script|SAVE IO:' save-io.log; then
+            exit 1
+          fi
+          grep -q 'SAVE IO PASS' save-io.log
+
       - name: Boot the playable game and verify core controls
         shell: bash
         run: |

@@ -405,6 +405,10 @@ Survivors now carry context-sensitive 3D work equipment while their current acti
 
 ---
 
+# Save file error handling
+
+Run `Godot --headless --path . --script res://tools/test_save_io.gd` for simulation-only save I/O regression coverage (no renderer or imported art required). Missing files, invalid destinations, malformed JSON and non-object roots report failure through settlement events. Saves are written to `<save>.tmp`, read back and verified, then swapped in; the previous save is kept as `<save>.bak`, and loading falls back to that backup (event `LOAD RECOVERED`) if the live save is missing after an interrupted swap. Before any field is applied, every present save key is type-checked (top-level fields, each simulation section, resources, stockpiles, objectives and vector records) and saves from newer builds are refused, so a damaged file is rejected with `Save data is damaged: <field>` instead of leaving a half-restored campaign. Missing optional keys still load with defaults for older v14 saves. The test injects temp-write and backup-swap failures and confirms the live save is untouched. Limits: the swap is two renames rather than one atomic OS replace (the gap between them is covered by the backup fallback), and individual citizen/building fields beyond record shape and vector coordinates are not yet validated.
+
 # Industry Workshop Command â€” October 2026 candidate
 
 This pull-request build contains a **real production management screen**, not just a graphical preview. Open **Industry (K)**, then click **Open Workshop Control / Manage Orders** in the middle of the trade screen. The new right-side interface leaves the 3D settlement visible.

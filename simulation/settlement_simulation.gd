@@ -2,6 +2,8 @@ class_name SettlementSimulation
 extends RefCounted
 
 const SAVE_VERSION := 14
+const SAVE_TEMP_SUFFIX := ".tmp"
+const SAVE_BACKUP_SUFFIX := ".bak"
 # Normal 1x game clock: one in-game minute per real second (24-minute day).
 # 4x and 12x scale this exact base rather than changing the underlying rate.
 const GAME_MINUTES_PER_REAL_SECOND := 1.0
@@ -1015,22 +1017,84 @@ func save_game(path: String = "user://settlement_save.json") -> bool:
 			"last_dispute_hour": federal_governance_simulation.last_dispute_hour
 		}
 	}
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
+	var write_problem := _write_save_text(path, JSON.stringify(data))
+	if write_problem!="":
+		add_event("SAVE FAILED", write_problem, "warning")
 		return false
-	file.store_string(JSON.stringify(data))
 	add_event("SAVE COMPLETE", "Settlement state written to disk.", "good")
 	return true
 
+# Never truncate the live save: write and verify a sibling temp file, keep the
+# previous save as a backup, then swap. load_game falls back to that backup if
+# the swap is interrupted after the old save was moved aside.
+func _write_save_text(path: String, text: String) -> String:
+	var temp_path := path+SAVE_TEMP_SUFFIX
+	var backup_path := path+SAVE_BACKUP_SUFFIX
+	var file := FileAccess.open(temp_path, FileAccess.WRITE)
+	if file == null:
+		return "Cannot open the save file for writing: "+error_string(FileAccess.get_open_error())
+	file.store_string(text)
+	file.flush()
+	var write_error := file.get_error()
+	file.close()
+	if write_error==OK and FileAccess.get_file_as_string(temp_path)!=text:
+		write_error = ERR_FILE_CORRUPT
+	if write_error!=OK:
+		DirAccess.remove_absolute(temp_path)
+		return "Cannot finish writing the save file: "+error_string(write_error)
+	var moved_previous := false
+	if FileAccess.file_exists(path):
+		var backup_error := DirAccess.rename_absolute(path, backup_path)
+		if backup_error!=OK:
+			DirAccess.remove_absolute(temp_path)
+			return "Cannot preserve the previous save: "+error_string(backup_error)
+		moved_previous = true
+	var swap_error := DirAccess.rename_absolute(temp_path, path)
+	if swap_error!=OK:
+		if moved_previous and not FileAccess.file_exists(path):
+			DirAccess.rename_absolute(backup_path, path)
+		DirAccess.remove_absolute(temp_path)
+		return "Cannot replace the save file: "+error_string(swap_error)
+	return ""
+
 func load_game(path: String = "user://settlement_save.json") -> bool:
-	if not FileAccess.file_exists(path):
-		add_event("LOAD FAILED", "No settlement save exists yet.", "warning")
+	var source := path
+	if not FileAccess.file_exists(source):
+		source = path+SAVE_BACKUP_SUFFIX
+		if not FileAccess.file_exists(source):
+			add_event("LOAD FAILED", "No settlement save exists yet.", "warning")
+			return false
+	var file := FileAccess.open(source, FileAccess.READ)
+	if file==null:
+		add_event("LOAD FAILED", "Cannot open the save file for reading: "+error_string(FileAccess.get_open_error()), "warning")
 		return false
-	var file := FileAccess.open(path, FileAccess.READ)
-	var parsed = JSON.parse_string(file.get_as_text())
+	var text := file.get_as_text()
+	var read_error := file.get_error()
+	file.close()
+	if read_error!=OK and read_error!=ERR_FILE_EOF:
+		add_event("LOAD FAILED", "Cannot read the save file: "+error_string(read_error), "warning")
+		return false
+	var parser := JSON.new()
+	if parser.parse(text)!=OK:
+		add_event("LOAD FAILED", "Invalid save JSON at line %d: %s" % [parser.get_error_line(),parser.get_error_message()], "warning")
+		return false
+	var parsed = parser.data
 	if typeof(parsed) != TYPE_DICTIONARY:
+		add_event("LOAD FAILED", "The save must contain a JSON object.", "warning")
 		return false
 	var data: Dictionary = parsed
+	var problem := _save_data_problem(data)
+	if problem!="":
+		add_event("LOAD FAILED", "Save data is damaged: "+problem+".", "warning")
+		return false
+	_apply_save_data(data)
+	if source==path:
+		add_event("LOAD COMPLETE", "Settlement state restored.", "good")
+	else:
+		add_event("LOAD RECOVERED", "The last save was interrupted; the previous backup was restored.", "warning")
+	return true
+
+func _apply_save_data(data: Dictionary) -> void:
 	day = int(data.get("day", 1))
 	hour = float(data.get("hour", 7.0))
 	total_hours = float(data.get("total_hours", 0.0))
@@ -1137,8 +1201,126 @@ func load_game(path: String = "user://settlement_save.json") -> bool:
 		federal_governance_simulation.next_council_hour = float(federal_state.get("next_council_hour", federal_governance_simulation.next_council_hour))
 		federal_governance_simulation.council_history = _restore_dict_array(federal_state.get("council_history", federal_governance_simulation.council_history))
 		federal_governance_simulation.last_dispute_hour = float(federal_state.get("last_dispute_hour", federal_governance_simulation.last_dispute_hour))
-	add_event("LOAD COMPLETE", "Settlement state restored.", "good")
-	return true
+
+# Missing keys keep their defaults so older saves still load, but every key that
+# is present must have the type _apply_save_data assigns. Otherwise a damaged
+# file aborts mid-restore and leaves a half-loaded campaign.
+func _save_data_problem(data: Dictionary) -> String:
+	var problem := _save_fields_problem(data, "", {
+		"version":TYPE_FLOAT, "day":TYPE_FLOAT, "hour":TYPE_FLOAT, "total_hours":TYPE_FLOAT,
+		"settlement_name":TYPE_STRING, "field_objectives":TYPE_DICTIONARY, "resources":TYPE_DICTIONARY,
+		"stockpiles":TYPE_DICTIONARY, "work_orders":TYPE_ARRAY, "blueprints":TYPE_ARRAY,
+		"buildings":TYPE_ARRAY, "citizens":TYPE_ARRAY, "next_citizen_id":TYPE_FLOAT,
+		"next_work_order_id":TYPE_FLOAT, "next_blueprint_id":TYPE_FLOAT, "completed_rooms":TYPE_FLOAT,
+		"utility_state":TYPE_DICTIONARY, "utility_failures":TYPE_DICTIONARY, "weather":TYPE_DICTIONARY,
+		"world_locations":TYPE_ARRAY, "expeditions":TYPE_ARRAY, "discovered_location_ids":TYPE_ARRAY,
+		"next_expedition_id":TYPE_FLOAT, "governance":TYPE_DICTIONARY, "economy":TYPE_DICTIONARY,
+		"factions":TYPE_DICTIONARY, "civilization":TYPE_DICTIONARY, "federal_governance":TYPE_DICTIONARY
+	})
+	if problem!="":
+		return problem
+	if int(data.get("version", SAVE_VERSION))>SAVE_VERSION:
+		return "it was written by a newer build (version %d, this build supports %d)" % [int(data["version"]),SAVE_VERSION]
+	var civilization: Dictionary = data.get("civilization", {})
+	for found in [
+		_save_fields_problem(data.get("weather", {}), "weather.", {
+			"condition":TYPE_STRING, "intensity":TYPE_FLOAT, "front_ends_at":TYPE_FLOAT,
+			"next_front_at":TYPE_FLOAT, "shelter_in_place":TYPE_BOOL
+		}),
+		_save_fields_problem(data.get("governance", {}), "governance.", {
+			"government_type":TYPE_STRING, "laws":TYPE_DICTIONARY, "leader_id":TYPE_FLOAT,
+			"council_ids":TYPE_ARRAY, "factions":TYPE_DICTIONARY, "unrest":TYPE_FLOAT,
+			"legitimacy":TYPE_FLOAT, "crime_pressure":TYPE_FLOAT, "active_cases":TYPE_ARRAY,
+			"next_case_id":TYPE_FLOAT, "next_election_hour":TYPE_FLOAT,
+			"last_protest_hour":TYPE_FLOAT, "last_crisis_hour":TYPE_FLOAT
+		}),
+		_save_fields_problem(data.get("economy", {}), "economy.", {
+			"credits":TYPE_FLOAT, "market_index":TYPE_DICTIONARY, "industry_stock":TYPE_DICTIONARY,
+			"production_queue":TYPE_ARRAY, "production_paused":TYPE_BOOL, "next_batch_id":TYPE_FLOAT,
+			"price_update_hour":TYPE_FLOAT, "trade_log":TYPE_ARRAY, "vehicles":TYPE_ARRAY,
+			"trade_pressure":TYPE_DICTIONARY, "warehouse_capacity":TYPE_FLOAT,
+			"warehouse_used":TYPE_FLOAT, "warehouse_pressure":TYPE_FLOAT,
+			"production_efficiency":TYPE_FLOAT, "bottleneck_reason":TYPE_STRING,
+			"fuel_consumed_today":TYPE_FLOAT, "next_warehouse_check_hour":TYPE_FLOAT,
+			"repair_kits":TYPE_FLOAT, "regional_markets":TYPE_DICTIONARY,
+			"trade_caravans":TYPE_ARRAY, "next_caravan_id":TYPE_FLOAT
+		}),
+		_save_fields_problem(data.get("factions", {}), "factions.", {
+			"factions":TYPE_DICTIONARY, "next_strategic_hour":TYPE_FLOAT, "active_raid":TYPE_DICTIONARY,
+			"raid_log":TYPE_ARRAY, "last_espionage_hour":TYPE_FLOAT
+		}),
+		_save_fields_problem(civilization, "civilization.", {
+			"settlements":TYPE_DICTIONARY, "logistics_routes":TYPE_ARRAY, "history_archive":TYPE_ARRAY,
+			"recovery_score":TYPE_FLOAT, "civilization_stability":TYPE_FLOAT,
+			"next_settlement_id":TYPE_FLOAT, "next_route_id":TYPE_FLOAT,
+			"next_logistics_hour":TYPE_FLOAT, "next_colony_event_hour":TYPE_FLOAT,
+			"civilization_policies":TYPE_DICTIONARY, "emergency_log":TYPE_ARRAY,
+			"colony_projects":TYPE_ARRAY, "next_colony_project_id":TYPE_FLOAT,
+			"recovery_projects":TYPE_DICTIONARY, "founding_roster":TYPE_ARRAY,
+			"endgame_stage":TYPE_STRING, "milestones":TYPE_DICTIONARY
+		}),
+		_save_fields_problem(data.get("federal_governance", {}), "federal_governance.", {
+			"charter":TYPE_DICTIONARY, "representatives":TYPE_DICTIONARY,
+			"federal_legitimacy":TYPE_FLOAT, "network_cohesion":TYPE_FLOAT,
+			"federal_treasury":TYPE_FLOAT, "next_council_hour":TYPE_FLOAT,
+			"council_history":TYPE_ARRAY, "last_dispute_hour":TYPE_FLOAT
+		}),
+		_save_values_problem(data.get("field_objectives", {}), "field_objectives", TYPE_BOOL),
+		_save_values_problem(data.get("resources", {}), "resources", TYPE_FLOAT),
+		_save_values_problem(data.get("stockpiles", {}), "stockpiles", TYPE_DICTIONARY),
+		_save_values_problem(data.get("utility_failures", {}), "utility_failures", TYPE_BOOL),
+		_save_vector_dicts_problem(data.get("blueprints", []), "blueprints"),
+		_save_vector_dicts_problem(data.get("buildings", []), "buildings"),
+		_save_vector_dicts_problem(data.get("citizens", []), "citizens"),
+		_save_vector_dicts_problem(data.get("world_locations", []), "world_locations")
+	]:
+		if found!="":
+			return found
+	var stockpiles_data: Dictionary = data.get("stockpiles", {})
+	for zone in stockpiles_data:
+		problem = _save_values_problem(stockpiles_data[zone], "stockpiles.%s" % zone, TYPE_FLOAT)
+		if problem!="":
+			return problem
+	return _save_values_problem(civilization.get("settlements", {}), "civilization.settlements", TYPE_DICTIONARY)
+
+func _save_fields_problem(section: Dictionary, label: String, fields: Dictionary) -> String:
+	for key in fields:
+		if section.has(key) and not _matches_save_type(section[key], int(fields[key])):
+			return "%s%s must be %s" % [label, key, _save_type_name(int(fields[key]))]
+	return ""
+
+func _save_values_problem(section: Dictionary, label: String, expected: int) -> String:
+	for key in section:
+		if not _matches_save_type(section[key], expected):
+			return "%s.%s must be %s" % [label, str(key), _save_type_name(expected)]
+	return ""
+
+func _save_vector_dicts_problem(items: Array, label: String) -> String:
+	for index in items.size():
+		var item = items[index]
+		if not item is Dictionary:
+			return "%s[%d] must be an object" % [label, index]
+		for key in ["position", "target", "size"]:
+			var vector = item.get(key)
+			if vector is Dictionary and vector.get("__vector2", false) and not (_matches_save_type(vector.get("x"), TYPE_FLOAT) and _matches_save_type(vector.get("y"), TYPE_FLOAT)):
+				return "%s[%d].%s must have numeric x and y" % [label, index, key]
+	return ""
+
+# JSON numbers arrive as floats; integers are accepted wherever a number is.
+func _matches_save_type(value: Variant, expected: int) -> bool:
+	return typeof(value)==expected or (expected==TYPE_FLOAT and typeof(value)==TYPE_INT)
+
+func _save_type_name(expected: int) -> String:
+	match expected:
+		TYPE_FLOAT:
+			return "a number"
+		TYPE_BOOL:
+			return "true or false"
+		TYPE_STRING:
+			return "text"
+		TYPE_ARRAY:
+			return "a list"
+	return "an object"
 
 # JSON.parse_string returns untyped Arrays; Godot refuses assigning these to
 # typed Array[Dictionary] / Array[int] properties without copying each element.
