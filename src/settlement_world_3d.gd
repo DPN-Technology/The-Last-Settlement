@@ -204,6 +204,9 @@ func _create_materials() -> void:
 	_weathered("foundation", Color("#383a36"), 0.95, 0.0, 0.45)
 	_weathered("asphalt", Color("#2d3130"), 0.97, 0.0, 0.24)
 	_weathered("pavement", Color("#393832"), 0.98, 0.0, 0.42)
+	# Large clinic exterior sheet metal: painted, chalked and grimy instead of
+	# the flat near-white "clinic" swatch kept for small interior supplies.
+	_weathered("clinic_panel", Color("#8d9188"), 0.84, 0.18, 0.58)
 	# Runtime photographic PBR replaces the older material shader when the
 	# license-checked 1K maps are included in the exported Windows package.
 	_use_photo_pbr("concrete", "rough_concrete", Color("#b3aca1"), 0.97, 0.03, 0.45)

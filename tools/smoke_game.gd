@@ -14,6 +14,85 @@ func _all_renderers_have_mesh(node: Node) -> bool:
 			return false
 	return true
 
+# Facility entrances: no mesh may stand in the walk-in lane in front of and
+# just through a door (the swinging leaf is excluded), and the clinic keeps
+# exactly one framed triage canopy instead of stacked flat white slabs.
+func _entrance_problem(world) -> String:
+	var checked_doors := 0
+	var clinics := 0
+	var flat_clinic: Material=world.materials.get("clinic")
+	for structure in world.structure_layer.get_children():
+		var door := structure.find_child("EntryDoorPivot",true,false) as Node3D
+		if door==null:
+			continue
+		var to_local: Transform3D=(structure as Node3D).global_transform.affine_inverse()
+		# SettlementArchitecture3D.facade hinges the leaf at -half_depth+0.13.
+		var hz: float=0.13-(to_local*door.global_transform).origin.z
+		var lane := AABB(Vector3(-0.7,0.4,-hz-2.2),Vector3(1.4,1.65,2.9))
+		var kind := str(structure.get_meta("building_type",""))
+		var canopy: Node3D=null
+		if kind=="medical":
+			clinics+=1
+			var canopies: Array[Node]=structure.find_children("ClinicTriageCanopy","Node3D",true,false)
+			if canopies.size()!=1:
+				return "clinic has %d triage canopies instead of one" % canopies.size()
+			canopy=canopies[0] as Node3D
+			var canopy_problem := _clinic_canopy_problem(canopy,hz,world.materials.get("clinic_panel"))
+			if canopy_problem!="":
+				return canopy_problem
+		var stack: Array[Node]=[structure]
+		while not stack.is_empty():
+			var node: Node=stack.pop_back()
+			if node==door:
+				continue
+			for child in node.get_children():
+				stack.append(child)
+			var mesh := node as MeshInstance3D
+			if mesh==null:
+				continue
+			var box: AABB=(to_local*mesh.global_transform)*mesh.get_aabb()
+			if box.intersects(lane):
+				return "%s door lane blocked by %s" % [kind,str(structure.get_path_to(mesh))]
+			if canopy==null or canopy.is_ancestor_of(mesh):
+				continue
+			if mesh.material_override==flat_clinic and box.end.z<-hz-0.1:
+				return "flat clinic swatch on entrance facade: %s" % str(structure.get_path_to(mesh))
+			var overhead_slab: bool=box.position.y>=2.0 and box.size.y<=0.5 and box.size.x>=1.5 and box.size.z>=1.0 and box.get_center().z<-hz-0.3
+			if overhead_slab and String(mesh.name)!="EntryCanopy":
+				return "stacked clinic entrance slab: %s" % str(structure.get_path_to(mesh))
+		checked_doors+=1
+	if checked_doors<6 or clinics<1:
+		return "entrance regression found %d doors and %d clinics" % [checked_doors,clinics]
+	return ""
+
+func _clinic_canopy_problem(canopy: Node3D, hz: float, panel: Material) -> String:
+	var required := {
+		"ClinicCanopySheet":1, "ClinicCanopyLedger":1, "ClinicCanopySeamRib":6,
+		"ClinicCanopyRafter":3, "ClinicCanopyCross":3, "ClinicCanopyFrontBeam":1,
+		"ClinicCanopyGutter":1, "ClinicCanopyPost":2, "ClinicCanopyFooting":2,
+		"ClinicCanopyKneeBrace":2
+	}
+	for part in required:
+		var meshes := canopy.find_children(part+"_*","MeshInstance3D",true,false)
+		if meshes.size()!=int(required[part]):
+			return "clinic canopy %s count is %d, expected %d" % [part,meshes.size(),required[part]]
+		for node in meshes:
+			var mesh := node as MeshInstance3D
+			if mesh.mesh==null or not mesh.is_visible_in_tree():
+				return "clinic canopy part is missing or hidden: "+str(mesh.name)
+	var sheet := canopy.find_child("ClinicCanopySheet_*",true,false) as MeshInstance3D
+	var sheet_box := sheet.mesh as BoxMesh
+	if sheet_box==null or sheet_box.size.y>0.1 or panel==null or sheet.material_override!=panel:
+		return "clinic canopy must use thin weathered sheet metal"
+	var front: Vector3=sheet.transform*Vector3(0,0,-sheet_box.size.z*0.5)
+	var back: Vector3=sheet.transform*Vector3(0,0,sheet_box.size.z*0.5)
+	if front.y<2.1 or back.y-front.y<0.25 or back.y-front.y>0.6:
+		return "clinic canopy must slope toward the front above head height"
+	var bounds: AABB=sheet.transform*sheet.get_aabb()
+	if bounds.end.z>-hz:
+		return "clinic canopy sheet intrudes into the room"
+	return ""
+
 # Lightweight non-interactive boot test for Windows preview candidates.
 # Executes the real main scene and the UI's command input without writing a save.
 func _initialize() -> void:
@@ -2547,6 +2626,17 @@ func _smoke() -> void:
 				push_error("SMOKE: Roof cutaway hid persistent reference facade dressing")
 				quit(1)
 				return
+			if kind=="medical":
+				var clinic_facade_canopy := facade.get_node_or_null("ClinicTriageCanopy") as Node3D
+				if clinic_facade_canopy==null:
+					push_error("SMOKE: Clinic canopy is not attached to persistent facade dressing")
+					quit(1)
+					return
+				for part in clinic_facade_canopy.find_children("*","MeshInstance3D",true,false):
+					if not part.is_visible_in_tree():
+						push_error("SMOKE: Clinic canopy part hidden by roof mode %d" % mode)
+						quit(1)
+						return
 		world._update_roof_views(sim,{}, {},0)
 		if not reference_roof.is_visible_in_tree():
 			push_error("SMOKE: Unselected reference roof hidden in Selected mode")
@@ -2573,6 +2663,12 @@ func _smoke() -> void:
 			quit(1)
 			return
 	world._update_roof_views(sim,{}, {},int(instance.roof_view_mode))
+	var entrance_problem := _entrance_problem(world)
+	if entrance_problem!="":
+		push_error("SMOKE: "+entrance_problem)
+		quit(1)
+		return
+	print("PLAYTEST SMOKE PASS: facility door lanes are unobstructed and the clinic has one framed triage canopy")
 	# Player Windows captures: prior Label3D glyphs were solid white bars.
 	# Name strings remain in metadata, but actual lettering is now rendered
 	# through CanvasItem's known-good fallback font.

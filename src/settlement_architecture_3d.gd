@@ -282,7 +282,7 @@ static func _clinic_roof(group: Node3D, size: Vector2, height: float, mats: Dict
 		end_parapet.set_meta("clinic_roof_edge",true)
 		var end_coping := box(group,"ClinicRoofCopingEnd_%d" % int(side),Vector3(side*parapet_x,parapet_y+0.14,0),Vector3(0.19,0.07,size.y+0.32),mats["steel"])
 		end_coping.set_meta("clinic_roof_edge",true)
-	box(group,"MedicalVentPavilion",Vector3(-size.x*0.25,height+1.05,size.y*0.17),Vector3(2.1,1.42,2.4),mats["clinic"])
+	box(group,"MedicalVentPavilion",Vector3(-size.x*0.25,height+1.05,size.y*0.17),Vector3(2.1,1.42,2.4),mats.get("clinic_panel",mats["clinic"]))
 	box(group,"MedicalVentCap",Vector3(-size.x*0.25,height+1.85,size.y*0.17),Vector3(2.5,0.17,2.7),mats["roof"])
 	var pavilion_x := -size.x * 0.25
 	var pavilion_z := size.y * 0.17

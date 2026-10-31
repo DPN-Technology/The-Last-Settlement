@@ -185,8 +185,8 @@ static func detail_building(group: Node3D, kind: String, size: Vector2, height: 
 			_housing(group,size,height,mats)
 		"industry", "storage":
 			_workshop(group,size,height,mats)
-		"medical":
-			_clinic(group,size,height,mats)
+		# Medical: the single framed triage canopy lives in
+		# SettlementReferenceEnvironment3D.detail_facility; no slabs here.
 		"command":
 			_command(group,size,height,mats)
 		"power", "generator", "battery":
@@ -218,9 +218,11 @@ static func _workshop(group: Node3D, size: Vector2, height: float, mats: Diction
 	cylinder(group,Vector3(x*0.62,height+4.2,-z*0.42),0.85,0.4,mats["steel"])
 	for index in range(4):
 		var px := -x*0.7+float(index)*2.0
+		# Frontage bays never put a post or header across the 1.8 m doorway.
+		if absf(px) < 1.85:
+			continue
 		box(group,Vector3(px,1.7,-z-0.15),Vector3(0.25,2.0,0.25),mats["rust"])
 		box(group,Vector3(px,2.5,-z-0.16),Vector3(1.35,0.12,0.2),mats["steel"])
-	box(group,Vector3(0,0.55,-z-2.0),Vector3(5.1,1.0,2.8),mats["darkmetal"])
 	# External hoist structure makes the industrial facility recognizable
 	# beyond its weathered roof equipment.
 	var gantry := box(group,Vector3(0,6.8,-z-3.0),Vector3(7.1,0.28,0.35),mats["steel"])
@@ -229,20 +231,6 @@ static func _workshop(group: Node3D, size: Vector2, height: float, mats: Diction
 		box(group,Vector3(sign*3.2,3.4,-z-3.0),Vector3(0.22,6.8,0.22),mats["rust"])
 	box(group,Vector3(0,5.85,-z-3.0),Vector3(0.13,1.9,0.13),mats["steel"])
 	cylinder(group,Vector3(0,4.84,-z-3.0),0.27,0.32,mats["darkmetal"])
-
-static func _clinic(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
-	var z := size.y*0.5
-	box(group,Vector3(0,3.1,-z-1.4),Vector3(5.6,0.32,3.7),mats["clinic"])
-	for dir in [-1.0,1.0]:
-		box(group,Vector3(dir*2.65,1.55,-z-2.1),Vector3(0.17,3.1,0.17),mats["steel"])
-	box(group,Vector3(0,2.4,-z-0.31),Vector3(2.1,0.15,0.15),mats["cross"])
-	box(group,Vector3(0,2.4,-z-0.33),Vector3(0.17,1.95,0.16),mats["cross"])
-	# Distinct front-facing triage canopy and emergency lighting frame.
-	var canopy := box(group,Vector3(0,3.0,-z-2.6),Vector3(6.0,0.15,3.0),mats["clinic"])
-	canopy.name = "ClinicTriageCanopy"
-	for sign in [-1.0,1.0]:
-		box(group,Vector3(sign*2.8,1.55,-z-3.65),Vector3(0.14,3.1,0.14),mats["steel"])
-	box(group,Vector3(0,3.15,-z-2.65),Vector3(2.1,0.09,0.20),mats["cross"])
 
 static func _command(group: Node3D, size: Vector2, height: float, mats: Dictionary) -> void:
 	var x := size.x*0.5

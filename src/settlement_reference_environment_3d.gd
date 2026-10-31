@@ -448,7 +448,7 @@ static func _industrial_roof_detail(parent: Node3D, size: Vector2, mats: Diction
 		var stack := _cylinder(parent, "ExhaustStack", Vector3(hx * 0.63, 4.84, hz * 0.47), 0.24, 1.7, mats["rust"])
 		_box(parent, "StackRainCap", stack.position + Vector3(0, 0.89, 0), Vector3(0.70, 0.10, 0.70), mats["darkmetal"])
 	elif kind in ["medical", "clinic"]:
-		_box(parent, "RoofAirHandling", Vector3(hx * 0.38, 4.13, hz * 0.17), Vector3(1.18, 0.49, 0.91), mats["clinic"])
+		_box(parent, "RoofAirHandling", Vector3(hx * 0.38, 4.13, hz * 0.17), Vector3(1.18, 0.49, 0.91), mats.get("clinic_panel", mats["clinic"]))
 		_box(parent, "IntakeSlats", Vector3(hx * 0.38, 4.15, hz * 0.17 + 0.48), Vector3(0.97, 0.28, 0.055), mats["darkmetal"])
 	elif kind in ["command", "security", "watchtower"]:
 		_box(parent, "AntennaMast", Vector3(hx * 0.62, 4.94, hz * 0.39), Vector3(0.09, 2.11, 0.09), mats["steel"])
@@ -496,7 +496,7 @@ static func _lived_in_facility_detail(parent: Node3D, size: Vector2, mats: Dicti
 	# Differentiated, human-scale signs give player-readable building identity.
 	var identity_color: Material = mats["steel"]
 	if kind in ["medical", "clinic"]:
-		identity_color = mats["clinic"]
+		identity_color = mats.get("clinic_panel", mats["clinic"])
 	elif kind in ["generator", "power", "industry"]:
 		identity_color = mats["warning"]
 	elif kind in ["command", "security", "watchtower"]:
@@ -510,7 +510,7 @@ static func _lived_in_facility_detail(parent: Node3D, size: Vector2, mats: Dicti
 			_box(parent, "ScrapLumberStack", Vector3(-hx * 0.48, 0.18 + offset * 0.22, hz + 0.68), Vector3(1.35, 0.12, 0.24), mats["wood"])
 		_cylinder(parent, "ServiceCanister", Vector3(hx * 0.53, 0.43, hz + 0.66), 0.21, 0.76, mats["rust"])
 	elif kind in ["medical", "clinic"]:
-		_box(parent, "MedicalSupplyCase", Vector3(hx * 0.50, 0.38, hz + 0.63), Vector3(0.91, 0.61, 0.51), mats["clinic"])
+		_box(parent, "MedicalSupplyCase", Vector3(hx * 0.50, 0.38, hz + 0.63), Vector3(0.91, 0.61, 0.51), mats.get("clinic_panel", mats["clinic"]))
 		_box(parent, "MedicalCaseLatch", Vector3(hx * 0.50, 0.44, hz + 0.90), Vector3(0.18, 0.12, 0.055), mats["steel"])
 
 
@@ -560,6 +560,46 @@ static func _exterior_weathering(parent: Node3D, size: Vector2, mats: Dictionary
 		_box(parent, "ReclaimedRearSiding", Vector3(x, 2.30, hz + 0.17), Vector3(minf(0.66, size.x * 0.16), 1.14 + float(i % 2) * 0.20, 0.055), mats["wood"] if i % 3 == 0 else mats["rooflight"])
 
 
+static func _clinic_triage_canopy(parent: Node3D, hz: float, mats: Dictionary) -> void:
+	# One framed lean-to replaces the old stacked clinic slabs: wall ledger
+	# above the facility plate, a sloped weathered sheet that drains forward,
+	# a level front beam and two posts far outside the doorway corridor.
+	var canopy := Node3D.new()
+	canopy.name="ClinicTriageCanopy"
+	parent.add_child(canopy)
+	var panel: Material=mats.get("clinic_panel",mats["clinic"])
+	var width: float=6.4
+	var thickness: float=0.06
+	var back := Vector3(0.0,3.62,-hz-0.26)
+	var front := Vector3(0.0,3.24,-hz-2.96)
+	var length: float=(front-back).length()
+	var pitch: float=atan2(back.y-front.y,back.z-front.z)
+	_box(canopy,"ClinicCanopyLedger",Vector3(0.0,back.y-0.07,-hz-0.20),Vector3(width+0.10,0.16,0.14),mats["darkmetal"])
+	var sheet := _box(canopy,"ClinicCanopySheet",(back+front)*0.5,Vector3(width,thickness,length+0.16),panel)
+	sheet.rotation.x=-pitch
+	var top: float=thickness*0.5
+	for x in [-2.95,-2.15,-1.35,1.35,2.15,2.95]:
+		_box(sheet,"ClinicCanopySeamRib",Vector3(x,top+0.0175,0.0),Vector3(0.05,0.035,length+0.12),mats["steel"])
+	for x in [-2.2,0.0,2.2]:
+		# Rafters run from the front beam into the wall ledger's face.
+		_box(sheet,"ClinicCanopyRafter",Vector3(x,-top-0.05,0.09),Vector3(0.08,0.10,length-0.08),mats["darkmetal"])
+	# Painted roof cross faces the elevated management camera; three
+	# non-overlapping pieces avoid coplanar z-fighting at the centre.
+	_box(sheet,"ClinicCanopyCross",Vector3(0.0,top+0.007,-0.05),Vector3(0.40,0.014,1.60),mats["cross"])
+	for side in [-1.0,1.0]:
+		_box(sheet,"ClinicCanopyCross",Vector3(side*0.51,top+0.007,-0.05),Vector3(0.62,0.014,0.40),mats["cross"])
+	var beam_center: Vector3=sheet.transform*Vector3(0.0,-top-0.08,-length*0.5+0.12)
+	_box(canopy,"ClinicCanopyFrontBeam",beam_center,Vector3(width+0.10,0.16,0.14),mats["steel"])
+	var gutter_center: Vector3=sheet.transform*Vector3(0.0,-0.02,-length*0.5-0.10)
+	_cylinder_between(canopy,"ClinicCanopyGutter",gutter_center-Vector3(width*0.5,0,0),gutter_center+Vector3(width*0.5,0,0),0.06,mats["rust"])
+	var beam_bottom: float=beam_center.y-0.08
+	for side in [-1.0,1.0]:
+		var post_x: float=side*3.05
+		_box(canopy,"ClinicCanopyPost",Vector3(post_x,beam_bottom*0.5,beam_center.z),Vector3(0.13,beam_bottom,0.13),mats["steel"])
+		_box(canopy,"ClinicCanopyFooting",Vector3(post_x,0.06,beam_center.z),Vector3(0.42,0.12,0.42),mats["concrete"])
+		_cylinder_between(canopy,"ClinicCanopyKneeBrace",Vector3(post_x,beam_bottom-0.55,beam_center.z),Vector3(post_x-side*0.55,beam_bottom,beam_center.z),0.035,mats["steel"])
+
+
 static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Dictionary, body_height: float) -> void:
 	# New visual props remain distinct from the core gameplay shell so roofs,
 	# doors, selection and simulation remain unchanged.
@@ -592,7 +632,7 @@ static func detail_facility(group: Node3D, kind: String, size: Vector2, mats: Di
 		var x: float=(float(index)-1.0)*size.x*0.29
 		_box(scene,"WeatheredLintel",Vector3(x,3.04,hz+0.18),Vector3(size.x*0.22,0.15,0.07),mats["rust"])
 	if kind=="medical":
-		_box(scene,"TriageCanopy",Vector3(0,2.96,-hz-1.16),Vector3(size.x*0.55,0.12,1.65),mats["clinic"])
+		_clinic_triage_canopy(scene,hz,mats)
 	elif kind in ["industry","generator","power"]:
 		for i in range(3):
 			_cylinder(scene,"MachineFuelDrum",Vector3(-1.0+float(i)*0.92,0.59,hz+1.10),0.29,1.10,mats["blue"] if i%2==0 else mats["rust"])

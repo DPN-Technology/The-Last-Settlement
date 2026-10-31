@@ -91,7 +91,7 @@ static func _medical(parent: Node3D, size: Vector2, mats: Dictionary) -> void:
 	var hz: float=size.y*0.5
 	var hx: float=size.x*0.5
 	# Small exterior triage station as seen in the reference.
-	_box(parent,"FieldTreatmentTrolley",Vector3(-hx*0.44,0.89,-hz-1.36),Vector3(1.64,0.12,0.67),mats["clinic"])
+	_box(parent,"FieldTreatmentTrolley",Vector3(-hx*0.44,0.89,-hz-1.36),Vector3(1.64,0.12,0.67),mats.get("clinic_panel",mats["clinic"]))
 	for x in [-hx*0.44-0.59,-hx*0.44+0.59]:
 		_box(parent,"TrolleyLeg",Vector3(x,0.43,-hz-1.36),Vector3(0.08,0.85,0.09),mats["steel"])
 	for j in range(2):
