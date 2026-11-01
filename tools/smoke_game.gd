@@ -570,8 +570,8 @@ func _smoke() -> void:
 		push_error("SMOKE: Construction control did not activate")
 		quit(1)
 		return
-	# Exterior navigation must keep physical building footprints solid. The
-	# current production game does not yet simulate walkable interiors.
+	# Exterior navigation keeps physical building footprints solid outside
+	# the assigned worker's explicit door-transition state.
 	var test_buildings: Array[Dictionary] = [
 		{"name":"Blocking Shelter","type":"housing","position":Vector2(200,200),"size":Vector2(100,80)},
 		{"name":"Test Farm","type":"farm","position":Vector2(360,200),"size":Vector2(100,80)}
@@ -625,10 +625,14 @@ func _smoke() -> void:
 		push_error("SMOKE: Work position is not inside the facility")
 		quit(1)
 		return
-	if SettlementNavigation.access_points(test_buildings[0],5)["work"]==access["work"]:
-		push_error("SMOKE: Indoor stations overlap for adjacent workers")
-		quit(1)
-		return
+	var indoor_stations := {}
+	for citizen_id in range(1,13):
+		var station := Vector2(SettlementNavigation.access_points(test_buildings[0],citizen_id)["work"])
+		if not inside_bounds.has_point(station) or indoor_stations.has(station):
+			push_error("SMOKE: Founding survivors do not have unique interior work positions")
+			quit(1)
+			return
+		indoor_stations[station]=true
 	var door_obstacles := SettlementNavigation.without_building(test_buildings,test_buildings[0])
 	if not SettlementNavigation.valid_step(Vector2(access["outside"]),Vector2(access["threshold"]),door_obstacles):
 		push_error("SMOKE: Assigned doorway cannot be traversed")
@@ -640,12 +644,25 @@ func _smoke() -> void:
 		return
 	var visit_citizen: Dictionary=sim.get_settlement_citizens()[0]
 	var original_position: Vector2=Vector2(visit_citizen["position"])
+	var original_action := str(visit_citizen["current_action"])
+	var original_target := Vector2(visit_citizen["target"])
+	var original_target_building := str(visit_citizen["target_building"])
 	var visit_building: Dictionary=sim.get_building_by_type("medical")
 	visit_citizen["position"]=SettlementNavigation.exterior_entry(visit_building)
-	visit_citizen["target_building"]="medical"
 	instance.interior_visits.erase(int(visit_citizen["id"]))
-	for tick in range(45):
-		instance._visit_facility(visit_citizen,visit_building,8.0)
+	var navigation_was_paused := sim.paused
+	var expedition_states := {}
+	sim.paused=true
+	for other in sim.citizens:
+		if int(other["id"])==int(visit_citizen["id"]):
+			continue
+		expedition_states[int(other["id"])]=bool(other.get("on_expedition",false))
+		other["on_expedition"]=true
+	sim._set_action(visit_citizen,"Work: Medical","medical")
+	for tick in range(120):
+		instance._update_citizens(0.25)
+		if str(instance.interior_visits.get(int(visit_citizen["id"]),{}).get("phase",""))=="AT_WORK":
+			break
 	if not instance.interior_visits.has(int(visit_citizen["id"])) or str(instance.interior_visits[int(visit_citizen["id"])]["phase"])!="AT_WORK":
 		push_error("SMOKE: Medical survivor never entered work room")
 		quit(1)
@@ -654,22 +671,24 @@ func _smoke() -> void:
 		push_error("SMOKE: Medical survivor never appeared within interior")
 		quit(1)
 		return
-	var evacuated := false
-	for tick in range(45):
-		if not instance._leave_facility(visit_citizen,8.0):
-			evacuated=true
+	sim._set_action(visit_citizen,"Idle","")
+	for tick in range(120):
+		instance._update_citizens(0.25)
+		if not instance.interior_visits.has(int(visit_citizen["id"])):
 			break
-	if not evacuated:
-		# The finishing tick may still report handled so callers do not
-		# issue an unintended second movement operation.
-		evacuated=not instance.interior_visits.has(int(visit_citizen["id"]))
+	var evacuated: bool = not instance.interior_visits.has(int(visit_citizen["id"]))
 	if not evacuated or SettlementNavigation.collision_rects([visit_building])[0].has_point(Vector2(visit_citizen["position"])):
 		push_error("SMOKE: Survivor cannot leave the assigned facility through door")
 		quit(1)
 		return
+	for other in sim.citizens:
+		if expedition_states.has(int(other["id"])):
+			other["on_expedition"]=bool(expedition_states[int(other["id"])])
+	visit_citizen["current_action"]=original_action
 	visit_citizen["position"]=original_position
-	visit_citizen["target"]=Vector2.ZERO
-	visit_citizen["target_building"]=""
+	visit_citizen["target"]=original_target
+	visit_citizen["target_building"]=original_target_building
+	sim.paused=navigation_was_paused
 	instance.interior_visits.clear()
 	instance.citizen_paths.clear()
 	# Facility management is a real repair work-order and a two-step

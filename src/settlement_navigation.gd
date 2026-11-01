@@ -166,10 +166,10 @@ static func access_points(building: Dictionary, citizen_id: int) -> Dictionary:
 	var center := Vector2(building["position"])
 	var size := Vector2(building["size"])
 	var threshold := center+Vector2(0.0,-size.y*0.5)
-	var col := posmod(citizen_id,3)-1
-	var row := posmod(int(floor(float(citizen_id)/3.0)),3)
-	# 3x3 work positions sit clear of the door's center aisle and of walls.
-	var work := center+Vector2(float(col)*size.x*0.28,(-0.10+float(row)*0.17)*size.y)
+	var col := posmod(citizen_id,4)
+	var row := posmod(int(floor(float(citizen_id)/4.0)),3)
+	# Twelve stable work positions cover the current founding roster.
+	var work := center+Vector2((-0.36+float(col)*0.24)*size.x,(-0.08+float(row)*0.20)*size.y)
 	return {
 		"key":building_key(building),
 		"outside":exterior_entry(building),

@@ -1,5 +1,10 @@
 ## Unreleased — Supply Intelligence
 
+### Navigation
+- Facility smoke coverage now drives entry and exit through the real citizen navigation update, rather than calling transition phases directly
+- Expanded deterministic interior work positions to twelve so the founding roster does not reuse stations
+- Corrected navigation playtest docs to reflect current doorway transitions and distinguish remaining furniture/crowd work
+
 ### Added
 - `ResourceLedger`: a measured resource-flow ledger covering food, meals, water, medicine, materials, scrap, fuel, parts and battery charge over a rolling ~24 game-hour window. Recorded flow always reconciles with the real stock change.
 - Supply Intelligence side panel showing per-resource stock, produced/consumed per game day, measured run-out time, ranked sources and uses, and actions routed to existing build/workforce/industry/region systems
