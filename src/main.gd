@@ -36,6 +36,11 @@ var palette_selected_index := 0
 var workforce_mode := false
 var workforce_page := 0
 var workforce_selected_id := 0
+# Supply intelligence panel: measured flows from sim.resource_ledger.
+var supply_mode := false
+var supply_resource := "food"
+const SUPPLY_LABELS := {"food":"FOOD","meals":"MEALS","water":"WATER","medicine":"MEDICINE","materials":"MATERIALS","scrap":"SCRAP","fuel":"FUEL","parts":"PARTS","battery":"BATTERY"}
+const SUPPLY_STORES := {"food":"command + farm stockpiles","meals":"command stockpile","water":"command stockpile","medicine":"command + medical stockpiles","materials":"industry stockpile","scrap":"industry + command stockpiles","fuel":"industry fuel stock","parts":"industry stock","battery":"the battery bank"}
 var playtest_notice := ""
 var playtest_notice_seconds := 0.0
 var ui_animation_clock := 0.0
@@ -375,6 +380,8 @@ func _draw() -> void:
 				_draw_directive_tab()
 	if workforce_mode:
 		_draw_workforce_panel()
+	elif supply_mode:
+		_draw_supply_panel()
 	elif help_mode:
 		_draw_help_panel()
 	elif update_mode:
@@ -413,6 +420,7 @@ func _toggle_workforce() -> void:
 		workforce_mode=false
 		return
 	workforce_mode=true
+	supply_mode=false
 	overview_visible=false
 	build_mode=false
 	world_map_mode=false
@@ -565,7 +573,7 @@ func _handle_workforce_click(position: Vector2) -> bool:
 	return true
 
 func _panel_action_items() -> Array:
-	if workforce_mode or help_mode:
+	if workforce_mode or supply_mode or help_mode:
 		return []
 	if update_mode:
 		return [["DOWNLOAD",KEY_F11],["INSTALL",KEY_F12],["CLOSE",KEY_ESCAPE]]
@@ -1754,12 +1762,14 @@ func _draw_hud() -> void:
 	var morale := sim.get_average_morale()
 	var resources := [
 		["PEOPLE", str(alive), float(alive)/24.0, "Click to assign jobs, shifts and duties in Workforce."],
-		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Stored food. Click to build a crop field."],
-		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water available. Click to build a purifier."],
-		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Actual power supply vs demand. Click to build a generator."],
-		["MEALS", "%.0f" % float(sim.resources["meals"]), float(sim.resources["meals"])/maxf(1.0,float(alive)*2.0), "Prepared food ready for consumption"],
+		["FOOD", "%.0f" % float(sim.resources["food"]), float(sim.resources["food"])/maxf(1.0, float(alive)*25.0), "Command + farm stores. Click for supply analysis."],
+		["WATER", "%.0f" % float(sim.resources["water"]), float(sim.resources["water"])/maxf(1.0,float(alive)*24.0), "Clean water stored. Click for supply analysis."],
+		["POWER", "%.0f / %.0f" % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"])], float(sim.utility_state["power_generated"])/maxf(1.0,float(sim.utility_state["power_demand"])), "Generated vs demand. Click for battery and fuel flow."],
+		["MEALS", "%.0f" % float(sim.resources["meals"]), float(sim.resources["meals"])/maxf(1.0,float(alive)*2.0), "Prepared meals ready. Click for supply analysis."],
 		["MORALE", "%.0f%%" % morale, morale/100.0, "Average confidence and satisfaction"]
 	]
+	# Measured net flow per game day; [text, color, hours_to_empty] per chip.
+	var trends := [["",MUTED,-1.0],_supply_trend("food"),_supply_trend("water"),_power_trend(),_supply_trend("meals"),["",MUTED,-1.0]]
 	var resource_rects := SettlementUILayout.resource_rects(vp)
 	var hovered := -1
 	for i in range(resources.size()):
@@ -1767,10 +1777,16 @@ func _draw_hud() -> void:
 		var item: Array = resources[i]
 		var fraction := clampf(float(item[2]),0.0,1.0)
 		var severity := (WARN if fraction >= 0.85 else BAD) if i == 3 and fraction < 1.0 else (BAD if fraction < 0.20 else (WARN if fraction < 0.40 else GOOD))
+		var trend: Array = trends[i]
+		var eta := float(trend[2])
+		if eta >= 0.0 and eta < 6.0:
+			severity = BAD
+		elif eta >= 0.0 and eta < 24.0 and severity == GOOD:
+			severity = WARN
 		var hovered_now := rect.has_point(get_local_mouse_position())
 		if hovered_now:
 			hovered=i
-		DPNUISkin.resource(self,rect,str(item[0]),str(item[1]),fraction,severity,hovered_now)
+		DPNUISkin.resource(self,rect,str(item[0]),str(item[1]),fraction,severity,hovered_now,str(trend[0]),trend[1])
 	var battery_percent := 100.0*float(sim.utility_state["battery_charge"])/maxf(1.0,float(sim.utility_state["battery_capacity"]))
 	var weather_name := sim.weather_simulation.condition
 	var summary := "Day %d  •  %02d:%02d  |  Weather: %s  |  Materials: %.0f  |  Projects: %d  |  Battery: %.0f%%" % [sim.day,int(sim.hour),int((sim.hour-floor(sim.hour))*60.0),weather_name,float(sim.resources["materials"]),sim.blueprints.size(),battery_percent]
@@ -1783,7 +1799,7 @@ func _draw_hud() -> void:
 	var warning := Rect2(vp.x-158,54.0,154.0,24.0)
 	DPNUISkin.button(self,warning,str(attention[0]),warning.has_point(get_local_mouse_position()),false,str(attention[0]) in ["STORM: TAKE COVER","NO SURVIVORS","POWER SHORTFALL","CHECK FOOD","CHECK WATER"],true,true)
 
-	if selected_citizen.is_empty() and selected_building.is_empty() and not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and not help_mode and not update_mode:
+	if selected_citizen.is_empty() and selected_building.is_empty() and not build_mode and not world_map_mode and not governance_mode and not economy_mode and not faction_mode and not civilization_mode and not help_mode and not update_mode and not supply_mode:
 		if not incident_panel_visible:
 			_draw_event_toasts()
 
@@ -1809,7 +1825,10 @@ func _draw_hud() -> void:
 		var tooltip_x := clampf(card.position.x,10.0,maxf(10.0,vp.x-tooltip_width-10))
 		var tooltip := Rect2(tooltip_x,top_h+8.0,tooltip_width,48.0)
 		DPNUISkin.frame(self,tooltip,ui_animation_clock,false)
-		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,18),str(source[0])+"  //  "+str(source[1]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,12,TEXT)
+		var headline := str(source[0])+"  //  "+str(source[1])
+		if str(trends[hovered][0])!="":
+			headline += "  //  "+str(trends[hovered][0])
+		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,18),headline,HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,12,TEXT)
 		draw_string(ThemeDB.fallback_font,tooltip.position+Vector2(11,35),str(source[3]),HORIZONTAL_ALIGNMENT_LEFT,tooltip_width-22,10,MUTED)
 	if playtest_notice_seconds > 0.0:
 		var notice := SettlementUILayout.playtest_notice_rect(vp)
@@ -1911,7 +1930,9 @@ func _overview_rows() -> Array[Dictionary]:
 				if bool(done):
 					finished+=1
 			result.append({"label":"FIELD DIRECTIVES   /   %d OF %d" % [finished,sim.field_objectives.size()],"detail":_next_settlement_goal(),"warn":finished<sim.field_objectives.size()})
-			result.append({"label":"SUPPLY RESERVES","detail":"Food %.0f  /  Water %.0f  /  Medicine %.0f" % [float(sim.resources["food"]),float(sim.resources["water"]),float(sim.resources["medicine"])],"warn":false})
+			var food_eta := float(_supply_trend("food")[2])
+			var water_eta := float(_supply_trend("water")[2])
+			result.append({"label":"SUPPLY RESERVES","detail":"Food %.0f  /  Water %.0f  /  Medicine %.0f" % [float(sim.resources["food"]),float(sim.resources["water"]),float(sim.resources["medicine"])],"warn":(food_eta>=0.0 and food_eta<24.0) or (water_eta>=0.0 and water_eta<24.0),"supply":"food"})
 			result.append({"label":"ACTIVE CONSTRUCTION","detail":"%d blueprints underway  /  %.0f building materials" % [sim.blueprints.size(),float(sim.resources["materials"])],"warn":false})
 			if sim.weather_simulation.condition==WeatherSimulation.DUST_STORM:
 				result.append({"label":"DUST STORM WARNING","detail":"%.1f hours to clear. Shelter: %s" % [sim.weather_simulation.remaining_hours(sim),"ACTIVE" if sim.weather_simulation.shelter_in_place else "OFF"],"warn":true})
@@ -1928,7 +1949,18 @@ func _overview_rows() -> Array[Dictionary]:
 			result.append({"label":"CLEAN WATER SUPPLY","detail":"%.0f stored  /  %.0f sanitation" % [float(sim.resources["water"]),float(sim.utility_state["sanitation"])],"warn":float(sim.resources["water"])<float(sim.get_settlement_citizens().size())*4.0})
 			result.append({"label":"FOOD SECURITY","detail":"%.0f food  /  %.0f prepared meals" % [float(sim.resources["food"]),float(sim.resources["meals"])],"warn":float(sim.resources["meals"])<float(sim.get_settlement_citizens().size())})
 			result.append({"label":"MEDICAL STOCK","detail":"%.0f medicine  /  check clinic & staff for emergencies" % float(sim.resources["medicine"]),"warn":float(sim.resources["medicine"])<5.0})
-			result.append({"label":"ENERGY RESPONSE","detail":"Select POWER to inspect production / WATER for treatment.","warn":available<required})
+			# Replaces a static instruction row with measured ledger flow.
+			var outlook := ["water","food","battery"]
+			var outlook_warn := false
+			var outlook_parts := PackedStringArray()
+			var outlook_ready := true
+			for key in outlook:
+				var flow := sim.supply_report(key)
+				outlook_ready = outlook_ready and bool(flow["ready"])
+				var flow_eta := float(flow["hours_to_empty"])
+				outlook_warn = outlook_warn or (bool(flow["ready"]) and flow_eta>=0.0 and flow_eta<24.0)
+				outlook_parts.append("%s %s" % [str(SUPPLY_LABELS[key]).capitalize(),_supply_rate_text(float(flow["net_per_day"]))])
+			result.append({"label":"SUPPLY OUTLOOK","detail":("  /  ".join(outlook_parts)+"  /  measured") if outlook_ready else "Measuring live resource flow...","warn":outlook_warn,"supply":"water"})
 		2:
 			var batches := eco.get_open_batches()
 			result.append({"label":"WORKSHOP STATUS","detail":"%s  /  %.0f%% efficiency" % ["PAUSED" if eco.production_paused else "ACTIVE",eco.production_efficiency*100.0],"warn":eco.production_paused or eco.production_efficiency<0.4})
@@ -2041,6 +2073,7 @@ func _palette_execute(command_id: String) -> void:
 			_toggle_workforce()
 		return
 	workforce_mode=false
+	supply_mode=false
 	match command_id:
 		"COMMAND":
 			_open_guide_section(0)
@@ -2193,6 +2226,10 @@ func _handle_overview_click(position: Vector2) -> bool:
 	var entries := _overview_rows()
 	for index in range(mini(entries.size(),SettlementUILayout.overview_visible_rows(vp))):
 		if SettlementUILayout.overview_data_row(vp,index).has_point(position):
+			var supply_key := str(entries[index].get("supply",""))
+			if supply_key!="":
+				_open_supply(supply_key)
+				return true
 			var quick := _overview_row_quick_index(index,entries)
 			if quick>=0:
 				_overview_quick_action(quick)
@@ -2379,6 +2416,7 @@ func _handle_build_palette_click(position: Vector2) -> bool:
 	return true
 
 func _open_building_from_status(build_type: String) -> void:
+	supply_mode = false
 	if not build_mode:
 		_handle_toolbar_click(SettlementUILayout.navbar_rect(get_viewport_rect().size,0).get_center())
 	var catalog := sim.get_build_catalog()
@@ -2389,6 +2427,210 @@ func _open_building_from_status(build_type: String) -> void:
 			break
 	playtest_notice = "BUILD MENU OPEN  /  SELECT TERRAIN TO PLACE "+str(catalog[build_catalog_index]["name"]).to_upper()
 	playtest_notice_seconds = 5.0
+
+# Measured supply analysis opened from the FOOD / WATER / POWER / MEALS chips.
+func _open_supply(resource: String) -> void:
+	if supply_mode and supply_resource == resource:
+		supply_mode = false
+		return
+	supply_mode = true
+	supply_resource = resource if resource in SettlementUILayout.SUPPLY_RESOURCES else "food"
+	overview_visible = false
+	workforce_mode = false
+	build_mode = false
+	world_map_mode = false
+	governance_mode = false
+	economy_mode = false
+	faction_mode = false
+	civilization_mode = false
+	update_mode = false
+	help_mode = false
+	selected_citizen = {}
+	selected_building = {}
+	selected_blueprint = {}
+
+func _cycle_supply_resource(direction: int) -> void:
+	var keys := SettlementUILayout.SUPPLY_RESOURCES
+	supply_resource = str(keys[posmod(keys.find(supply_resource)+direction,keys.size())])
+
+static func _supply_rate_text(rate: float) -> String:
+	if absf(rate) < 0.005:
+		return "0/d"
+	if absf(rate) >= 10.0:
+		return "%+.0f/d" % rate
+	if absf(rate) >= 1.0:
+		return "%+.1f/d" % rate
+	return "%+.2f/d" % rate
+
+static func _supply_eta_text(hours: float) -> String:
+	if hours < 0.0:
+		return "STABLE"
+	if hours < 0.05:
+		return "EMPTY"
+	if hours < 10.0:
+		return "%.1fH" % hours
+	if hours < 48.0:
+		return "%.0fH" % hours
+	return "%.1fD" % (hours/24.0)
+
+static func _supply_amount_text(amount: float, prefix: String) -> String:
+	if amount < 0.05:
+		return "0"
+	return prefix+("%.1f" % amount if amount < 100.0 else "%.0f" % amount)
+
+# [trend text, color, game hours to empty]; blank until enough is measured.
+func _supply_trend(resource: String) -> Array:
+	var report := sim.supply_report(resource)
+	if not bool(report["ready"]):
+		return ["",MUTED,-1.0]
+	var eta := float(report["hours_to_empty"])
+	return [_supply_rate_text(float(report["net_per_day"])),GOOD if eta < 0.0 else (BAD if eta < 24.0 else WARN),eta]
+
+# POWER is a live rate, so its chip warns with the measured time until the
+# battery bank (or generator fuel) is exhausted.
+func _power_trend() -> Array:
+	var battery := sim.supply_report("battery")
+	if bool(battery["ready"]) and float(battery["hours_to_empty"]) >= 0.0:
+		var eta := float(battery["hours_to_empty"])
+		return ["BAT "+_supply_eta_text(eta),BAD if eta < 24.0 else WARN,eta]
+	var fuel := sim.supply_report("fuel")
+	if bool(fuel["ready"]) and float(fuel["hours_to_empty"]) >= 0.0 and float(fuel["hours_to_empty"]) < 48.0:
+		var fuel_eta := float(fuel["hours_to_empty"])
+		return ["FUEL "+_supply_eta_text(fuel_eta),BAD if fuel_eta < 24.0 else WARN,fuel_eta]
+	return ["",MUTED,-1.0]
+
+# Each action routes to an existing playable system; none fakes production.
+func _supply_actions(resource: String) -> Array:
+	match resource:
+		"food":
+			return [["BUILD CROP FIELD","build","farm"],["WORKFORCE","workforce",""],["INDUSTRY & TRADE","nav",3]]
+		"meals":
+			return [["WORKFORCE","workforce",""],["BUILD CROP FIELD","build","farm"],["INDUSTRY & TRADE","nav",3]]
+		"water":
+			return [["BUILD PURIFIER","build","purifier"],["BUILD WATER PUMP","build","water_pump"],["INDUSTRY & TRADE","nav",3]]
+		"battery":
+			return [["BUILD GENERATOR","build","generator"],["BUILD BATTERY","build","battery"],["INDUSTRY & TRADE","nav",3]]
+		"medicine","fuel","parts":
+			return [["INDUSTRY & TRADE","nav",3],["REGION SALVAGE","nav",1]]
+		_:
+			return [["REGION SALVAGE","nav",1],["WORKFORCE","workforce",""],["INDUSTRY & TRADE","nav",3]]
+
+func _run_supply_action(index: int) -> void:
+	var actions := _supply_actions(supply_resource)
+	if index < 0 or index >= actions.size():
+		return
+	var action: Array = actions[index]
+	supply_mode = false
+	match str(action[1]):
+		"build":
+			_open_building_from_status(str(action[2]))
+		"workforce":
+			if not workforce_mode:
+				_toggle_workforce()
+		"nav":
+			_handle_toolbar_click(SettlementUILayout.navbar_rect(get_viewport_rect().size,int(action[2])).get_center())
+
+func _handle_supply_click(position: Vector2) -> bool:
+	if not supply_mode:
+		return false
+	# Chips stay live: they switch the analysis or route PEOPLE/MORALE.
+	if _handle_resource_chip_click(position):
+		return true
+	var vp := get_viewport_rect().size
+	# Like Workforce, an outside click closes instead of acting behind it.
+	if not SettlementUILayout.supply_panel(vp).has_point(position):
+		supply_mode = false
+		return true
+	for i in range(SettlementUILayout.SUPPLY_RESOURCES.size()):
+		if SettlementUILayout.supply_tab_rect(vp,i).has_point(position):
+			supply_resource = str(SettlementUILayout.SUPPLY_RESOURCES[i])
+			return true
+	var actions := _supply_actions(supply_resource)
+	for i in range(actions.size()):
+		if SettlementUILayout.supply_action_rect(vp,i,actions.size()).has_point(position):
+			_run_supply_action(i)
+			return true
+	return true
+
+func _draw_supply_panel() -> void:
+	var vp := get_viewport_rect().size
+	var area := SettlementUILayout.supply_panel(vp)
+	var mouse := get_local_mouse_position()
+	_draw_ui_panel(area,ACCENT)
+	var report := sim.supply_report(supply_resource)
+	var measured := bool(report["ready"])
+	var label := str(SUPPLY_LABELS.get(supply_resource,supply_resource.to_upper()))
+	var left := area.position.x+16.0
+	var inner := area.size.x-32.0
+	var top := area.position.y
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+28),"SUPPLY INTELLIGENCE  /  "+label,HORIZONTAL_ALIGNMENT_LEFT,inner-50.0,16,TEXT)
+	var window := "MEASURED LIVE FLOW  /  LAST %.1f GAME HOURS" % float(report["hours"]) if measured else "MEASURING  /  %.1f OF %.1f GAME HOURS RECORDED" % [float(report["hours"]),ResourceLedger.MIN_REPORT_HOURS]
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+48),window,HORIZONTAL_ALIGNMENT_LEFT,inner-50.0,10,GOOD if measured else WARN)
+	for i in range(SettlementUILayout.SUPPLY_RESOURCES.size()):
+		var key := str(SettlementUILayout.SUPPLY_RESOURCES[i])
+		var tab := SettlementUILayout.supply_tab_rect(vp,i)
+		var trend := _supply_trend(key)
+		var caption := str(SUPPLY_LABELS[key])
+		if str(trend[0])!="":
+			caption += "  "+str(trend[0])
+		DPNUISkin.button(self,tab,caption,tab.has_point(mouse),key==supply_resource,false,true,true)
+		if str(trend[0])!="":
+			draw_rect(Rect2(tab.position+Vector2(0,4),Vector2(3,tab.size.y-8)),trend[1])
+	var stock := float(report["stock"])
+	var eta := float(report["hours_to_empty"])
+	var producers: Array = report["producers"]
+	var consumers: Array = report["consumers"]
+	var produced := float(report["produced_per_day"])
+	var consumed := float(report["consumed_per_day"])
+	var is_battery := supply_resource=="battery"
+	var cards := [
+		["IN STOCK","%.0f/%.0f" % [stock,float(sim.utility_state["battery_capacity"])] if is_battery else "%.0f" % stock,"BANK CAPACITY" if is_battery else "ALL STORES",false],
+		["PRODUCED/DAY",_supply_amount_text(produced,"+") if measured else "--","%d SOURCE%s" % [producers.size(),"" if producers.size()==1 else "S"],false],
+		["CONSUMED/DAY",_supply_amount_text(consumed,"-") if measured else "--","%d USE%s" % [consumers.size(),"" if consumers.size()==1 else "S"],false],
+		["RUN-OUT",_supply_eta_text(eta) if measured else "--","NET "+_supply_rate_text(float(report["net_per_day"])) if measured else "MEASURING",measured and eta>=0.0 and eta<24.0]
+	]
+	for i in range(cards.size()):
+		var card: Array = cards[i]
+		DPNUISkin.metric_card(self,SettlementUILayout.supply_metric_rect(vp,i),str(card[0]),str(card[1]),str(card[2]),bool(card[3]))
+	var status := "Rates appear after %.1f game hours of live play." % ResourceLedger.MIN_REPORT_HOURS
+	var status_color := MUTED
+	if measured:
+		if eta < 0.0:
+			status = "%s is stable or rising at the measured rate." % label
+			status_color = GOOD
+		elif eta < 0.05:
+			status = "%s is exhausted. Restore supply or cut use now." % label
+			status_color = BAD
+		else:
+			status = "%s runs out in %s at the measured rate." % [label,_supply_eta_text(eta)]
+			status_color = BAD if eta < 24.0 else WARN
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+250),status,HORIZONTAL_ALIGNMENT_LEFT,inner,12,status_color)
+	var context := "Stored in "+str(SUPPLY_STORES.get(supply_resource,"settlement stores"))+"."
+	if supply_resource in ["battery","fuel"]:
+		context = "Grid %.0f / %.0f demand  •  %s  •  " % [float(sim.utility_state["power_generated"]),float(sim.utility_state["power_demand"]),"ONLINE" if bool(sim.utility_state["power_online"]) else "BLACKOUT"]+context
+	draw_string(ThemeDB.fallback_font,Vector2(left,top+270),context,HORIZONTAL_ALIGNMENT_LEFT,inner,10,MUTED)
+	var rows := SettlementUILayout.supply_flow_rows(vp)
+	for column in range(2):
+		var entries: Array = producers if column==0 else consumers
+		var tone := GOOD if column==0 else WARN
+		var header := SettlementUILayout.supply_flow_row(vp,column,0)
+		draw_string(ThemeDB.fallback_font,Vector2(header.position.x+2,top+292),"PRODUCED BY" if column==0 else "CONSUMED BY",HORIZONTAL_ALIGNMENT_LEFT,header.size.x,10,tone)
+		if entries.is_empty():
+			draw_string(ThemeDB.fallback_font,header.position+Vector2(8,13),("No measured production" if column==0 else "No measured use") if measured else "Measuring...",HORIZONTAL_ALIGNMENT_LEFT,header.size.x-12,10,MUTED)
+			continue
+		for row in range(mini(rows,entries.size())):
+			var box := SettlementUILayout.supply_flow_row(vp,column,row)
+			var entry: Dictionary = entries[row]
+			var rate := float(entry["per_day"])
+			var rate_text := ("%s%.1f/d" if rate < 100.0 else "%s%.0f/d") % ["+" if column==0 else "-",rate]
+			draw_rect(box,Color("#19131c"))
+			draw_rect(Rect2(box.position,Vector2(3,box.size.y)),tone)
+			draw_string(ThemeDB.fallback_font,box.position+Vector2(9,13),str(entry["source"]),HORIZONTAL_ALIGNMENT_LEFT,box.size.x-74.0,10,TEXT)
+			draw_string(ThemeDB.fallback_font,box.position+Vector2(9,13),rate_text,HORIZONTAL_ALIGNMENT_RIGHT,box.size.x-16.0,10,tone)
+	var actions := _supply_actions(supply_resource)
+	for i in range(actions.size()):
+		var button := SettlementUILayout.supply_action_rect(vp,i,actions.size())
+		DPNUISkin.button(self,button,str(actions[i][0]),button.has_point(mouse),false,false,true,true)
 
 func _handle_resource_chip_click(position: Vector2) -> bool:
 	var vp := get_viewport_rect().size
@@ -2419,14 +2661,14 @@ func _handle_resource_chip_click(position: Vector2) -> bool:
 		match i:
 			0:
 				_toggle_workforce()
-			4:
-				overview_visible = true
 			1:
-				_open_building_from_status("farm")
+				_open_supply("food")
 			2:
-				_open_building_from_status("purifier")
+				_open_supply("water")
 			3:
-				_open_building_from_status("generator")
+				_open_supply("battery")
+			4:
+				_open_supply("meals")
 			5:
 				if not governance_mode:
 					_handle_toolbar_click(SettlementUILayout.navbar_rect(vp,2).get_center())
@@ -2481,6 +2723,7 @@ func _handle_toolbar_click(position: Vector2) -> bool:
 		if not SettlementUILayout.navbar_rect(vp,index).has_point(position):
 			continue
 		workforce_mode = false
+		supply_mode = false
 		if index == 0:
 			# Click Build must never invoke Civilization treasury's B shortcut.
 			var was_building := build_mode and not civilization_mode and not world_map_mode
@@ -2527,6 +2770,8 @@ func _active_command_panel() -> Rect2:
 	var size := get_viewport_rect().size
 	if workforce_mode:
 		return SettlementUILayout.workforce_panel(size)
+	if supply_mode:
+		return SettlementUILayout.supply_panel(size)
 	if help_mode:
 		return SettlementUILayout.guide_rect(size)
 	if update_mode:
@@ -2562,6 +2807,8 @@ func _handle_command_close_click(point: Vector2) -> bool:
 		return false
 	if workforce_mode:
 		workforce_mode=false
+	elif supply_mode:
+		supply_mode=false
 	elif help_mode:
 		help_mode=false
 	elif update_mode:
@@ -3144,6 +3391,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if workforce_mode and event.keycode not in [KEY_F2,KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE]:
 			return
+		if supply_mode and event.keycode in [KEY_LEFT,KEY_UP,KEY_RIGHT,KEY_DOWN]:
+			_cycle_supply_resource(-1 if event.keycode in [KEY_LEFT,KEY_UP] else 1)
+			return
+		if supply_mode and event.keycode not in [KEY_F2,KEY_F5,KEY_F6,KEY_F7,KEY_ESCAPE,KEY_F8,KEY_SPACE,KEY_1,KEY_2,KEY_3]:
+			return
 		match event.keycode:
 			KEY_TAB:
 				_cycle_roof_view()
@@ -3485,6 +3737,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					incident_panel_visible=false
 				elif workforce_mode:
 					workforce_mode=false
+				elif supply_mode:
+					supply_mode=false
 				elif pending_demolition_key!="":
 					pending_demolition_key=""
 				elif overview_visible:
@@ -3529,6 +3783,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				overview_visible = false
 				return
 			if _handle_time_control_click(event.position):
+				return
+			if _handle_supply_click(event.position):
 				return
 			if workforce_mode:
 				_handle_workforce_click(event.position)

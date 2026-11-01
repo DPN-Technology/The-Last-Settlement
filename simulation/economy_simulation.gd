@@ -233,10 +233,13 @@ func _consume_inputs(sim:SettlementSimulation, inputs:Dictionary) -> bool:
 		var required := float(inputs[key])
 		if key == "scrap":
 			sim.stockpiles["industry"]["scrap"] -= required
+			sim.resource_ledger.note(key,"Workshop inputs",-required)
 		elif key == "materials":
 			sim.stockpiles["industry"]["materials"] -= required
+			sim.resource_ledger.note(key,"Workshop inputs",-required)
 		elif key in industry_stock:
 			industry_stock[key] -= required
+			sim.resource_ledger.note(key,"Workshop inputs",-required)
 		elif key == "repair_kits":
 			repair_kits -= required
 	return true
@@ -250,6 +253,7 @@ func _finish_batch(sim:SettlementSimulation,batch:Dictionary,recipe:Dictionary) 
 			_create_utility_truck()
 		else:
 			industry_stock[key] = float(industry_stock.get(key,0.0)) + float(recipe["output"][key])
+			sim.resource_ledger.note(key,"Workshop output",float(recipe["output"][key]))
 	sim.add_event("PRODUCTION COMPLETE","%s batch completed." % batch["recipe"],"good")
 
 func _update_warehouse(sim:SettlementSimulation) -> void:
@@ -370,6 +374,7 @@ func trade(sim:SettlementSimulation,item:String,quantity:float,buying:bool) -> b
 			return false
 		credits += total*0.8
 		trade_pressure[item] = float(trade_pressure.get(item,0.0))-quantity
+	sim.resource_ledger.note(item,"Local market",quantity if buying else -quantity)
 	trade_log.push_front({"item":item,"quantity":quantity,"buying":buying,"price":unit_price,"day":sim.day})
 	if trade_log.size()>20:
 		trade_log.resize(20)
@@ -555,6 +560,7 @@ func trade_with_source(sim:SettlementSimulation, source_index:int, item:String, 
 		credits += total*0.8
 		caravan["credits"] = float(caravan["credits"])-total*0.8
 
+	sim.resource_ledger.note(item,"Caravan trade",quantity if buying else -quantity)
 	var market:Dictionary = regional_markets[str(caravan["market_key"])]
 	market["reputation"] = minf(100.0,float(market["reputation"])+0.35*quantity)
 	trade_log.push_front({

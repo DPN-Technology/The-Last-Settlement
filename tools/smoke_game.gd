@@ -98,7 +98,74 @@ func _clinic_canopy_problem(canopy: Node3D, hz: float, panel: Material) -> Strin
 func _initialize() -> void:
 	call_deferred("_smoke")
 
+func _supply_ledger_problem() -> String:
+	var ledger := ResourceLedger.new()
+	if bool(ledger.report("food",0.0)["ready"]):
+		return "Supply ledger reports a rate before measuring time"
+	ledger.advance(0.5)
+	if float(ledger.report("food",0.0)["hours_to_empty"])!=0.0:
+		return "Empty stock with no recent use is incorrectly reported as stable"
+	ledger.note("parts","Workshop",1.0)
+	ledger.note("parts","Workshop",-1.0)
+	ledger.record("Industry",{"parts":8.0},{"parts":8.0})
+	var gross := ledger.report("parts",8.0)
+	if not is_equal_approx(float(gross["produced_per_day"]),48.0) or not is_equal_approx(float(gross["consumed_per_day"]),48.0) or not is_zero_approx(float(gross["net_per_day"])):
+		return "Opposite flows from one source cancel instead of preserving production and consumption"
+	ledger.note("food","Pending",2.0)
+	ledger.reset()
+	if ledger.measured_hours()!=0.0 or ledger.net_total("parts")!=0.0:
+		return "Reset leaves supply history behind"
+	for tick in range(26):
+		ledger.advance(1.0)
+		ledger.record("Use",{"food":1.0 if tick==0 else 0.0},{"food":0.0})
+	var expired := ledger.report("food",0.0)
+	if not is_equal_approx(float(expired["hours"]),24.0) or not is_zero_approx(float(expired["consumed_per_day"])) or float(expired["hours_to_empty"])!=0.0:
+		return "An exhausted resource becomes stable after its depletion leaves the rolling window"
+	ledger.reset()
+	ledger.advance(2.0)
+	ledger.record("Use",{"food":12.0},{"food":10.0})
+	if not is_equal_approx(float(ledger.report("food",10.0)["hours_to_empty"]),10.0):
+		return "Positive stock run-out does not match the measured decline"
+	var fixture := SettlementSimulation.new()
+	fixture.paused = true
+	fixture.resource_ledger.advance(0.5)
+	var economy := fixture.economy_simulation
+	var starting_food := float(fixture.supply_totals()["food"])
+	if not economy.trade(fixture,"food",1.0,true) or not economy.trade(fixture,"food",1.0,false):
+		return "Supply regression fixture could not buy and sell food"
+	var trade := fixture.supply_report("food")
+	if not is_equal_approx(float(trade["stock"]),starting_food) or not is_equal_approx(float(trade["produced_per_day"]),48.0) or not is_equal_approx(float(trade["consumed_per_day"]),48.0):
+		return "Buy and sell commands between ticks hide actual supply flows"
+	fixture.reset_supply_ledger()
+	fixture.resource_ledger.advance(0.5)
+	economy._spawn_trade_caravan(fixture,"9",fixture.world_simulation.get_location_by_id(9))
+	economy.trade_caravans[0]["status"] = "trading"
+	if not economy.trade_with_source(fixture,1,"food",1.0,true) or not economy.trade_with_source(fixture,1,"food",1.0,false):
+		return "Supply regression fixture could not trade with a caravan"
+	var caravan := fixture.supply_report("food")
+	if not is_equal_approx(float(caravan["stock"]),starting_food) or not is_equal_approx(float(caravan["produced_per_day"]),48.0) or not is_equal_approx(float(caravan["consumed_per_day"]),48.0):
+		return "Caravan purchases and sales between ticks hide actual supply flows"
+	fixture.reset_supply_ledger()
+	fixture.resource_ledger.advance(0.5)
+	var starting_parts := float(fixture.supply_totals()["parts"])
+	economy._finish_batch(fixture,{"status":"working","recipe":"Machine Parts"},economy.recipes["Machine Parts"])
+	if not economy._consume_inputs(fixture,{"parts":1.0}):
+		return "Supply regression fixture could not consume workshop output"
+	var workshop := fixture.supply_report("parts")
+	if not is_equal_approx(float(workshop["stock"]),starting_parts) or not is_equal_approx(float(workshop["produced_per_day"]),48.0) or not is_equal_approx(float(workshop["consumed_per_day"]),48.0):
+		return "Workshop outputs and inputs within a phase hide actual supply flows"
+	if economy._consume_inputs(fixture,{"parts":10000.0}) or economy.trade(fixture,"parts",10000.0,true):
+		return "Supply regression fixture unexpectedly accepted an unaffordable action"
+	if fixture.supply_report("parts")!=workshop:
+		return "A failed workshop or trade command recorded phantom supply flows"
+	return ""
+
 func _smoke() -> void:
+	var supply_problem := _supply_ledger_problem()
+	if supply_problem!="":
+		push_error("SMOKE: "+supply_problem)
+		quit(1)
+		return
 	var scene_resource: PackedScene = load("res://src/Main.tscn")
 	if scene_resource == null:
 		push_error("SMOKE: Main scene missing")
@@ -1168,13 +1235,18 @@ func _smoke() -> void:
 		push_error("SMOKE: Old Site-01 developer jargon still appears in player identity")
 		quit(1)
 		return
-	# A practical resource HUD lets players resolve a power shortfall with a
-	# real generator blueprint, not another abstract warning light.
+	# The POWER chip opens measured supply analysis; its first action still
+	# routes to a real generator blueprint, not another abstract warning light.
 	instance.governance_mode = false
 	instance.build_mode = false
 	var power_card: Rect2 = SettlementUILayout.resource_rects(screen)[3]
-	if not instance._handle_resource_chip_click(power_card.get_center()) or not instance.build_mode:
-		push_error("SMOKE: Power telemetry does not open functional construction")
+	if not instance._handle_resource_chip_click(power_card.get_center()) or not instance.supply_mode or instance.supply_resource != "battery" or instance.build_mode:
+		push_error("SMOKE: Power telemetry does not open measured supply analysis")
+		quit(1)
+		return
+	var power_actions: Array = instance._supply_actions("battery")
+	if not instance._handle_supply_click(SettlementUILayout.supply_action_rect(screen,0,power_actions.size()).get_center()) or instance.supply_mode or not instance.build_mode:
+		push_error("SMOKE: Supply analysis action does not open functional construction")
 		quit(1)
 		return
 	if str(sim.get_build_catalog()[instance.build_catalog_index]["type"]) != "generator":
@@ -3292,7 +3364,7 @@ func _smoke() -> void:
 		push_error("SMOKE: Build screen X close control is not functional")
 		quit(1)
 		return
-	for mode_key in ["governance_mode","economy_mode","faction_mode","civilization_mode","world_map_mode","help_mode"]:
+	for mode_key in ["governance_mode","economy_mode","faction_mode","civilization_mode","world_map_mode","help_mode","supply_mode"]:
 		instance.set(mode_key,true)
 		var mode_panel: Rect2=instance._active_command_panel()
 		if mode_panel.size.x<=0.0 or not instance._handle_command_close_click(SettlementUILayout.command_close_rect(mode_panel).get_center()) or bool(instance.get(mode_key)):
@@ -3325,12 +3397,171 @@ func _smoke() -> void:
 		push_error("SMOKE: Governance preview differs from real policy effects")
 		quit(1)
 		return
+	# Supply Intelligence is measured, never modelled: over a window shorter
+	# than the 24h ledger, recorded net flow must equal the real stock change
+	# and the survivor phase must be fully explained by per-activity detail.
+	var ledger_fixture := SettlementSimulation.new()
+	ledger_fixture.speed = 12.0
+	# Random starting crews can have no cook and therefore no food use.
+	ledger_fixture.citizens[0]["job"] = "Cook"
+	var ledger_start: Dictionary = ledger_fixture.supply_totals()
+	for _ledger_tick in range(240):
+		ledger_fixture.update(0.25)
+	ledger_fixture.flush_supply_ledger()
+	var ledger_end: Dictionary = ledger_fixture.supply_totals()
+	if absf(ledger_fixture.resource_ledger.measured_hours()-12.0)>0.05:
+		push_error("SMOKE: Supply ledger window does not track elapsed game hours")
+		quit(1)
+		return
+	for ledger_key in ResourceLedger.TRACKED:
+		var stock_change := float(ledger_end[ledger_key])-float(ledger_start[ledger_key])
+		if absf(ledger_fixture.resource_ledger.net_total(ledger_key)-stock_change)>0.01:
+			push_error("SMOKE: Supply ledger flow does not reconcile with stock for "+ledger_key)
+			quit(1)
+			return
+		if ledger_fixture.resource_ledger.source_total(ledger_key,"Survivor activity")>0.001:
+			push_error("SMOKE: Survivor supply use is not attributed to a named activity: "+ledger_key)
+			quit(1)
+			return
+		var ledger_report: Dictionary = ledger_fixture.supply_report(ledger_key)
+		var report_net := float(ledger_report["produced_per_day"])-float(ledger_report["consumed_per_day"])
+		var report_eta := float(ledger_report["hours_to_empty"])
+		if not bool(ledger_report["ready"]) or absf(report_net-float(ledger_report["net_per_day"]))>0.001 or absf(float(ledger_report["stock"])-float(ledger_end[ledger_key]))>0.001:
+			push_error("SMOKE: Supply report rates are inconsistent for "+ledger_key)
+			quit(1)
+			return
+		if report_eta>=0.0 and absf(report_eta-maxf(0.0,float(ledger_report["stock"]))/(-report_net/24.0))>0.01:
+			push_error("SMOKE: Supply run-out time is not derived from measured flow: "+ledger_key)
+			quit(1)
+			return
+	if ledger_fixture.supply_report("water")["producers"].is_empty() or ledger_fixture.supply_report("food")["consumers"].is_empty():
+		push_error("SMOKE: Supply ledger lost known water production or food use")
+		quit(1)
+		return
+	# Viewing analysis must not mutate stock, and the ledger stays out of saves.
+	var supply_view_snapshot := sim.resources.duplicate(true)
+	var supply_stock_snapshot := sim.supply_totals()
+	for ledger_key in ResourceLedger.TRACKED:
+		sim.supply_report(ledger_key)
+	if sim.resources!=supply_view_snapshot or sim.supply_totals()!=supply_stock_snapshot:
+		push_error("SMOKE: viewing supply analysis changed settlement resources")
+		quit(1)
+		return
+	var ledger_save := "user://settlement-supply-smoke.json"
+	if not sim.save_game(ledger_save):
+		push_error("SMOKE: Could not write supply ledger save fixture")
+		quit(1)
+		return
+	var ledger_json: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(ledger_save))
+	if int(ledger_json.get("version",0))!=SettlementSimulation.SAVE_VERSION or ledger_json.has("resource_ledger") or ledger_json.has("supply_ledger"):
+		push_error("SMOKE: Supply ledger altered the v14 save schema")
+		quit(1)
+		return
+	if not sim.load_game(ledger_save) or sim.resource_ledger.measured_hours()!=0.0 or bool(sim.supply_report("food")["ready"]):
+		push_error("SMOKE: Supply ledger did not restart measuring after load")
+		quit(1)
+		return
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(ledger_save))
+	# Panel controls share draw/hit geometry and fit every supported screen.
+	for target_size in [Vector2(960,720),Vector2(1024,600),Vector2(1280,720),Vector2(1366,768),Vector2(1920,1080)]:
+		var supply_area := SettlementUILayout.supply_panel(target_size)
+		if supply_area.position.y<SettlementUILayout.TOP_H or supply_area.end.y>target_size.y-SettlementUILayout.BOTTOM_H or supply_area.end.x>target_size.x:
+			push_error("SMOKE: Supply panel overlaps HUD or dock at "+str(target_size))
+			quit(1)
+			return
+		var supply_close := SettlementUILayout.command_close_rect(supply_area)
+		var supply_targets: Array[Rect2] = []
+		for tab_i in range(SettlementUILayout.SUPPLY_RESOURCES.size()):
+			supply_targets.append(SettlementUILayout.supply_tab_rect(target_size,tab_i))
+		for card_i in range(4):
+			supply_targets.append(SettlementUILayout.supply_metric_rect(target_size,card_i))
+		for flow_row in range(SettlementUILayout.supply_flow_rows(target_size)):
+			supply_targets.append(SettlementUILayout.supply_flow_row(target_size,0,flow_row))
+			supply_targets.append(SettlementUILayout.supply_flow_row(target_size,1,flow_row))
+		for supply_target in supply_targets:
+			if not supply_area.encloses(supply_target) or supply_target.intersects(supply_close):
+				push_error("SMOKE: Supply analysis content falls outside its panel at "+str(target_size))
+				quit(1)
+				return
+		var last_flow := SettlementUILayout.supply_flow_row(target_size,0,SettlementUILayout.supply_flow_rows(target_size)-1)
+		for supply_key in SettlementUILayout.SUPPLY_RESOURCES:
+			var action_count: int = instance._supply_actions(supply_key).size()
+			for action_i in range(action_count):
+				var supply_action := SettlementUILayout.supply_action_rect(target_size,action_i,action_count)
+				if not supply_area.encloses(supply_action) or supply_action.intersects(last_flow):
+					push_error("SMOKE: Supply action overlaps flow rows at "+str(target_size))
+					quit(1)
+					return
+	# Mouse and keyboard: chips, tabs, arrows, outside click, X and Esc.
+	instance.selected_citizen={}
+	instance.selected_building={}
+	instance.selected_blueprint={}
+	if not instance._handle_resource_chip_click(SettlementUILayout.resource_rects(screen)[1].get_center()) or not instance.supply_mode or instance.supply_resource!="food":
+		push_error("SMOKE: FOOD telemetry does not open supply analysis")
+		quit(1)
+		return
+	if not instance._handle_supply_click(SettlementUILayout.resource_rects(screen)[2].get_center()) or not instance.supply_mode or instance.supply_resource!="water":
+		push_error("SMOKE: WATER chip does not switch the open supply analysis")
+		quit(1)
+		return
+	if not instance._handle_supply_click(SettlementUILayout.supply_tab_rect(screen,SettlementUILayout.SUPPLY_RESOURCES.find("fuel")).get_center()) or instance.supply_resource!="fuel":
+		push_error("SMOKE: Supply resource tab is not clickable")
+		quit(1)
+		return
+	instance.queue_redraw()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	var arrow := InputEventKey.new()
+	arrow.keycode = KEY_RIGHT
+	arrow.pressed = true
+	instance._unhandled_input(arrow)
+	if not instance.supply_mode or instance.supply_resource!="parts":
+		push_error("SMOKE: Arrow keys do not cycle supply analysis")
+		quit(1)
+		return
+	if not instance._handle_supply_click(Vector2(SettlementUILayout.supply_panel(screen).position.x-30.0,screen.y*0.5)) or instance.supply_mode:
+		push_error("SMOKE: Clicking outside does not close supply analysis")
+		quit(1)
+		return
+	instance._open_supply("meals")
+	var supply_escape := InputEventKey.new()
+	supply_escape.keycode = KEY_ESCAPE
+	supply_escape.pressed = true
+	instance._unhandled_input(supply_escape)
+	if instance.supply_mode:
+		push_error("SMOKE: Escape does not close supply analysis")
+		quit(1)
+		return
+	instance._open_supply("medicine")
+	instance._open_supply("medicine")
+	if instance.supply_mode:
+		push_error("SMOKE: Re-selecting the open supply chip does not toggle it closed")
+		quit(1)
+		return
+	instance.overview_visible=true
+	instance.overview_tab_index=1
+	var outlook_rows: Array[Dictionary]=instance._overview_rows()
+	var outlook_index := -1
+	for row_i in range(outlook_rows.size()):
+		if str(outlook_rows[row_i].get("label",""))=="ENERGY RESPONSE":
+			push_error("SMOKE: Static ENERGY RESPONSE instruction row still shown as live data")
+			quit(1)
+			return
+		if str(outlook_rows[row_i].get("label",""))=="SUPPLY OUTLOOK":
+			outlook_index=row_i
+	if outlook_index<0 or outlook_index>=SettlementUILayout.overview_visible_rows(screen) or not instance._handle_overview_click(SettlementUILayout.overview_data_row(screen,outlook_index).get_center()) or not instance.supply_mode or instance.supply_resource!="water" or instance.overview_visible:
+		push_error("SMOKE: Overview supply outlook does not open measured analysis")
+		quit(1)
+		return
+	instance.supply_mode=false
 	if not _all_renderers_have_mesh(instance):
 		push_error("SMOKE: Gameplay created a renderer without a mesh resource")
 		quit(1)
 		return
 	print("PLAYTEST SMOKE PASS: real prospective governance policy impact verified against applied game state")
+	print("PLAYTEST SMOKE PASS: measured supply ledger reconciles with stock, stays out of saves, and drives the supply analysis panel")
 	print("PLAYTEST SMOKE PASS: responsive F2 incident console, dismissals, filters, acknowledgements, route actions, and all command X buttons")
 	print("PLAYTEST SMOKE PASS: storm hazards/shelter/save compatibility, live 3D atmosphere, 3D industrial animation, region and workforce gameplay")
 	instance.queue_free()
+	await process_frame
 	quit(0)

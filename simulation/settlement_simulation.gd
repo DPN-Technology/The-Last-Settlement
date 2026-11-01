@@ -73,6 +73,9 @@ var economy_simulation := EconomySimulation.new()
 var faction_simulation := FactionSimulation.new()
 var civilization_simulation := CivilizationSimulation.new()
 var federal_governance_simulation := FederalGovernanceSimulation.new()
+# Transient measured flows for supply intelligence; never saved.
+var resource_ledger := ResourceLedger.new()
+var _ledger_mark: Dictionary = {}
 var settlement_name := "LAST HAVEN // SITE-01"
 # Optional v14 save field: older saves load with every directive unfinished.
 var field_objectives := {
@@ -112,6 +115,44 @@ func _init() -> void:
 	civilization_simulation.initialize(self)
 	federal_governance_simulation.initialize(self)
 	add_event("SETTLEMENT ONLINE", "Twelve survivors have established a temporary command camp.", "good")
+	_ledger_mark = supply_totals()
+
+# Settlement-wide stock of every ledger resource, read from the same
+# stockpiles that _sync_resource_totals() publishes to the HUD.
+func supply_totals() -> Dictionary:
+	var command: Dictionary = stockpiles["command"]
+	return {
+		"food": float(command.get("food", 0.0)) + float(stockpiles["farm"].get("food", 0.0)),
+		"meals": float(command.get("meals", 0.0)),
+		"water": float(command.get("water", 0.0)),
+		"medicine": float(command.get("medicine", 0.0)) + float(stockpiles["medical"].get("medicine", 0.0)),
+		"materials": float(stockpiles["industry"].get("materials", 0.0)),
+		"scrap": float(stockpiles["industry"].get("scrap", 0.0)) + float(command.get("scrap", 0.0)),
+		"fuel": float(economy_simulation.industry_stock.get("fuel", 0.0)),
+		"parts": float(economy_simulation.industry_stock.get("parts", 0.0)),
+		"battery": float(utility_state.get("battery_charge", 0.0))
+	}
+
+func _ledger_phase(source: String, overrides: Dictionary = {}) -> void:
+	var now := supply_totals()
+	resource_ledger.record(source, _ledger_mark, now, overrides)
+	_ledger_mark = now
+
+# Player commands (construction, trade, expeditions, colony orders) change
+# stock between ticks; attribute them before anything else is measured.
+func flush_supply_ledger() -> void:
+	if _ledger_mark.is_empty():
+		_ledger_mark = supply_totals()
+		return
+	_ledger_phase("Command orders")
+
+func supply_report(resource: String) -> Dictionary:
+	flush_supply_ledger()
+	return resource_ledger.report(resource, float(supply_totals().get(resource, 0.0)))
+
+func reset_supply_ledger() -> void:
+	resource_ledger.reset()
+	_ledger_mark = supply_totals()
 
 func _create_buildings() -> void:
 	buildings = [
@@ -291,6 +332,8 @@ func update(delta: float) -> void:
 	var sim_hours := clock_hours(delta,speed)
 	if sim_hours<=0.0:
 		return
+	flush_supply_ledger()
+	resource_ledger.advance(sim_hours)
 	total_hours += sim_hours
 	hour += sim_hours
 	while hour >= 24.0:
@@ -299,6 +342,7 @@ func update(delta: float) -> void:
 		add_event("NEW DAY", "Day %d begins." % day, "intel")
 
 	weather_simulation.update(self,sim_hours)
+	_ledger_phase("Weather")
 	var alive := get_alive_citizens()
 	var population := alive.size()
 	resources["power"] = clampf(resources["power"] + _power_delta(population) * sim_hours, 0.0, 100.0)
@@ -321,18 +365,30 @@ func update(delta: float) -> void:
 		if c["health"] <= 0.0 and c["alive"]:
 			c["alive"] = false
 			add_event("SURVIVOR LOST", "%s has died." % c["name"], "critical")
+	# Survivor work is fully itemized with note(); any remainder here would
+	# reveal an unattributed mutation (regression-tested by the smoke gate).
+	_ledger_phase("Survivor activity")
 
 	_update_utilities(sim_hours)
 	_apply_utility_consequences(sim_hours)
+	_ledger_phase("Utilities", {"fuel": "Generator fuel"})
 	social_simulation.update(self, sim_hours)
+	_ledger_phase("Community")
 	world_simulation.update(self, sim_hours)
+	_ledger_phase("Expeditions")
 	governance_simulation.update(self, sim_hours)
+	_ledger_phase("Governance")
 	economy_simulation.update(self, sim_hours)
+	_ledger_phase("Industry & trade")
 	faction_simulation.update(self, sim_hours)
+	_ledger_phase("Factions")
 	federal_governance_simulation.update(self, sim_hours)
+	_ledger_phase("Federal network")
 	civilization_simulation.update(self, sim_hours)
+	_ledger_phase("Colony logistics")
 	_sync_resource_totals()
 	event_director.update(self)
+	_ledger_phase("Incidents")
 
 func _update_utilities(sim_hours: float) -> void:
 	var power_nodes: Array[Dictionary] = []
@@ -400,6 +456,7 @@ func _update_utilities(sim_hours: float) -> void:
 	utility_state["power_demand"] = demand
 
 	var battery := float(utility_state["battery_charge"])
+	var battery_before := battery
 	if generated >= demand:
 		var surplus := generated - demand
 		battery = minf(float(utility_state["battery_capacity"]), battery + surplus * 0.18 * sim_hours)
@@ -414,6 +471,7 @@ func _update_utilities(sim_hours: float) -> void:
 			battery = 0.0
 			utility_state["power_online"] = false
 	utility_state["battery_charge"] = battery
+	resource_ledger.note("battery", "Surplus charging" if battery >= battery_before else "Grid deficit draw", battery - battery_before)
 
 	if rng.randf() < 0.00018 * sim_hours:
 		utility_failures["generator_trip"] = true
@@ -432,7 +490,9 @@ func _update_utilities(sim_hours: float) -> void:
 	var clean_rate := minf(purifier_capacity * power_factor * weather_simulation.water_factor(), raw_available / maxf(sim_hours, 0.001))
 	var cleaned := clean_rate * sim_hours
 	utility_state["raw_water"] = maxf(0.0, raw_available - cleaned)
-	stockpiles["command"]["water"] = minf(420.0, float(stockpiles["command"].get("water",0.0)) + cleaned)
+	var water_before := float(stockpiles["command"].get("water",0.0))
+	stockpiles["command"]["water"] = minf(420.0, water_before + cleaned)
+	resource_ledger.note("water", "Water purification", float(stockpiles["command"]["water"]) - water_before)
 	utility_state["clean_water_rate"] = clean_rate
 	utility_state["water_online"] = clean_rate > 0.05
 
@@ -492,6 +552,7 @@ func _update_citizen_needs(c: Dictionary, sim_hours: float) -> void:
 		if float(source.get("meals", 0.0)) > 0.0:
 			var used := minf(float(source["meals"]), 0.65 * sim_hours)
 			source["meals"] -= used
+			resource_ledger.note("meals", "Survivor meals", -used)
 			c["hunger"] = maxf(0.0, c["hunger"] - 14.0 * sim_hours)
 
 	if c["current_action"] == "Drink":
@@ -499,6 +560,7 @@ func _update_citizen_needs(c: Dictionary, sim_hours: float) -> void:
 		if float(source.get("water", 0.0)) > 0.0:
 			var used := minf(float(source["water"]), 0.9 * sim_hours)
 			source["water"] -= used
+			resource_ledger.note("water", "Survivor drinking", -used)
 			c["thirst"] = maxf(0.0, c["thirst"] - 18.0 * sim_hours)
 
 	if c["hunger"] > 75.0:
@@ -663,26 +725,37 @@ func _apply_citizen_work(c: Dictionary, sim_hours: float) -> void:
 
 	match action:
 		"Work: Farming":
-			stockpiles["farm"]["food"] += 0.48 * output * CitizenFactory.skill_multiplier(c, "farming")
+			var harvest := 0.48 * output * CitizenFactory.skill_multiplier(c, "farming")
+			stockpiles["farm"]["food"] += harvest
+			resource_ledger.note("food", "Farm harvest", harvest)
 		"Work: Engineering":
 			resources["power"] = minf(100.0, resources["power"] + 0.08 * output * CitizenFactory.skill_multiplier(c, "engineering"))
 		"Work: Construction":
-			stockpiles["industry"]["materials"] += 0.15 * output * CitizenFactory.skill_multiplier(c, "construction")
+			var salvage := 0.15 * output * CitizenFactory.skill_multiplier(c, "construction")
+			stockpiles["industry"]["materials"] += salvage
+			resource_ledger.note("materials", "Builder salvage work", salvage)
 		"Scavenge":
 			stockpiles["industry"]["scrap"] += 0.12 * output
+			resource_ledger.note("scrap", "Scavenging", 0.12 * output)
 			if rng.randf() < 0.003 * sim_hours:
 				_assign_injury(c, "Laceration", 9.0)
 		"Prepare Meals":
 			if float(stockpiles["command"].get("food", 0.0)) >= 0.4:
 				stockpiles["command"]["food"] -= 0.4 * output
 				stockpiles["command"]["meals"] += 0.32 * output
+				resource_ledger.note("food", "Meal preparation", -0.4 * output)
+				resource_ledger.note("meals", "Meal preparation", 0.32 * output)
 		"Haul Supplies":
 			_haul_tick(c, output)
 		"Work: Medical":
+			var medicine_before := float(stockpiles["medical"].get("medicine", 0.0))
 			_treat_patients(c, output)
+			resource_ledger.note("medicine", "Medical treatment", float(stockpiles["medical"].get("medicine", 0.0)) - medicine_before)
 
 func _haul_tick(_c: Dictionary, output: float) -> void:
+	var fuel_before := float(economy_simulation.industry_stock.get("fuel", 0.0))
 	output *= economy_simulation.get_logistics_multiplier(output)
+	resource_ledger.note("fuel", "Truck refuelling", float(economy_simulation.industry_stock.get("fuel", 0.0)) - fuel_before)
 	var farm_food := float(stockpiles["farm"].get("food", 0.0))
 	if farm_food > 20.0:
 		var moved := minf(farm_food - 20.0, 0.9 * output)
@@ -764,8 +837,10 @@ func _complete_order(order: Dictionary) -> void:
 	match order["job"]:
 		"Cook":
 			stockpiles["command"]["meals"] += 8.0
+			resource_ledger.note("meals", "Cook work orders", 8.0)
 		"Hauler":
 			stockpiles["command"]["food"] += 6.0
+			resource_ledger.note("food", "Haul work orders", 6.0)
 		"Builder":
 			var target_name := str(order["title"]).trim_prefix("Repair ")
 			var target := get_building_by_name(target_name)
@@ -1201,6 +1276,8 @@ func _apply_save_data(data: Dictionary) -> void:
 		federal_governance_simulation.next_council_hour = float(federal_state.get("next_council_hour", federal_governance_simulation.next_council_hour))
 		federal_governance_simulation.council_history = _restore_dict_array(federal_state.get("council_history", federal_governance_simulation.council_history))
 		federal_governance_simulation.last_dispute_hour = float(federal_state.get("last_dispute_hour", federal_governance_simulation.last_dispute_hour))
+	# Measured flows belong to the replaced campaign; restart measuring here.
+	reset_supply_ledger()
 
 # Missing keys keep their defaults so older saves still load, but every key that
 # is present must have the type _apply_save_data assigns. Otherwise a damaged

@@ -77,6 +77,42 @@ static func side_panel(size: Vector2, preferred_width: float, top_offset: float 
 static func directive_tab() -> Rect2:
 	return Rect2(14.0, TOP_H + 9.0, 268.0, 30.0)
 
+# Supply intelligence: one rectangle set shared by drawing and mouse hits.
+const SUPPLY_RESOURCES := ["food","meals","water","medicine","materials","scrap","fuel","parts","battery"]
+const SUPPLY_FLOW_TOP := 300.0
+const SUPPLY_FLOW_ROW_H := 19.0
+
+static func supply_panel(size: Vector2) -> Rect2:
+	return side_panel(size, 452.0)
+
+static func supply_tab_rect(size: Vector2, index: int) -> Rect2:
+	var panel := supply_panel(size)
+	var gap := 5.0
+	var width := (panel.size.x-28.0-gap*2.0)/3.0
+	return Rect2(panel.position+Vector2(14.0+float(index%3)*(width+gap),62.0+floorf(float(index)/3.0)*31.0),Vector2(width,27.0))
+
+static func supply_metric_rect(size: Vector2, index: int) -> Rect2:
+	var panel := supply_panel(size)
+	var gap := 6.0
+	var width := (panel.size.x-28.0-gap*3.0)/4.0
+	return Rect2(panel.position+Vector2(14.0+float(index)*(width+gap),160.0),Vector2(width,66.0))
+
+static func supply_action_rect(size: Vector2, index: int, count: int) -> Rect2:
+	var panel := supply_panel(size)
+	var gap := 6.0
+	var width := (panel.size.x-28.0-gap*float(count-1))/maxf(1.0,float(count))
+	return Rect2(panel.position.x+14.0+float(index)*(width+gap),panel.end.y-44.0,width,32.0)
+
+static func supply_flow_rows(size: Vector2) -> int:
+	var panel := supply_panel(size)
+	return clampi(int(floor((panel.size.y-54.0-SUPPLY_FLOW_TOP)/SUPPLY_FLOW_ROW_H)),1,10)
+
+static func supply_flow_row(size: Vector2, column: int, row: int) -> Rect2:
+	var panel := supply_panel(size)
+	var gap := 10.0
+	var width := (panel.size.x-28.0-gap)/2.0
+	return Rect2(panel.position+Vector2(14.0+float(column)*(width+gap),SUPPLY_FLOW_TOP+float(row)*SUPPLY_FLOW_ROW_H),Vector2(width,SUPPLY_FLOW_ROW_H-2.0))
+
 # Transient feedback must not sit beneath the always-visible F3 objectives
 # tab. The previous 650px box started at (14,TOP_H+10), so most of its
 # contents were hidden and an unexplained black strip appeared beside it.

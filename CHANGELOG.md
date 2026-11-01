@@ -1,3 +1,22 @@
+## Unreleased — Supply Intelligence
+
+### Added
+- `ResourceLedger`: a measured resource-flow ledger covering food, meals, water, medicine, materials, scrap, fuel, parts and battery charge over a rolling ~24 game-hour window. Recorded flow always reconciles with the real stock change.
+- Supply Intelligence side panel showing per-resource stock, produced/consumed per game day, measured run-out time, ranked sources and uses, and actions routed to existing build/workforce/industry/region systems
+- Measured net-trend readouts on the FOOD, WATER and MEALS HUD chips; POWER shows battery or generator-fuel run-out
+- Smoke coverage for ledger conservation, gross flows, exhausted stock, save-schema isolation, panel geometry at 960×720 through 1920×1080, mouse/keyboard controls, and actual panel rendering
+
+### Changed
+- FOOD, WATER and POWER chips open Supply Intelligence instead of jumping straight into construction; MEALS opens its supply analysis instead of Overview. Overview remains accessible from the identity header, and the panel's actions still open the matching blueprint.
+- Overview: the Utilities tab's static "ENERGY RESPONSE" instruction row is replaced by a measured **SUPPLY OUTLOOK** row. The Command tab's **SUPPLY RESERVES** row now warns when food or water will run out within 24 game hours. Both rows open Supply Intelligence.
+
+### Fixed
+- Empty stock stays marked exhausted even after its last consumption leaves the measurement window
+- Workshop inputs/outputs and local/caravan purchases/sales no longer cancel out of the produced/consumed totals when they occur within one measurement phase
+
+### Compatibility
+- Save schema unchanged (`14`); the ledger is session-only and restarts measuring after load
+
 ## 1.0.5 — First Stable Windows Release
 
 ### Released

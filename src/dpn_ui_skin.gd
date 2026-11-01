@@ -288,7 +288,7 @@ static func nav_station(canvas: CanvasItem, rect: Rect2, index: int, label: Stri
 		canvas.draw_string(ThemeDB.fallback_font,Vector2(rect.end.x-6,rect.position.y+12),key_hint,HORIZONTAL_ALIGNMENT_RIGHT,16,10,RED if active else MUTED)
 
 
-static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: String, fraction: float, severity: Color, hover: bool) -> void:
+static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: String, fraction: float, severity: Color, hover: bool, trend: String = "", trend_color: Color = MUTED) -> void:
 	# The entire HUD background is a cached texture. Individual values and
 	# bar fill remain live CanvasItem text/solid rectangles for truthful data.
 	var surface := _resource_background(hover)
@@ -298,6 +298,9 @@ static func resource(canvas: CanvasItem, rect: Rect2, label: String, reading: St
 		canvas.draw_rect(rect,Color("#25131e") if hover else Color("#0b0e14"))
 	canvas.draw_rect(Rect2(rect.position+Vector2(1,2),Vector2(3,maxf(1.0,rect.size.y-4))),severity)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),label,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),11,MUTED)
+	# Measured net flow per game day, right-aligned clear of the status dot.
+	if trend!="":
+		canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,15),trend,HORIZONTAL_ALIGNMENT_RIGHT,maxf(8.0,rect.size.x-27.0),10,trend_color)
 	canvas.draw_string(ThemeDB.fallback_font,rect.position+Vector2(9,34),reading,HORIZONTAL_ALIGNMENT_LEFT,maxf(8.0,rect.size.x-18.0),18,TEXT)
 	var width := maxf(3.0,rect.size.x-14.0)
 	canvas.draw_rect(Rect2(rect.position+Vector2(7,rect.size.y-6),Vector2(width,3)),Color("#29202b"))

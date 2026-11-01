@@ -154,6 +154,8 @@
 - [x] Trade-pressure market feedback
 - [x] Vehicle-assisted hauling
 - [x] Production bottleneck visualization
+- [x] Measured resource-flow ledger (Supply Intelligence: per-source rates, run-out times, HUD trends)
+- [ ] Supply-flow history persisted across save/load
 - [x] Player-created production orders
 - [x] Regional faction price modifiers
 - [x] Caravan route risk
